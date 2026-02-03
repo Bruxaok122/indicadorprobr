@@ -1,0 +1,168 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { contactId, message, templateName, isTemplate } = await req.json();
+
+    if (!contactId || (!message && !templateName)) {
+      return new Response(
+        JSON.stringify({ error: "contactId e message ou templateName são obrigatórios" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get WhatsApp config
+    const { data: config, error: configError } = await supabase
+      .from("whatsapp_config")
+      .select("*")
+      .limit(1)
+      .single();
+
+    if (configError || !config) {
+      return new Response(
+        JSON.stringify({ error: "WhatsApp não configurado. Configure o Access Token primeiro." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get contact
+    const { data: contact, error: contactError } = await supabase
+      .from("contacts")
+      .select("*")
+      .eq("id", contactId)
+      .single();
+
+    if (contactError || !contact) {
+      return new Response(
+        JSON.stringify({ error: "Contato não encontrado" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Build WhatsApp API request
+    const whatsappUrl = `https://graph.facebook.com/v18.0/${config.phone_number_id}/messages`;
+
+    let requestBody: any;
+
+    if (isTemplate && templateName) {
+      requestBody = {
+        messaging_product: "whatsapp",
+        to: contact.phone,
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: "pt_BR" },
+        },
+      };
+    } else {
+      requestBody = {
+        messaging_product: "whatsapp",
+        to: contact.phone,
+        type: "text",
+        text: { body: message },
+      };
+    }
+
+    console.log("Sending message to WhatsApp:", JSON.stringify(requestBody, null, 2));
+
+    const response = await fetch(whatsappUrl, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${config.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const result = await response.json();
+    console.log("WhatsApp API response:", JSON.stringify(result, null, 2));
+
+    if (!response.ok) {
+      const errorMessage = result.error?.message || "Erro ao enviar mensagem";
+      return new Response(
+        JSON.stringify({ 
+          error: errorMessage, 
+          details: result.error,
+          code: result.error?.code 
+        }),
+        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get or create conversation
+    let { data: conversation } = await supabase
+      .from("conversations")
+      .select("*")
+      .eq("contact_id", contactId)
+      .eq("is_active", true)
+      .single();
+
+    if (!conversation) {
+      const { data: newConversation } = await supabase
+        .from("conversations")
+        .insert({
+          contact_id: contactId,
+          is_active: true,
+          window_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        })
+        .select()
+        .single();
+      conversation = newConversation;
+    }
+
+    // Save message to database
+    const { error: messageError } = await supabase.from("messages").insert({
+      conversation_id: conversation!.id,
+      contact_id: contactId,
+      direction: "outgoing",
+      message_type: isTemplate ? "template" : "text",
+      content: message || `[Template: ${templateName}]`,
+      template_name: templateName || null,
+      whatsapp_message_id: result.messages?.[0]?.id,
+      status: "sent",
+    });
+
+    if (messageError) {
+      console.error("Error saving message:", messageError);
+    }
+
+    // Update contact status
+    await supabase
+      .from("contacts")
+      .update({
+        status: "aguardando",
+        last_message_at: new Date().toISOString(),
+      })
+      .eq("id", contactId);
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        messageId: result.messages?.[0]?.id,
+        message: "Mensagem enviada com sucesso!"
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error: unknown) {
+    console.error("Send message error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
