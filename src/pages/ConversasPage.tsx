@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Search,
   Send,
@@ -22,7 +24,7 @@ import {
   CheckCheck,
   Check,
   X,
-  AlertCircle,
+  Upload,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -52,11 +54,13 @@ export default function ConversasPage() {
   );
   const [messageText, setMessageText] = useState("");
   const [showDocDialog, setShowDocDialog] = useState(false);
-  const [docUrl, setDocUrl] = useState("");
-  const [docName, setDocName] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [docCaption, setDocCaption] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
-  const { messages, isLoading: messagesLoading, sendMessage, isSending, sendDocument, isSendingDocument } =
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { messages, isLoading: messagesLoading, sendMessage, isSending } =
     useMessages(selectedContactId);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -95,19 +99,56 @@ export default function ConversasPage() {
     setMessageText("");
   };
 
-  const handleSendDocument = () => {
-    if (!docUrl.trim() || !selectedContactId) return;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== "application/pdf") {
+        toast.error("Apenas arquivos PDF são permitidos");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("Arquivo muito grande. Máximo 10MB.");
+        return;
+      }
+      setSelectedFile(file);
+      setShowDocDialog(true);
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
-    sendDocument({
-      contactId: selectedContactId,
-      documentUrl: docUrl.trim(),
-      documentName: docName.trim() || "documento.pdf",
-      caption: docCaption.trim() || undefined,
-    });
-    setShowDocDialog(false);
-    setDocUrl("");
-    setDocName("");
-    setDocCaption("");
+  const handleSendDocument = async () => {
+    if (!selectedFile || !selectedContactId) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("contactId", selectedContactId);
+      if (docCaption.trim()) {
+        formData.append("caption", docCaption.trim());
+      }
+
+      const { data, error } = await supabase.functions.invoke("upload-document", {
+        body: formData,
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      toast.success("Documento enviado com sucesso!");
+      setShowDocDialog(false);
+      setSelectedFile(null);
+      setDocCaption("");
+    } catch (err: any) {
+      toast.error("Erro ao enviar documento", {
+        description: err.message,
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -292,12 +333,19 @@ export default function ConversasPage() {
               {/* Message Input */}
               <div className="border-t bg-card p-4">
                 <div className="flex items-end gap-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    accept=".pdf,application/pdf"
+                    className="hidden"
+                  />
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant="outline"
                         size="icon"
-                        onClick={() => setShowDocDialog(true)}
+                        onClick={() => fileInputRef.current?.click()}
                       >
                         <Paperclip className="h-4 w-4" />
                       </Button>
@@ -345,37 +393,27 @@ export default function ConversasPage() {
         </div>
       </div>
 
-      {/* Document Dialog */}
+      {/* Document Upload Dialog */}
       <Dialog open={showDocDialog} onOpenChange={setShowDocDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Enviar Documento PDF</DialogTitle>
             <DialogDescription>
-              Insira a URL do documento que deseja enviar
+              Confirme o envio do documento selecionado
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="docUrl">URL do Documento *</Label>
-              <Input
-                id="docUrl"
-                placeholder="https://exemplo.com/documento.pdf"
-                value={docUrl}
-                onChange={(e) => setDocUrl(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                O documento deve estar hospedado em uma URL pública acessível
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="docName">Nome do Arquivo</Label>
-              <Input
-                id="docName"
-                placeholder="contrato.pdf"
-                value={docName}
-                onChange={(e) => setDocName(e.target.value)}
-              />
-            </div>
+            {selectedFile && (
+              <div className="flex items-center gap-3 rounded-lg border p-4">
+                <FileText className="h-8 w-8 text-destructive" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{selectedFile.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="docCaption">Legenda (opcional)</Label>
               <Input
@@ -387,18 +425,22 @@ export default function ConversasPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDocDialog(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowDocDialog(false);
+              setSelectedFile(null);
+              setDocCaption("");
+            }}>
               Cancelar
             </Button>
-            <Button onClick={handleSendDocument} disabled={!docUrl.trim() || isSendingDocument}>
-              {isSendingDocument ? (
+            <Button onClick={handleSendDocument} disabled={isUploading}>
+              {isUploading ? (
                 <>
                   <LoadingSpinner size="sm" />
                   Enviando...
                 </>
               ) : (
                 <>
-                  <Send className="mr-2 h-4 w-4" />
+                  <Upload className="mr-2 h-4 w-4" />
                   Enviar Documento
                 </>
               )}

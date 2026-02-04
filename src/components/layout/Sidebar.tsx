@@ -15,6 +15,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const navItems = [
   {
@@ -67,12 +68,15 @@ export function Sidebar() {
   return (
     <aside className="flex h-screen w-64 flex-col bg-primary text-primary-foreground">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-4">
-        <Scale className="h-8 w-8 text-accent" />
-        <div>
-          <h1 className="text-xl font-bold">JurisZap</h1>
-          <p className="text-xs text-primary-foreground/70">Sistema Jurídico</p>
+      <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
+        <div className="flex items-center gap-2">
+          <Scale className="h-8 w-8 text-accent" />
+          <div>
+            <h1 className="text-xl font-bold">JurisZap</h1>
+            <p className="text-xs text-primary-foreground/70">Sistema Jurídico</p>
+          </div>
         </div>
+        <ThemeToggle />
       </div>
 
       {/* Navigation */}

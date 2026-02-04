@@ -3,23 +3,19 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MessageTemplate } from "@/types/juriszap";
-import { toast } from "sonner";
+import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
+import { useContacts } from "@/hooks/useContacts";
 import {
   FileText,
-  Plus,
-  Trash2,
+  RefreshCw,
   CheckCircle,
   Clock,
   X,
-  Info,
+  Send,
+  AlertCircle,
+  Users,
 } from "lucide-react";
 import {
   Dialog,
@@ -28,7 +24,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -37,94 +32,85 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function TemplatesPage() {
-  const queryClient = useQueryClient();
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newContent, setNewContent] = useState("");
-  const [newCategory, setNewCategory] = useState("utility");
+  const { templates, allTemplates, isLoading, error, refetch, sendBulk, isSendingBulk } = useMetaTemplates();
+  const { contacts } = useContacts();
+  
+  const [showBulkDialog, setShowBulkDialog] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
+  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
 
-  const { data: templates = [], isLoading } = useQuery({
-    queryKey: ["templates"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("message_templates")
-        .select("*")
-        .order("created_at", { ascending: false });
+  const handleOpenBulkDialog = (template: MetaTemplate) => {
+    setSelectedTemplate(template);
+    setSelectedContacts([]);
+    setShowBulkDialog(true);
+  };
 
-      if (error) throw error;
-      return data as MessageTemplate[];
-    },
-  });
+  const handleToggleContact = (contactId: string) => {
+    setSelectedContacts(prev => 
+      prev.includes(contactId) 
+        ? prev.filter(id => id !== contactId)
+        : [...prev, contactId]
+    );
+  };
 
-  const addMutation = useMutation({
-    mutationFn: async (template: { name: string; content: string; category: string }) => {
-      const { error } = await supabase.from("message_templates").insert({
-        name: template.name,
-        content: template.content,
-        category: template.category,
-        status: "pending",
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Template criado com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["templates"] });
-      setShowAddDialog(false);
-      setNewName("");
-      setNewContent("");
-      setNewCategory("utility");
-    },
-    onError: (error: any) => {
-      toast.error("Erro ao criar template", { description: error.message });
-    },
-  });
+  const handleSelectAll = () => {
+    if (selectedContacts.length === contacts.length) {
+      setSelectedContacts([]);
+    } else {
+      setSelectedContacts(contacts.map(c => c.id));
+    }
+  };
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("message_templates").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Template removido!");
-      queryClient.invalidateQueries({ queryKey: ["templates"] });
-    },
-    onError: (error: any) => {
-      toast.error("Erro ao remover", { description: error.message });
-    },
-  });
-
-  const handleAdd = () => {
-    if (!newName.trim() || !newContent.trim()) return;
-    addMutation.mutate({
-      name: newName.trim(),
-      content: newContent.trim(),
-      category: newCategory,
+  const handleSendBulk = () => {
+    if (!selectedTemplate || selectedContacts.length === 0) return;
+    
+    sendBulk({
+      contactIds: selectedContacts,
+      templateName: selectedTemplate.name,
+      templateLanguage: selectedTemplate.language,
+    }, {
+      onSuccess: () => {
+        setShowBulkDialog(false);
+        setSelectedTemplate(null);
+        setSelectedContacts([]);
+      },
     });
   };
 
-  const getStatusIcon = (status: MessageTemplate["status"]) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case "approved":
+      case "APPROVED":
         return <CheckCircle className="h-4 w-4 text-success" />;
-      case "pending":
+      case "PENDING":
         return <Clock className="h-4 w-4 text-warning" />;
-      case "rejected":
+      case "REJECTED":
         return <X className="h-4 w-4 text-destructive" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
-  const getStatusText = (status: MessageTemplate["status"]) => {
+  const getStatusText = (status: string) => {
     switch (status) {
-      case "approved":
+      case "APPROVED":
         return "Aprovado";
-      case "pending":
+      case "PENDING":
         return "Aguardando aprovação";
-      case "rejected":
+      case "REJECTED":
         return "Rejeitado";
+      default:
+        return status;
     }
+  };
+
+  const getTemplateBody = (template: MetaTemplate): string => {
+    const bodyComponent = template.components?.find(c => c.type === "BODY");
+    return bodyComponent?.text || "Sem conteúdo";
   };
 
   return (
@@ -132,82 +118,12 @@ export default function TemplatesPage() {
       <div className="flex h-screen flex-col overflow-hidden">
         <PageHeader
           title="Templates de Mensagem"
-          description="Gerencie seus modelos de mensagem aprovados"
+          description="Templates aprovados da sua conta WhatsApp Business"
         >
-          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Template
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Criar Novo Template</DialogTitle>
-                <DialogDescription>
-                  Templates precisam ser aprovados pela Meta antes de serem usados
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome do Template</Label>
-                  <Input
-                    id="name"
-                    placeholder="Ex: notificacao_audiencia"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value.toLowerCase().replace(/\s+/g, "_"))}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Use apenas letras minúsculas, números e underscores
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Categoria</Label>
-                  <Select value={newCategory} onValueChange={setNewCategory}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="utility">Utilidade</SelectItem>
-                      <SelectItem value="marketing">Marketing</SelectItem>
-                      <SelectItem value="authentication">Autenticação</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="content">Conteúdo da Mensagem</Label>
-                  <Textarea
-                    id="content"
-                    placeholder="Prezado(a) {{1}}, informamos que sua audiência..."
-                    value={newContent}
-                    onChange={(e) => setNewContent(e.target.value)}
-                    className="min-h-[150px]"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Use {"{{1}}"}, {"{{2}}"}, etc. para variáveis dinâmicas
-                  </p>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleAdd}
-                  disabled={!newName.trim() || !newContent.trim() || addMutation.isPending}
-                >
-                  {addMutation.isPending ? (
-                    <>
-                      <LoadingSpinner size="sm" />
-                      Criando...
-                    </>
-                  ) : (
-                    "Criar Template"
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button onClick={() => refetch()} disabled={isLoading}>
+            <RefreshCw className={cn("mr-2 h-4 w-4", isLoading && "animate-spin")} />
+            Atualizar
+          </Button>
         </PageHeader>
 
         <div className="flex-1 overflow-auto p-6">
@@ -220,23 +136,32 @@ export default function TemplatesPage() {
               </p>
             </AlertBanner>
 
+            {error && (
+              <AlertBanner type="error" title="Erro ao carregar templates">
+                <p>{error.message}</p>
+                <p className="mt-2 text-sm">
+                  Verifique se o WhatsApp está configurado corretamente na página de Configuração.
+                </p>
+              </AlertBanner>
+            )}
+
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <LoadingSpinner size="lg" text="Carregando templates..." />
+                <LoadingSpinner size="lg" text="Carregando templates da Meta..." />
               </div>
             ) : templates.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <FileText className="mb-4 h-12 w-12 text-muted-foreground/50" />
                   <p className="text-lg font-medium text-muted-foreground">
-                    Nenhum template cadastrado
+                    Nenhum template aprovado encontrado
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Crie seu primeiro template para começar a enviar mensagens
+                    Crie templates na sua conta Meta Business e aguarde aprovação
                   </p>
-                  <Button className="mt-4" onClick={() => setShowAddDialog(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Criar Template
+                  <Button className="mt-4" variant="outline" onClick={() => refetch()}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Verificar novamente
                   </Button>
                 </CardContent>
               </Card>
@@ -256,40 +181,128 @@ export default function TemplatesPage() {
                           <div
                             className={cn(
                               "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium",
-                              template.status === "approved" &&
+                              template.status === "APPROVED" &&
                                 "bg-success/10 text-success",
-                              template.status === "pending" &&
+                              template.status === "PENDING" &&
                                 "bg-warning/10 text-warning",
-                              template.status === "rejected" &&
+                              template.status === "REJECTED" &&
                                 "bg-destructive/10 text-destructive"
                             )}
                           >
                             {getStatusIcon(template.status)}
                             {getStatusText(template.status)}
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                            onClick={() => deleteMutation.mutate(template.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-4">
                       <div className="rounded-lg bg-muted p-4">
-                        <p className="whitespace-pre-wrap text-sm">{template.content}</p>
+                        <p className="whitespace-pre-wrap text-sm">{getTemplateBody(template)}</p>
                       </div>
+                      
+                      {template.status === "APPROVED" && (
+                        <Button 
+                          onClick={() => handleOpenBulkDialog(template)}
+                          className="w-full"
+                        >
+                          <Send className="mr-2 h-4 w-4" />
+                          Disparar para Contatos Selecionados
+                        </Button>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
               </div>
             )}
+
+            {allTemplates.length > templates.length && (
+              <AlertBanner type="warning" title="Templates não aprovados">
+                <p>
+                  {allTemplates.length - templates.length} template(s) não estão aprovados e não podem ser usados para envio.
+                </p>
+              </AlertBanner>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Bulk Send Dialog */}
+      <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Disparar Template em Massa</DialogTitle>
+            <DialogDescription>
+              Selecione os contatos que receberão o template "{selectedTemplate?.name}"
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                {selectedContacts.length} de {contacts.length} selecionado(s)
+              </p>
+              <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                {selectedContacts.length === contacts.length ? "Desmarcar todos" : "Selecionar todos"}
+              </Button>
+            </div>
+
+            <ScrollArea className="h-[300px] rounded-lg border p-4">
+              {contacts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <Users className="mb-2 h-8 w-8 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">Nenhum contato cadastrado</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {contacts.map((contact) => (
+                    <div
+                      key={contact.id}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg p-3 transition-colors cursor-pointer",
+                        selectedContacts.includes(contact.id) 
+                          ? "bg-primary/10" 
+                          : "hover:bg-muted"
+                      )}
+                      onClick={() => handleToggleContact(contact.id)}
+                    >
+                      <Checkbox
+                        checked={selectedContacts.includes(contact.id)}
+                        onCheckedChange={() => handleToggleContact(contact.id)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{contact.name}</p>
+                        <p className="text-sm text-muted-foreground">{contact.phone}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkDialog(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSendBulk} 
+              disabled={selectedContacts.length === 0 || isSendingBulk}
+            >
+              {isSendingBulk ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Enviar para {selectedContacts.length} contato(s)
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
