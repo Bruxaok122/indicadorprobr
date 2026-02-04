@@ -114,20 +114,27 @@ export default function ImportarPage() {
   const validation = validateJuridicalList(rawText);
 
   const exampleText = `================================================================================
-ADVOGADO
-Dr. João Silva
-PROCESSO
-1234567-89.2024.8.26.0100
-Maria Santos
-(11) 99999-8888
-(11) 98888-7777
-================================================================================
-ADVOGADO
-Dra. Ana Costa
-PROCESSO
-9876543-21.2024.8.26.0200
-José Oliveira
-(21) 99999-1111
+
+ADVOGADO: Lourival Casemiro Rodrigues
+
+PROCESSO: 1000346-90.2023.8.26.0627
+
+Requerente (Polo Ativo):
+
+👤 Nome: Rosimari Barbosa Ferreira
+
+💳 Doc.: CPF: 388.900.088-65 | RENDA: R$ 2.825,00 | IDADE: 34
+
+📞 Telefones: (18) 99650-6971, (18) 99755-5438
+
+⚖️ Advogado 1: Lourival Casemiro Rodrigues
+
+📞 Telefones: (não disponíveis nesta etapa)
+
+Requerido (Polo Passivo):
+
+🏢 Nome: PREFEITURA MUNICIPAL
+
 ================================================================================`;
 
   return (
@@ -162,7 +169,7 @@ José Oliveira
                     </CardTitle>
                     <CardDescription>
                       Cole o texto da lista no formato padrão. O sistema irá extrair
-                      automaticamente os dados.
+                      automaticamente os dados de cada cliente e seus telefones.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -170,7 +177,7 @@ José Oliveira
                       <Label htmlFor="rawText">Lista de Contatos</Label>
                       <Textarea
                         id="rawText"
-                        placeholder="Cole aqui a lista de contatos..."
+                        placeholder="Cole aqui a lista de contatos no formato com separadores ================"
                         value={rawText}
                         onChange={(e) => setRawText(e.target.value)}
                         className="min-h-[300px] font-mono text-sm"
@@ -212,11 +219,12 @@ José Oliveira
                   <CardHeader>
                     <CardTitle className="text-base">Formato Esperado</CardTitle>
                     <CardDescription>
-                      Copie e adapte este exemplo para sua lista
+                      O sistema aceita o formato com emojis e extrai: Nome do cliente (👤), 
+                      Telefones (📞), Advogado (⚖️ ou ADVOGADO:), e Processo
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <pre className="overflow-auto rounded-lg bg-muted p-4 text-xs">
+                    <pre className="overflow-auto rounded-lg bg-muted p-4 text-xs whitespace-pre-wrap">
                       {exampleText}
                     </pre>
                     <Button

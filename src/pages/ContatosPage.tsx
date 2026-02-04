@@ -5,7 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useContacts } from "@/hooks/useContacts";
-import { LoadingPage } from "@/components/ui/loading-spinner";
+import { useMetaTemplates } from "@/hooks/useMetaTemplates";
+import { LoadingPage, LoadingSpinner } from "@/components/ui/loading-spinner";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Search,
@@ -15,6 +16,7 @@ import {
   Phone,
   Scale,
   FileText,
+  Send,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -37,16 +39,41 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
 
 export default function ContatosPage() {
   const { contacts, isLoading, deleteContact, isDeleting } = useContacts();
+  const { templates, sendBulk, isSendingBulk } = useMetaTemplates();
+  
   const [search, setSearch] = useState("");
+  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
+  const [showBulkDialog, setShowBulkDialog] = useState(false);
+  const [showSingleDialog, setShowSingleDialog] = useState(false);
+  const [singleContactId, setSingleContactId] = useState<string | null>(null);
+  const [selectedTemplateName, setSelectedTemplateName] = useState<string>("");
 
   const filteredContacts = contacts.filter((contact) => {
     const searchLower = search.toLowerCase();
@@ -57,6 +84,74 @@ export default function ContatosPage() {
       contact.lawyer_name?.toLowerCase().includes(searchLower)
     );
   });
+
+  const handleToggleContact = (contactId: string) => {
+    setSelectedContacts(prev =>
+      prev.includes(contactId)
+        ? prev.filter(id => id !== contactId)
+        : [...prev, contactId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedContacts.length === filteredContacts.length) {
+      setSelectedContacts([]);
+    } else {
+      setSelectedContacts(filteredContacts.map(c => c.id));
+    }
+  };
+
+  const handleOpenBulkDialog = () => {
+    if (selectedContacts.length === 0) return;
+    setSelectedTemplateName("");
+    setShowBulkDialog(true);
+  };
+
+  const handleOpenSingleDialog = (contactId: string) => {
+    setSingleContactId(contactId);
+    setSelectedTemplateName("");
+    setShowSingleDialog(true);
+  };
+
+  const handleSendBulk = () => {
+    if (!selectedTemplateName || selectedContacts.length === 0) return;
+
+    const template = templates.find(t => t.name === selectedTemplateName);
+    if (!template) return;
+
+    sendBulk({
+      contactIds: selectedContacts,
+      templateName: template.name,
+      templateLanguage: template.language,
+    }, {
+      onSuccess: () => {
+        setShowBulkDialog(false);
+        setSelectedContacts([]);
+        setSelectedTemplateName("");
+      },
+    });
+  };
+
+  const handleSendSingle = () => {
+    if (!selectedTemplateName || !singleContactId) return;
+
+    const template = templates.find(t => t.name === selectedTemplateName);
+    if (!template) return;
+
+    sendBulk({
+      contactIds: [singleContactId],
+      templateName: template.name,
+      templateLanguage: template.language,
+    }, {
+      onSuccess: () => {
+        setShowSingleDialog(false);
+        setSingleContactId(null);
+        setSelectedTemplateName("");
+      },
+    });
+  };
+
+  const singleContact = contacts.find(c => c.id === singleContactId);
 
   if (isLoading) {
     return (
@@ -73,12 +168,20 @@ export default function ContatosPage() {
           title="Contatos"
           description={`${contacts.length} cliente(s) cadastrado(s)`}
         >
-          <Button asChild>
-            <Link to="/importar">
-              <Users className="mr-2 h-4 w-4" />
-              Importar
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            {selectedContacts.length > 0 && (
+              <Button onClick={handleOpenBulkDialog} variant="default">
+                <Send className="mr-2 h-4 w-4" />
+                Disparar Template ({selectedContacts.length})
+              </Button>
+            )}
+            <Button asChild>
+              <Link to="/importar">
+                <Users className="mr-2 h-4 w-4" />
+                Importar
+              </Link>
+            </Button>
+          </div>
         </PageHeader>
 
         <div className="flex-1 overflow-hidden p-6">
@@ -118,6 +221,12 @@ export default function ContatosPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={selectedContacts.length === filteredContacts.length && filteredContacts.length > 0}
+                            onCheckedChange={handleSelectAll}
+                          />
+                        </TableHead>
                         <TableHead>Cliente</TableHead>
                         <TableHead>Telefone</TableHead>
                         <TableHead>Processo</TableHead>
@@ -130,6 +239,12 @@ export default function ContatosPage() {
                     <TableBody>
                       {filteredContacts.map((contact) => (
                         <TableRow key={contact.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedContacts.includes(contact.id)}
+                              onCheckedChange={() => handleToggleContact(contact.id)}
+                            />
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
@@ -194,6 +309,20 @@ export default function ContatosPage() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => handleOpenSingleDialog(contact.id)}
+                                  >
+                                    <Send className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Enviar template</TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
                                     asChild
                                     className="h-8 w-8"
                                   >
@@ -252,6 +381,131 @@ export default function ContatosPage() {
           </div>
         </div>
       </div>
+
+      {/* Bulk Send Dialog */}
+      <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Disparar Template em Massa</DialogTitle>
+            <DialogDescription>
+              Enviar template para {selectedContacts.length} contato(s) selecionado(s)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Selecione o Template</Label>
+              {templates.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum template aprovado disponível. Configure o WhatsApp primeiro.
+                </p>
+              ) : (
+                <Select value={selectedTemplateName} onValueChange={setSelectedTemplateName}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Escolha um template aprovado..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.name}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSendBulk}
+              disabled={!selectedTemplateName || isSendingBulk}
+            >
+              {isSendingBulk ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Enviar
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Single Send Dialog */}
+      <Dialog open={showSingleDialog} onOpenChange={setShowSingleDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enviar Template Individual</DialogTitle>
+            <DialogDescription>
+              Enviar template para {singleContact?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {singleContact && (
+              <div className="flex items-center gap-3 rounded-lg border p-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                  <span className="font-medium text-primary">
+                    {singleContact.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <p className="font-medium">{singleContact.name}</p>
+                  <p className="text-sm text-muted-foreground">{singleContact.phone}</p>
+                </div>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Selecione o Template</Label>
+              {templates.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum template aprovado disponível. Configure o WhatsApp primeiro.
+                </p>
+              ) : (
+                <Select value={selectedTemplateName} onValueChange={setSelectedTemplateName}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Escolha um template aprovado..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.name}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSingleDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSendSingle}
+              disabled={!selectedTemplateName || isSendingBulk}
+            >
+              {isSendingBulk ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Enviar Template
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

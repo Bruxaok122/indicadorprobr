@@ -44,17 +44,154 @@ function normalizePhone(phone: string): string {
 }
 
 /**
- * Verifica se uma string parece ser um número de telefone
+ * Extrai telefones de uma string (pode ter múltiplos separados por vírgula)
  */
-function isPhoneLine(line: string): boolean {
-  const digits = line.replace(/\D/g, "");
-  return digits.length >= 8 && digits.length <= 15;
+function extractPhones(text: string): string[] {
+  // Pattern para telefones brasileiros: (XX) XXXXX-XXXX ou variações
+  const phonePattern = /\(?\d{2}\)?\s*\d{4,5}[-.\s]?\d{4}/g;
+  const matches = text.match(phonePattern) || [];
+  
+  return matches
+    .map(phone => normalizePhone(phone))
+    .filter(phone => phone.length >= 12 && phone.length <= 13);
 }
 
 /**
- * Faz o parse de um bloco individual da lista jurídica
+ * Verifica se uma linha é uma mensagem a ser ignorada
+ * (começa com "Bom dia", "Boa tarde", etc. ou parece mensagem pronta)
  */
-function parseBlock(block: string): ParsedBlock | null {
+function isMessageLine(line: string): boolean {
+  const messagePatterns = [
+    /^[""]?Bom dia/i,
+    /^[""]?Boa tarde/i,
+    /^[""]?Boa noite/i,
+    /^Estou entrando em contato/i,
+    /colocar meu escritório/i,
+    /esclarecer dúvidas/i,
+    /próximos passos/i,
+    /^[""]?\(\d{7}/,  // Começa com número do processo entre parênteses
+  ];
+  
+  return messagePatterns.some(pattern => pattern.test(line.trim()));
+}
+
+/**
+ * Verifica se uma linha contém um número de processo
+ */
+function isProcessLine(line: string): boolean {
+  // Formato: 1234567-89.2024.8.26.0627
+  return /\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/.test(line);
+}
+
+/**
+ * Extrai o número do processo de uma linha
+ */
+function extractProcess(line: string): string | null {
+  const match = line.match(/(\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4})/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Faz o parse de um bloco individual da lista jurídica (novo formato)
+ */
+function parseBlockNewFormat(block: string): ParsedBlock | null {
+  const lines = block
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (lines.length < 3) {
+    return null;
+  }
+
+  let lawyer = "Não informado";
+  let process = "Não informado";
+  let clientName = "Cliente";
+  const phones: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Ignorar linhas de mensagem
+    if (isMessageLine(line)) {
+      continue;
+    }
+
+    // Extrair advogado
+    if (line.toUpperCase().startsWith("ADVOGADO:") || line.toUpperCase().startsWith("ADVOGADO ")) {
+      // Advogado pode estar na mesma linha após ":"
+      const afterColon = line.split(":").slice(1).join(":").trim();
+      if (afterColon) {
+        lawyer = afterColon;
+      }
+    } else if (line.includes("⚖️ Advogado")) {
+      // Formato com emoji
+      const afterColon = line.split(":").slice(1).join(":").trim();
+      if (afterColon) {
+        lawyer = afterColon;
+      }
+    }
+
+    // Extrair processo
+    if (line.toUpperCase().startsWith("PROCESSO:") || line.toUpperCase().startsWith("PROCESSO ")) {
+      const extracted = extractProcess(line);
+      if (extracted) {
+        process = extracted;
+      } else {
+        const afterColon = line.split(":").slice(1).join(":").trim();
+        if (afterColon && afterColon !== "(não disponíveis nesta etapa)") {
+          process = afterColon;
+        }
+      }
+    } else if (isProcessLine(line)) {
+      const extracted = extractProcess(line);
+      if (extracted) {
+        process = extracted;
+      }
+    }
+
+    // Extrair nome do cliente (linha com 👤 Nome:)
+    if (line.includes("👤 Nome:") || line.includes("👤Nome:")) {
+      const afterColon = line.split(":").slice(1).join(":").trim();
+      if (afterColon) {
+        clientName = afterColon;
+      }
+    }
+
+    // Extrair telefones (linha com 📞 Telefones:)
+    if (line.includes("📞 Telefones:") || line.includes("📞Telefones:")) {
+      const afterColon = line.split(":").slice(1).join(":").trim();
+      if (afterColon && !afterColon.includes("não disponíveis")) {
+        const extractedPhones = extractPhones(afterColon);
+        phones.push(...extractedPhones);
+      }
+    }
+    // Também tentar extrair telefones de linhas que parecem ter formato de telefone
+    else if (/\(\d{2}\)\s*\d{4,5}[-.\s]?\d{4}/.test(line) && !line.includes("não disponíveis")) {
+      const extractedPhones = extractPhones(line);
+      phones.push(...extractedPhones);
+    }
+  }
+
+  // Remover duplicatas de telefones
+  const uniquePhones = [...new Set(phones)];
+
+  if (uniquePhones.length === 0) {
+    return null;
+  }
+
+  return {
+    lawyer,
+    process,
+    clientName,
+    phones: uniquePhones,
+  };
+}
+
+/**
+ * Faz o parse de um bloco individual da lista jurídica (formato antigo)
+ */
+function parseBlockOldFormat(block: string): ParsedBlock | null {
   const lines = block
     .split("\n")
     .map((line) => line.trim())
@@ -64,26 +201,24 @@ function parseBlock(block: string): ParsedBlock | null {
     return null;
   }
 
-  // Primeira linha: ADVOGADO (label)
-  // Segunda linha: nome do advogado
-  // Terceira linha: PROCESSO (label)
-  // Quarta linha: número do processo
-  // Quinta linha: nome do cliente
-  // Linhas seguintes: telefones
-
   let lawyerIndex = lines.findIndex((line) => line.toUpperCase().includes("ADVOGADO"));
   let processIndex = lines.findIndex((line) => line.toUpperCase().includes("PROCESSO"));
 
-  // Se não encontrou os labels, tenta inferir a estrutura
   if (lawyerIndex === -1 || processIndex === -1) {
-    // Estrutura alternativa: assume que a primeira linha é advogado, segunda é processo
     if (lines.length >= 4) {
-      return {
-        lawyer: lines[0] || "Não informado",
-        process: lines[1] || "Não informado",
-        clientName: lines[2] || "Cliente",
-        phones: lines.slice(3).filter(isPhoneLine).map(normalizePhone),
-      };
+      const phonesFromBlock = lines.slice(3).filter(line => {
+        const digits = line.replace(/\D/g, "");
+        return digits.length >= 8 && digits.length <= 15;
+      }).map(normalizePhone);
+      
+      if (phonesFromBlock.length > 0) {
+        return {
+          lawyer: lines[0] || "Não informado",
+          process: lines[1] || "Não informado",
+          clientName: lines[2] || "Cliente",
+          phones: phonesFromBlock,
+        };
+      }
     }
     return null;
   }
@@ -91,14 +226,15 @@ function parseBlock(block: string): ParsedBlock | null {
   const lawyer = lines[lawyerIndex + 1] || "Não informado";
   const process = lines[processIndex + 1] || "Não informado";
 
-  // Nome do cliente vem após o processo
   const clientNameIndex = processIndex + 2;
   const clientName = lines[clientNameIndex] || "Cliente";
 
-  // Telefones são as linhas restantes que parecem números
   const phones = lines
     .slice(clientNameIndex + 1)
-    .filter(isPhoneLine)
+    .filter(line => {
+      const digits = line.replace(/\D/g, "");
+      return digits.length >= 8 && digits.length <= 15;
+    })
     .map(normalizePhone);
 
   if (phones.length === 0) {
@@ -114,16 +250,21 @@ function parseBlock(block: string): ParsedBlock | null {
 }
 
 /**
+ * Detecta qual formato usar e faz parse do bloco
+ */
+function parseBlock(block: string): ParsedBlock | null {
+  // Detectar novo formato (contém emojis ou "👤 Nome:")
+  const isNewFormat = block.includes("👤") || block.includes("📞") || block.includes("⚖️");
+  
+  if (isNewFormat) {
+    return parseBlockNewFormat(block);
+  }
+  
+  return parseBlockOldFormat(block);
+}
+
+/**
  * Faz o parse completo da lista jurídica
- * Formato esperado:
- * ================================================================================
- * ADVOGADO
- * Nome do Advogado
- * PROCESSO
- * Número do Processo
- * Nome do Cliente
- * (11) 99999-9999
- * ================================================================================
  */
 export function parseJuridicalList(rawText: string): {
   contacts: ParsedContact[];
@@ -138,7 +279,6 @@ export function parseJuridicalList(rawText: string): {
   const rawBlocks = rawText.split(SEPARATOR).filter((block) => block.trim().length > 0);
 
   if (rawBlocks.length === 0) {
-    // Tenta parsear sem separador (formato simples)
     const parsed = parseBlock(rawText);
     if (parsed && parsed.phones.length > 0) {
       blocks.push(parsed);
@@ -160,7 +300,10 @@ export function parseJuridicalList(rawText: string): {
     const parsed = parseBlock(rawBlock);
 
     if (!parsed) {
-      errors.push(`Bloco ${index + 1}: Formato inválido ou incompleto`);
+      // Só adiciona erro se o bloco não for uma mensagem ignorada
+      if (!isMessageLine(rawBlock.trim().split('\n')[0] || '')) {
+        errors.push(`Bloco ${index + 1}: Formato inválido ou incompleto`);
+      }
       return;
     }
 
