@@ -3,26 +3,35 @@ import { supabase } from "@/integrations/supabase/client";
 import { Contact, ParsedContact } from "@/types/juriszap";
 import { toast } from "sonner";
 import { useEffect } from "react";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 export function useContacts() {
   const queryClient = useQueryClient();
+  const { isAdmin } = useAuthContext();
 
   const { data: contacts = [], isLoading } = useQuery({
-    queryKey: ["contacts"],
+    queryKey: ["contacts", isAdmin],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      const { data, error } = await supabase
+      // Admins see all contacts, regular users see only their own
+      let query = supabase
         .from("contacts")
-        .select("*")
-        .eq("user_id", user.id)
+        .select("*");
+      
+      if (!isAdmin) {
+        query = query.eq("user_id", user.id);
+      }
+      
+      const { data, error } = await query
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as Contact[];
     },
+    enabled: isAdmin !== undefined,
   });
 
   // Realtime subscription

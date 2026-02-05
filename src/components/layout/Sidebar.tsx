@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "@/contexts/AuthContext";
+import logoJuriszap from "@/assets/logo-juriszap.png";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -10,7 +11,6 @@ import {
   Settings,
   Upload,
   Webhook,
-  Scale,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -89,13 +89,9 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-3">
         <div className={cn("flex items-center gap-2", isCollapsed && "hidden")}>
-          <Scale className="h-8 w-8 text-accent" />
-          <div>
-            <h1 className="text-xl font-bold">JurisZap</h1>
-            <p className="text-xs text-primary-foreground/70">Sistema Jurídico</p>
-          </div>
+          <img src={logoJuriszap} alt="JurisZap" className="h-10 w-auto" />
         </div>
-        {isCollapsed && <Scale className="h-6 w-6 text-accent mx-auto" />}
+        {isCollapsed && <img src={logoJuriszap} alt="JurisZap" className="h-8 w-auto mx-auto" />}
         <Button
           variant="ghost"
           size="icon"
