@@ -7,9 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { AlertBanner } from "@/components/ui/alert-banner";
-import { Lock, Mail, Eye, EyeOff } from "lucide-react";
+import { Lock, Mail, Eye, EyeOff, Scale } from "lucide-react";
 import { toast } from "sonner";
-import logoJuriszap from "@/assets/logo-juriszap.png";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -55,8 +54,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="flex flex-col items-center text-center">
-          <img src={logoJuriszap} alt="JurisZap" className="h-24 w-auto" />
-          <p className="mt-4 text-muted-foreground">Sistema de Comunicação Jurídica</p>
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary shadow-lg">
+            <Scale className="h-10 w-10 text-primary-foreground" />
+          </div>
+          <h1 className="mt-6 text-3xl font-bold text-foreground">JurisZap</h1>
+          <p className="mt-2 text-muted-foreground">Sistema de Comunicação Jurídica</p>
         </div>
 
         {/* Login Card */}
