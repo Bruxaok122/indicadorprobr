@@ -12,6 +12,9 @@ export function useMessages(contactId: string | null) {
     queryFn: async () => {
       if (!contactId) return [];
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
       const { data, error } = await supabase
         .from("messages")
         .select("*")
@@ -23,6 +26,10 @@ export function useMessages(contactId: string | null) {
     },
     enabled: !!contactId,
   });
+
+  // Check if conversation has any messages (to enforce template-first rule)
+  const hasMessages = messages.length > 0;
+  const canSendFreeText = messages.some(m => m.direction === "incoming");
 
   // Realtime subscription
   useEffect(() => {
@@ -65,7 +72,6 @@ export function useMessages(contactId: string | null) {
       return data;
     },
     onSuccess: () => {
-      toast.success("Mensagem enviada!");
       queryClient.invalidateQueries({ queryKey: ["messages", contactId] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
     },
@@ -92,7 +98,6 @@ export function useMessages(contactId: string | null) {
       return data;
     },
     onSuccess: () => {
-      toast.success("Documento enviado!");
       queryClient.invalidateQueries({ queryKey: ["messages", contactId] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
     },
@@ -106,6 +111,8 @@ export function useMessages(contactId: string | null) {
   return {
     messages,
     isLoading,
+    hasMessages,
+    canSendFreeText,
     sendMessage: sendMessageMutation.mutate,
     isSending: sendMessageMutation.isPending,
     sendDocument: sendDocumentMutation.mutate,

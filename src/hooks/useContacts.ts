@@ -10,9 +10,13 @@ export function useContacts() {
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ["contacts"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
       const { data, error } = await supabase
         .from("contacts")
         .select("*")
+        .eq("user_id", user.id)
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
 
@@ -41,6 +45,9 @@ export function useContacts() {
 
   const addContactMutation = useMutation({
     mutationFn: async (contact: Omit<ParsedContact, 'phone'> & { phone: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
       const { data, error } = await supabase
         .from("contacts")
         .insert({
@@ -49,6 +56,7 @@ export function useContacts() {
           lawyer_name: contact.lawyer_name,
           process_number: contact.process_number,
           status: "novo",
+          user_id: user.id,
         })
         .select()
         .single();
@@ -69,6 +77,9 @@ export function useContacts() {
 
   const importContactsMutation = useMutation({
     mutationFn: async (contacts: ParsedContact[]) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
       const results = { successful: 0, failed: 0 };
 
       for (const contact of contacts) {
@@ -78,6 +89,7 @@ export function useContacts() {
           lawyer_name: contact.lawyer_name,
           process_number: contact.process_number,
           status: "novo",
+          user_id: user.id,
         });
 
         if (error) {
@@ -93,6 +105,7 @@ export function useContacts() {
         total_contacts: contacts.length,
         successful: results.successful,
         failed: results.failed,
+        user_id: user.id,
       });
 
       return results;
@@ -105,6 +118,26 @@ export function useContacts() {
     },
     onError: (error: any) => {
       toast.error("Erro na importação", {
+        description: error.message,
+      });
+    },
+  });
+
+  const deleteContactsMutation = useMutation({
+    mutationFn: async (contactIds: string[]) => {
+      const { error } = await supabase
+        .from("contacts")
+        .delete()
+        .in("id", contactIds);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Contatos removidos com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao remover contatos", {
         description: error.message,
       });
     },
@@ -139,5 +172,7 @@ export function useContacts() {
     isImporting: importContactsMutation.isPending,
     deleteContact: deleteContactMutation.mutate,
     isDeleting: deleteContactMutation.isPending,
+    deleteContacts: deleteContactsMutation.mutate,
+    isDeletingContacts: deleteContactsMutation.isPending,
   };
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,7 @@ import {
   Scale,
   Plus,
   UserPlus,
+  File,
 } from "lucide-react";
 import {
   Dialog,
@@ -44,15 +46,18 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 export default function ImportarPage() {
   const { importContacts, isImporting, addContact, isAddingContact } = useContacts();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Import state
   const [rawText, setRawText] = useState("");
   const [parsedContacts, setParsedContacts] = useState<ParsedContact[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [isLoadingFile, setIsLoadingFile] = useState(false);
 
   // Single contact state
   const [singleName, setSingleName] = useState("");
@@ -78,6 +83,42 @@ export default function ImportarPage() {
         setShowPreview(false);
       },
     });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith(".txt")) {
+      toast.error("Apenas arquivos .txt são permitidos");
+      return;
+    }
+
+    setIsLoadingFile(true);
+    try {
+      const text = await file.text();
+      setRawText(text);
+      
+      // Auto-parse after loading
+      const { contacts, errors } = parseJuridicalList(text);
+      setParsedContacts(contacts);
+      setParseErrors(errors);
+      
+      if (contacts.length > 0) {
+        setShowPreview(true);
+        toast.success(`Arquivo carregado: ${contacts.length} contato(s) encontrado(s)`);
+      } else {
+        toast.warning("Nenhum contato encontrado no arquivo");
+      }
+    } catch (err) {
+      toast.error("Erro ao ler o arquivo");
+      console.error(err);
+    } finally {
+      setIsLoadingFile(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const handleAddSingle = () => {
@@ -173,6 +214,46 @@ Requerido (Polo Passivo):
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    {/* File Upload */}
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        accept=".txt"
+                        className="hidden"
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isLoadingFile}
+                        className="w-full"
+                      >
+                        {isLoadingFile ? (
+                          <>
+                            <LoadingSpinner size="sm" />
+                            Carregando...
+                          </>
+                        ) : (
+                          <>
+                            <File className="mr-2 h-4 w-4" />
+                            Carregar Arquivo .txt
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">
+                          ou cole o texto
+                        </span>
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="rawText">Lista de Contatos</Label>
                       <Textarea

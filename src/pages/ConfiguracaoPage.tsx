@@ -8,20 +8,25 @@ import { Label } from "@/components/ui/label";
 import { useWhatsAppConfig } from "@/hooks/useWhatsAppConfig";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { AlertBanner } from "@/components/ui/alert-banner";
-import { Eye, EyeOff, CheckCircle, AlertCircle, HelpCircle, ExternalLink } from "lucide-react";
+import { Eye, EyeOff, CheckCircle, AlertCircle, HelpCircle, ExternalLink, ShieldCheck } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 export default function ConfiguracaoPage() {
   const { config, isLoading, isConfigured, validate, isValidating } = useWhatsAppConfig();
+  const { profile, isAdmin } = useAuthContext();
 
   const [accessToken, setAccessToken] = useState("");
   const [wabaId, setWabaId] = useState("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [showToken, setShowToken] = useState(false);
+
+  // Check if user can use shared API
+  const canUseSharedApi = profile?.can_use_shared_api || isAdmin;
 
   const handleValidate = () => {
     if (!accessToken || !wabaId || !phoneNumberId) {
@@ -52,32 +57,51 @@ export default function ConfiguracaoPage() {
 
         <div className="flex-1 overflow-auto p-6">
           <div className="mx-auto max-w-2xl space-y-6">
-            {/* Status Banner */}
-            {isConfigured ? (
-              <AlertBanner type="success" title="Conexão Ativa">
-                Sua conta do WhatsApp Business está conectada e funcionando corretamente.
-              </AlertBanner>
-            ) : (
-              <AlertBanner type="warning" title="Configuração Necessária">
-                Configure sua API do WhatsApp para começar a enviar mensagens.
+            {/* Shared API Status */}
+            {canUseSharedApi && (
+              <AlertBanner type="info" title="API Compartilhada">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>API já integrada pelo administrador. Você pode enviar mensagens sem configuração adicional.</span>
+                </div>
               </AlertBanner>
             )}
 
+            {/* Status Banner */}
+            {isConfigured && !canUseSharedApi ? (
+              <AlertBanner type="success" title="Conexão Ativa">
+                Sua conta do WhatsApp Business está conectada e funcionando corretamente.
+              </AlertBanner>
+            ) : !canUseSharedApi ? (
+              <AlertBanner type="warning" title="Configuração Necessária">
+                Configure sua API do WhatsApp para começar a enviar mensagens.
+              </AlertBanner>
+            ) : null}
+
             {/* Configuration Card */}
-            <Card>
+            <Card className={canUseSharedApi && !isAdmin ? "opacity-50" : ""}>
               <CardHeader>
-                <CardTitle>Credenciais da API</CardTitle>
+                <CardTitle>
+                  {canUseSharedApi && !isAdmin ? "Sua API Própria (opcional)" : "Credenciais da API"}
+                </CardTitle>
                 <CardDescription>
-                  Obtenha estas informações no{" "}
-                  <a
-                    href="https://developers.facebook.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary underline hover:no-underline"
-                  >
-                    Meta Developers
-                    <ExternalLink className="ml-1 inline h-3 w-3" />
-                  </a>
+                  {canUseSharedApi && !isAdmin
+                    ? "Você já tem acesso à API compartilhada. Configure sua própria apenas se desejar."
+                    : (
+                      <>
+                        Obtenha estas informações no{" "}
+                        <a
+                          href="https://developers.facebook.com/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline hover:no-underline"
+                        >
+                          Meta Developers
+                          <ExternalLink className="ml-1 inline h-3 w-3" />
+                        </a>
+                      </>
+                    )
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
