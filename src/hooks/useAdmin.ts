@@ -137,6 +137,41 @@ export function useAdmin() {
     },
   });
 
+  // Clear temp ban mutation
+  const clearTempBanMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ 
+          temp_banned_until: null,
+          ban_reason: null,
+          failed_device_attempts: 0,
+          last_failed_attempt_at: null,
+        })
+        .eq("user_id", userId);
+
+      if (error) throw error;
+      
+      // Also clear all failed attempts via RPC
+      await supabase.rpc("clear_failed_attempts", { _user_id: userId });
+      
+      // Deactivate all device sessions to allow fresh login
+      await supabase
+        .from("device_sessions")
+        .update({ is_active: false })
+        .eq("user_id", userId);
+    },
+    onSuccess: () => {
+      toast.success("Bloqueio temporário removido! Sessões de dispositivo foram resetadas.");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao remover bloqueio", {
+        description: error.message,
+      });
+    },
+  });
+
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -173,5 +208,7 @@ export function useAdmin() {
     isTogglingApiPermission: toggleApiPermissionMutation.isPending,
     deleteUser: deleteUserMutation.mutate,
     isDeletingUser: deleteUserMutation.isPending,
+    clearTempBan: clearTempBanMutation.mutate,
+    isClearingTempBan: clearTempBanMutation.isPending,
   };
 }

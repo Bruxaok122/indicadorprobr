@@ -104,37 +104,96 @@ export function useAuth() {
 
       // If user has another active device, record failed attempt and deny access
       if (existingSessions && existingSessions.length > 0) {
-        // Record the failed attempt and check if should be banned
-        const { data: banResult } = await supabase.rpc("record_failed_device_attempt", { 
-          _user_id: userId 
-        });
+        // Get current failed attempts count
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("failed_device_attempts")
+          .eq("user_id", userId)
+          .single();
         
-        const banData = banResult as { attempts?: number; is_banned?: boolean; ban_duration_hours?: number } | null;
-        const attempts = banData?.attempts || 1;
-        const isBanned = banData?.is_banned || false;
-        const banHours = banData?.ban_duration_hours || 0;
+        const currentAttempts = profile?.failed_device_attempts || 0;
         
-        if (isBanned) {
-          toast.error("Conta temporariamente bloqueada", {
-            description: `Múltiplas tentativas de acesso detectadas. Bloqueio de ${banHours} hora(s).`,
-            duration: 10000,
+        // First attempt: warn and allow device change
+        if (currentAttempts === 0) {
+          // Deactivate all existing sessions to allow new device
+          await supabase
+            .from("device_sessions")
+            .update({ is_active: false })
+            .eq("user_id", userId);
+          
+          // Increment failed attempts as a warning
+          await supabase
+            .from("profiles")
+            .update({ 
+              failed_device_attempts: 1,
+              last_failed_attempt_at: new Date().toISOString()
+            })
+            .eq("user_id", userId);
+          
+          // Register this as the new device
+          await supabase.from("device_sessions").insert({
+            user_id: userId,
+            device_fingerprint: fingerprint,
+            device_info: deviceInfo,
+            is_active: true,
           });
-        } else {
-          toast.error("Conta já conectada em outro dispositivo", {
-            description: `Por segurança, apenas um dispositivo pode estar conectado por vez. Tentativa ${attempts}/3 antes do bloqueio temporário.`,
+          
+          // Log successful attempt after device change
+          await supabase.from("login_attempts").insert({
+            user_id: userId,
+            device_fingerprint: fingerprint,
+            success: true,
+          });
+          
+          // Update profile with new device info
+          await supabase
+            .from("profiles")
+            .update({
+              device_fingerprint: fingerprint,
+              last_device_info: deviceInfo,
+              last_login_at: new Date().toISOString(),
+            })
+            .eq("user_id", userId);
+          
+          toast.warning("Dispositivo alterado", {
+            description: "Você estava conectado em outro dispositivo. Este agora é seu dispositivo ativo. Mais trocas podem resultar em bloqueio temporário.",
             duration: 8000,
           });
+          
+          return true;
+        } else {
+          // Already had a warning, now apply ban logic
+          const { data: banResult } = await supabase.rpc("record_failed_device_attempt", { 
+            _user_id: userId 
+          });
+          
+          const banData = banResult as { attempts?: number; is_banned?: boolean; ban_duration_hours?: number } | null;
+          const attempts = banData?.attempts || currentAttempts + 1;
+          const isBanned = banData?.is_banned || false;
+          const banHours = banData?.ban_duration_hours || 0;
+          
+          if (isBanned) {
+            toast.error("Conta temporariamente bloqueada", {
+              description: `Múltiplas tentativas de acesso detectadas. Bloqueio de ${banHours} hora(s).`,
+              duration: 10000,
+            });
+          } else {
+            toast.error("Limite de trocas de dispositivo excedido", {
+              description: `Por segurança, não é possível trocar de dispositivo novamente. Tentativa ${attempts}/3 antes do bloqueio temporário.`,
+              duration: 8000,
+            });
+          }
+          
+          // Log the failed attempt
+          await supabase.from("login_attempts").insert({
+            user_id: userId,
+            device_fingerprint: fingerprint,
+            success: false,
+          });
+          
+          await supabase.auth.signOut();
+          return false;
         }
-        
-        // Log the attempt
-        await supabase.from("login_attempts").insert({
-          user_id: userId,
-          device_fingerprint: fingerprint,
-          success: false,
-        });
-        
-        await supabase.auth.signOut();
-        return false;
       }
 
       // Register this device as the only active one
