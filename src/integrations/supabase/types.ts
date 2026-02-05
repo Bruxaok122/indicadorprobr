@@ -151,6 +151,33 @@ export type Database = {
         }
         Relationships: []
       }
+      login_attempts: {
+        Row: {
+          created_at: string
+          device_fingerprint: string
+          id: string
+          ip_address: string | null
+          success: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_fingerprint: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_fingerprint?: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_templates: {
         Row: {
           category: string | null
@@ -249,46 +276,58 @@ export type Database = {
       }
       profiles: {
         Row: {
+          ban_reason: string | null
           can_use_shared_api: boolean | null
           created_at: string
           device_fingerprint: string | null
           email: string
+          failed_device_attempts: number | null
           full_name: string
           id: string
           is_blocked: boolean | null
           last_device_info: Json | null
+          last_failed_attempt_at: string | null
           last_login_at: string | null
           messages_sent: number | null
+          temp_banned_until: string | null
           templates_sent: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          ban_reason?: string | null
           can_use_shared_api?: boolean | null
           created_at?: string
           device_fingerprint?: string | null
           email: string
+          failed_device_attempts?: number | null
           full_name: string
           id?: string
           is_blocked?: boolean | null
           last_device_info?: Json | null
+          last_failed_attempt_at?: string | null
           last_login_at?: string | null
           messages_sent?: number | null
+          temp_banned_until?: string | null
           templates_sent?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          ban_reason?: string | null
           can_use_shared_api?: boolean | null
           created_at?: string
           device_fingerprint?: string | null
           email?: string
+          failed_device_attempts?: number | null
           full_name?: string
           id?: string
           is_blocked?: boolean | null
           last_device_info?: Json | null
+          last_failed_attempt_at?: string | null
           last_login_at?: string | null
           messages_sent?: number | null
+          temp_banned_until?: string | null
           templates_sent?: number | null
           updated_at?: string
           user_id?: string
@@ -384,6 +423,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      clear_failed_attempts: { Args: { _user_id: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -392,7 +432,12 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_temp_banned: { Args: { _user_id: string }; Returns: boolean }
       is_user_blocked: { Args: { _user_id: string }; Returns: boolean }
+      record_failed_device_attempt: {
+        Args: { _user_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "user"
