@@ -15,12 +15,12 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Search,
   Send,
   Paperclip,
   Phone,
-  User,
   FileText,
   MessageSquare,
   Clock,
@@ -28,8 +28,8 @@ import {
   Check,
   X,
   Upload,
-  Image as ImageIcon,
   FileImage,
+  ArrowLeft,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -59,11 +59,13 @@ export default function ConversasPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { contacts, isLoading: contactsLoading } = useContacts();
   const { templates } = useMetaTemplates();
+  const isMobile = useIsMobile();
 
   const [search, setSearch] = useState("");
   const [selectedContactId, setSelectedContactId] = useState<string | null>(
     searchParams.get("contact")
   );
+  const [mobileShowChat, setMobileShowChat] = useState(!!searchParams.get("contact"));
   const [messageText, setMessageText] = useState("");
   const [showDocDialog, setShowDocDialog] = useState(false);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
@@ -80,6 +82,19 @@ export default function ConversasPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
+
+  // Mobile: handle contact selection
+  const handleSelectContact = (contactId: string) => {
+    setSelectedContactId(contactId);
+    if (isMobile) {
+      setMobileShowChat(true);
+    }
+  };
+
+  // Mobile: go back to contact list
+  const handleBackToList = () => {
+    setMobileShowChat(false);
+  };
 
   const filteredContacts = contacts.filter((contact) => {
     const searchLower = search.toLowerCase();
@@ -252,9 +267,14 @@ export default function ConversasPage() {
 
   return (
     <AppLayout>
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex h-screen overflow-hidden relative">
         {/* Contacts Sidebar */}
-        <div className="flex w-80 flex-col border-r bg-card">
+        <div className={cn(
+          "flex flex-col border-r bg-card",
+          isMobile 
+            ? cn("absolute inset-0 z-10 transition-transform duration-300", mobileShowChat && "-translate-x-full")
+            : "w-80"
+        )}>
           <div className="border-b p-4">
             <h2 className="mb-3 text-lg font-semibold">Conversas</h2>
             <div className="relative">
@@ -283,7 +303,7 @@ export default function ConversasPage() {
                 {filteredContacts.map((contact) => (
                   <button
                     key={contact.id}
-                    onClick={() => setSelectedContactId(contact.id)}
+                    onClick={() => handleSelectContact(contact.id)}
                     className={cn(
                       "flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors",
                       selectedContactId === contact.id
@@ -313,23 +333,36 @@ export default function ConversasPage() {
         </div>
 
         {/* Chat Area */}
-        <div className="flex flex-1 flex-col">
+        <div className={cn(
+          "flex flex-1 flex-col",
+          isMobile && cn("absolute inset-0 z-10 transition-transform duration-300 bg-background", !mobileShowChat && "translate-x-full")
+        )}>
           {selectedContact ? (
             <>
               {/* Chat Header */}
-              <div className="flex items-center justify-between border-b bg-card px-6 py-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-lg font-medium text-primary-foreground">
+              <div className="flex items-center justify-between border-b bg-card px-4 md:px-6 py-3 md:py-4">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {isMobile && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleBackToList}
+                      className="shrink-0 -ml-2"
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                  )}
+                  <div className="flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-full bg-primary text-base md:text-lg font-medium text-primary-foreground">
                     {selectedContact.name.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <h3 className="font-semibold">{selectedContact.name}</h3>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold truncate">{selectedContact.name}</h3>
+                    <div className="flex items-center gap-2 md:gap-3 text-xs md:text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Phone className="h-3 w-3" />
                         {selectedContact.phone}
                       </span>
-                      {selectedContact.process_number && (
+                      {selectedContact.process_number && !isMobile && (
                         <span className="flex items-center gap-1">
                           <FileText className="h-3 w-3" />
                           {selectedContact.process_number}
@@ -409,7 +442,7 @@ export default function ConversasPage() {
               </ScrollArea>
 
               {/* Message Input */}
-              <div className="border-t bg-card p-4">
+              <div className={cn("border-t bg-card p-3 md:p-4", isMobile && "pb-6")}>
                 {!canSendFreeText && hasMessages && (
                   <div className="mb-3 flex items-center justify-between rounded-lg bg-warning/10 px-3 py-2">
                     <p className="text-sm text-warning">
@@ -425,7 +458,7 @@ export default function ConversasPage() {
                     </Button>
                   </div>
                 )}
-                <div className="flex items-end gap-2">
+                <div className={cn("flex items-end gap-2", isMobile && "gap-1")}>
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -433,32 +466,45 @@ export default function ConversasPage() {
                     accept=".pdf,application/pdf,image/*"
                     className="hidden"
                   />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
+                  {isMobile ? (
+                    <>
+                      <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} className="shrink-0">
                         <Paperclip className="h-4 w-4" />
                       </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Enviar arquivo</TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setShowTemplateDialog(true)}
-                        disabled={templates.length === 0}
-                      >
+                      <Button variant="outline" size="icon" onClick={() => setShowTemplateDialog(true)} disabled={templates.length === 0} className="shrink-0">
                         <FileText className="h-4 w-4" />
                       </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Enviar template</TooltipContent>
-                  </Tooltip>
+                    </>
+                  ) : (
+                    <>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            <Paperclip className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Enviar arquivo</TooltipContent>
+                      </Tooltip>
+                      
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setShowTemplateDialog(true)}
+                            disabled={templates.length === 0}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Enviar template</TooltipContent>
+                      </Tooltip>
+                    </>
+                  )}
 
                   <Textarea
                     placeholder="Digite sua mensagem..."
@@ -482,16 +528,21 @@ export default function ConversasPage() {
                     )}
                   </Button>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {canSendFreeText 
-                    ? "Pressione Enter para enviar. Shift + Enter para nova linha."
-                    : "Use um template para iniciar a conversa (política Meta)."
-                  }
-                </p>
+                {!isMobile && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {canSendFreeText 
+                      ? "Pressione Enter para enviar. Shift + Enter para nova linha."
+                      : "Use um template para iniciar a conversa (política Meta)."
+                    }
+                  </p>
+                )}
               </div>
             </>
           ) : (
-            <div className="flex flex-1 flex-col items-center justify-center bg-muted/30">
+            <div className={cn(
+              "flex flex-1 flex-col items-center justify-center bg-muted/30",
+              isMobile && "hidden"
+            )}>
               <MessageSquare className="mb-4 h-16 w-16 text-muted-foreground/50" />
               <h3 className="text-xl font-medium text-muted-foreground">
                 Selecione uma conversa
