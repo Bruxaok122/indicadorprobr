@@ -71,12 +71,28 @@ serve(async (req) => {
 
                 console.log(`Processing message from ${phone}: ${message.type}`);
 
-                // Find or create contact
+                // Find existing contact by phone (prioritize ones with user_id set)
                 let { data: existingContact } = await supabase
                   .from("contacts")
                   .select("*")
                   .eq("phone", phone)
+                  .not("user_id", "is", null)
+                  .order("created_at", { ascending: true })
+                  .limit(1)
                   .single();
+
+                // If no contact with user_id, check for any contact with this phone
+                if (!existingContact) {
+                  const { data: anyContact } = await supabase
+                    .from("contacts")
+                    .select("*")
+                    .eq("phone", phone)
+                    .order("created_at", { ascending: true })
+                    .limit(1)
+                    .single();
+                  
+                  existingContact = anyContact;
+                }
 
                 let contactId: string;
 
@@ -98,8 +114,10 @@ serve(async (req) => {
                     continue;
                   }
                   contactId = newContact.id;
+                  console.log(`Created new contact: ${contactId}`);
                 } else {
                   contactId = existingContact.id;
+                  console.log(`Using existing contact: ${contactId} (user_id: ${existingContact.user_id})`);
                   // Update contact status and last message
                   await supabase
                     .from("contacts")
@@ -110,21 +128,24 @@ serve(async (req) => {
                     .eq("id", contactId);
                 }
 
-                // Find or create conversation
+                // Find or create conversation for this specific contact
                 let { data: conversation } = await supabase
                   .from("conversations")
                   .select("*")
                   .eq("contact_id", contactId)
-                  .eq("is_active", true)
+                  .order("created_at", { ascending: false })
+                  .limit(1)
                   .single();
 
                 let conversationId: string;
 
-                if (!conversation) {
+                if (!conversation || !conversation.is_active) {
+                  // Create new conversation if none exists or the existing one is inactive
                   const { data: newConversation, error: convError } = await supabase
                     .from("conversations")
                     .insert({
                       contact_id: contactId,
+                      user_id: existingContact?.user_id || null,
                       is_active: true,
                       window_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
                     })

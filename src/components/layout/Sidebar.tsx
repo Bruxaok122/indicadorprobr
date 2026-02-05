@@ -88,10 +88,11 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-3">
-        <div className={cn("flex items-center gap-2", isCollapsed && "hidden")}>
-          <img src={logoJuriszap} alt="JurisZap" className="h-10 w-auto" />
+        <div className={cn("flex items-center gap-3", isCollapsed && "hidden")}>
+          <img src={logoJuriszap} alt="JurisZap" className="h-12 w-auto" />
+          <span className="font-bold text-lg">JurisZap</span>
         </div>
-        {isCollapsed && <img src={logoJuriszap} alt="JurisZap" className="h-8 w-auto mx-auto" />}
+        {isCollapsed && <img src={logoJuriszap} alt="JurisZap" className="h-10 w-auto mx-auto" />}
         <Button
           variant="ghost"
           size="icon"
