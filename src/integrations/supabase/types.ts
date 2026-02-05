@@ -25,6 +25,7 @@ export type Database = {
           process_number: string | null
           status: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -36,6 +37,7 @@ export type Database = {
           process_number?: string | null
           status?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -47,6 +49,7 @@ export type Database = {
           process_number?: string | null
           status?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -57,6 +60,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           updated_at: string
+          user_id: string | null
           window_expires_at: string | null
         }
         Insert: {
@@ -65,6 +69,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           updated_at?: string
+          user_id?: string | null
           window_expires_at?: string | null
         }
         Update: {
@@ -73,6 +78,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           updated_at?: string
+          user_id?: string | null
           window_expires_at?: string | null
         }
         Relationships: [
@@ -85,6 +91,36 @@ export type Database = {
           },
         ]
       }
+      device_sessions: {
+        Row: {
+          created_at: string
+          device_fingerprint: string
+          device_info: Json | null
+          id: string
+          is_active: boolean | null
+          last_seen_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_fingerprint: string
+          device_info?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_seen_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_fingerprint?: string
+          device_info?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_seen_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       import_logs: {
         Row: {
           created_at: string
@@ -93,6 +129,7 @@ export type Database = {
           raw_data: string | null
           successful: number | null
           total_contacts: number | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -101,6 +138,7 @@ export type Database = {
           raw_data?: string | null
           successful?: number | null
           total_contacts?: number | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -109,6 +147,7 @@ export type Database = {
           raw_data?: string | null
           successful?: number | null
           total_contacts?: number | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -152,9 +191,11 @@ export type Database = {
           document_name: string | null
           document_url: string | null
           id: string
+          image_url: string | null
           message_type: string
           status: string | null
           template_name: string | null
+          user_id: string | null
           whatsapp_message_id: string | null
         }
         Insert: {
@@ -166,9 +207,11 @@ export type Database = {
           document_name?: string | null
           document_url?: string | null
           id?: string
+          image_url?: string | null
           message_type?: string
           status?: string | null
           template_name?: string | null
+          user_id?: string | null
           whatsapp_message_id?: string | null
         }
         Update: {
@@ -180,9 +223,11 @@ export type Database = {
           document_name?: string | null
           document_url?: string | null
           id?: string
+          image_url?: string | null
           message_type?: string
           status?: string | null
           template_name?: string | null
+          user_id?: string | null
           whatsapp_message_id?: string | null
         }
         Relationships: [
@@ -201,6 +246,108 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      profiles: {
+        Row: {
+          can_use_shared_api: boolean | null
+          created_at: string
+          device_fingerprint: string | null
+          email: string
+          full_name: string
+          id: string
+          is_blocked: boolean | null
+          last_device_info: Json | null
+          last_login_at: string | null
+          messages_sent: number | null
+          templates_sent: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_use_shared_api?: boolean | null
+          created_at?: string
+          device_fingerprint?: string | null
+          email: string
+          full_name: string
+          id?: string
+          is_blocked?: boolean | null
+          last_device_info?: Json | null
+          last_login_at?: string | null
+          messages_sent?: number | null
+          templates_sent?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_use_shared_api?: boolean | null
+          created_at?: string
+          device_fingerprint?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          is_blocked?: boolean | null
+          last_device_info?: Json | null
+          last_login_at?: string | null
+          messages_sent?: number | null
+          templates_sent?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_whatsapp_config: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          id: string
+          is_validated: boolean | null
+          phone_number_id: string | null
+          updated_at: string
+          user_id: string
+          waba_id: string | null
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          id?: string
+          is_validated?: boolean | null
+          phone_number_id?: string | null
+          updated_at?: string
+          user_id: string
+          waba_id?: string | null
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          id?: string
+          is_validated?: boolean | null
+          phone_number_id?: string | null
+          updated_at?: string
+          user_id?: string
+          waba_id?: string | null
+        }
+        Relationships: []
       }
       whatsapp_config: {
         Row: {
@@ -237,10 +384,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_user_blocked: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -367,6 +522,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
