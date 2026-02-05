@@ -3,18 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Message } from "@/types/juriszap";
 import { toast } from "sonner";
 import { useEffect } from "react";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 export function useMessages(contactId: string | null) {
   const queryClient = useQueryClient();
+  const { isAdmin } = useAuthContext();
 
   const { data: messages = [], isLoading } = useQuery({
-    queryKey: ["messages", contactId],
+    queryKey: ["messages", contactId, isAdmin],
     queryFn: async () => {
       if (!contactId) return [];
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
+      // Just fetch messages for the contact - RLS handles permissions
       const { data, error } = await supabase
         .from("messages")
         .select("*")
@@ -24,7 +24,7 @@ export function useMessages(contactId: string | null) {
       if (error) throw error;
       return data as Message[];
     },
-    enabled: !!contactId,
+    enabled: !!contactId && isAdmin !== undefined,
   });
 
   // Check if conversation has any messages (to enforce template-first rule)
