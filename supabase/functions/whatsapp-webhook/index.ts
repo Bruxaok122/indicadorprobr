@@ -150,12 +150,68 @@ serve(async (req) => {
                 // Extract message content based on type
                 let content = "";
                 let messageType = "text";
+                let imageUrl: string | undefined;
 
                 if (message.type === "text") {
                   content = message.text?.body || "";
                 } else if (message.type === "image") {
-                  content = "[Imagem recebida]";
                   messageType = "image";
+                  content = message.image?.caption || "[Imagem recebida]";
+                  
+                  // Try to download the image
+                  try {
+                    // Get WhatsApp config for access token
+                    const { data: config } = await supabase
+                      .from("whatsapp_config")
+                      .select("access_token")
+                      .limit(1)
+                      .single();
+                    
+                    if (config?.access_token && message.image?.id) {
+                      // Get media URL from WhatsApp
+                      const mediaResponse = await fetch(
+                        `https://graph.facebook.com/v18.0/${message.image.id}`,
+                        {
+                          headers: {
+                            Authorization: `Bearer ${config.access_token}`,
+                          },
+                        }
+                      );
+                      
+                      if (mediaResponse.ok) {
+                        const mediaData = await mediaResponse.json();
+                        
+                        // Download the actual image
+                        const imageResponse = await fetch(mediaData.url, {
+                          headers: {
+                            Authorization: `Bearer ${config.access_token}`,
+                          },
+                        });
+                        
+                        if (imageResponse.ok) {
+                          const imageBlob = await imageResponse.blob();
+                          const fileName = `${Date.now()}-${message.image.id}.${mediaData.mime_type?.split('/')[1] || 'jpg'}`;
+                          
+                          // Upload to Supabase Storage
+                          const { data: uploadData, error: uploadError } = await supabase
+                            .storage
+                            .from("documents")
+                            .upload(`images/${fileName}`, imageBlob, {
+                              contentType: mediaData.mime_type || "image/jpeg",
+                            });
+                          
+                          if (!uploadError && uploadData) {
+                            const { data: urlData } = supabase.storage
+                              .from("documents")
+                              .getPublicUrl(`images/${fileName}`);
+                            imageUrl = urlData.publicUrl;
+                          }
+                        }
+                      }
+                    }
+                  } catch (imgError) {
+                    console.error("Error downloading image:", imgError);
+                  }
                 } else if (message.type === "document") {
                   content = `[Documento: ${message.document?.filename || "arquivo"}]`;
                   messageType = "document";
@@ -168,7 +224,7 @@ serve(async (req) => {
                 }
 
                 // Save message
-                const { error: messageError } = await supabase.from("messages").insert({
+                const messageInsert: any = {
                   conversation_id: conversationId,
                   contact_id: contactId,
                   direction: "incoming",
@@ -176,7 +232,13 @@ serve(async (req) => {
                   content: content,
                   whatsapp_message_id: messageId,
                   status: "delivered",
-                });
+                };
+                
+                if (imageUrl) {
+                  messageInsert.image_url = imageUrl;
+                }
+
+                const { error: messageError } = await supabase.from("messages").insert(messageInsert);
 
                 if (messageError) {
                   console.error("Error saving message:", messageError);

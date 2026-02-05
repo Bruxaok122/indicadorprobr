@@ -65,13 +65,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 
 export default function ContatosPage() {
-  const { contacts, isLoading, deleteContact, isDeleting } = useContacts();
+  const { contacts, isLoading, deleteContact, isDeleting, deleteContacts, isDeletingContacts } = useContacts();
   const { templates, sendBulk, isSendingBulk } = useMetaTemplates();
   
   const [search, setSearch] = useState("");
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [showSingleDialog, setShowSingleDialog] = useState(false);
+  const [showDeleteBulkDialog, setShowDeleteBulkDialog] = useState(false);
   const [singleContactId, setSingleContactId] = useState<string | null>(null);
   const [selectedTemplateName, setSelectedTemplateName] = useState<string>("");
 
@@ -170,10 +171,16 @@ export default function ContatosPage() {
         >
           <div className="flex items-center gap-2">
             {selectedContacts.length > 0 && (
-              <Button onClick={handleOpenBulkDialog} variant="default">
-                <Send className="mr-2 h-4 w-4" />
-                Disparar Template ({selectedContacts.length})
-              </Button>
+              <>
+                <Button onClick={handleOpenBulkDialog} variant="default">
+                  <Send className="mr-2 h-4 w-4" />
+                  Disparar ({selectedContacts.length})
+                </Button>
+                <Button variant="destructive" onClick={() => setShowDeleteBulkDialog(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir ({selectedContacts.length})
+                </Button>
+              </>
             )}
             <Button asChild>
               <Link to="/importar">
@@ -506,6 +513,33 @@ export default function ContatosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Delete Dialog */}
+      <AlertDialog open={showDeleteBulkDialog} onOpenChange={setShowDeleteBulkDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir {selectedContacts.length} contato(s)?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Todos os contatos selecionados e seus 
+              históricos de mensagens serão removidos permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                deleteContacts(selectedContacts);
+                setSelectedContacts([]);
+                setShowDeleteBulkDialog(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeletingContacts}
+            >
+              {isDeletingContacts ? "Excluindo..." : "Excluir Todos"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }

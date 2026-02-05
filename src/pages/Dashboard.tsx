@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWhatsAppConfig } from "@/hooks/useWhatsAppConfig";
 import { useContacts } from "@/hooks/useContacts";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import {
   CheckCircle,
@@ -13,6 +14,7 @@ import {
   Upload,
   ArrowRight,
   AlertTriangle,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -21,6 +23,11 @@ import { StatusBadge } from "@/components/ui/status-badge";
 export default function Dashboard() {
   const { isConfigured, isLoading: configLoading } = useWhatsAppConfig();
   const { contacts, isLoading: contactsLoading } = useContacts();
+  const { profile, isAdmin } = useAuthContext();
+
+  // Check if user can use shared API
+  const canUseSharedApi = profile?.can_use_shared_api || isAdmin;
+  const hasApiAccess = isConfigured || canUseSharedApi;
 
   const stats = {
     total: contacts.length,
@@ -33,7 +40,7 @@ export default function Dashboard() {
     {
       title: "Configurar WhatsApp API",
       description: "Conecte sua conta do WhatsApp Business",
-      completed: isConfigured,
+      completed: hasApiAccess,
       href: "/configuracao",
       icon: Settings,
     },
@@ -60,13 +67,26 @@ export default function Dashboard() {
       <div className="flex h-screen flex-col overflow-hidden">
         <PageHeader
           title="Painel de Controle"
-          description="Gerencie suas comunicações jurídicas via WhatsApp"
+          description={profile ? `Bem-vindo(a), ${profile.full_name}` : "Gerencie suas comunicações jurídicas via WhatsApp"}
         />
 
         <div className="flex-1 overflow-auto p-6">
           <div className="mx-auto max-w-6xl space-y-6">
+            {/* API Status */}
+            {canUseSharedApi && (
+              <div className="flex items-center gap-3 rounded-lg border border-info/30 bg-info/10 p-4">
+                <ShieldCheck className="h-5 w-5 text-info" />
+                <div className="flex-1">
+                  <p className="font-medium text-foreground">API Compartilhada Ativa</p>
+                  <p className="text-sm text-muted-foreground">
+                    Você tem acesso à API do administrador. Pode enviar mensagens sem configuração adicional.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Status Alert */}
-            {!isConfigured && !configLoading && (
+            {!hasApiAccess && !configLoading && (
               <div className="flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4">
                 <AlertTriangle className="h-5 w-5 text-warning" />
                 <div className="flex-1">
