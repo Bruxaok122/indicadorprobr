@@ -102,8 +102,41 @@ export function useAuth() {
         return true;
       }
 
+      // If there are no active sessions (e.g., user was unblocked by admin),
+      // allow login from any device without restriction
+      if (!existingSessions || existingSessions.length === 0) {
+        // Register this device as the only active one
+        await supabase.from("device_sessions").insert({
+          user_id: userId,
+          device_fingerprint: fingerprint,
+          device_info: deviceInfo,
+          is_active: true,
+        });
+        
+        // Log successful attempt
+        await supabase.from("login_attempts").insert({
+          user_id: userId,
+          device_fingerprint: fingerprint,
+          success: true,
+        });
+
+        // Update profile with device info
+        await supabase
+          .from("profiles")
+          .update({
+            device_fingerprint: fingerprint,
+            last_device_info: deviceInfo,
+            last_login_at: new Date().toISOString(),
+          })
+          .eq("user_id", userId);
+        
+        // Clear failed attempts on successful login
+        await supabase.rpc("clear_failed_attempts", { _user_id: userId });
+
+        return true;
+      }
+
       // If user has another active device, record failed attempt and deny access
-      if (existingSessions && existingSessions.length > 0) {
         // Get current failed attempts count
         const { data: profile } = await supabase
           .from("profiles")
@@ -194,37 +227,6 @@ export function useAuth() {
           await supabase.auth.signOut();
           return false;
         }
-      }
-
-      // Register this device as the only active one
-      await supabase.from("device_sessions").insert({
-        user_id: userId,
-        device_fingerprint: fingerprint,
-        device_info: deviceInfo,
-        is_active: true,
-      });
-      
-      // Log successful attempt
-      await supabase.from("login_attempts").insert({
-        user_id: userId,
-        device_fingerprint: fingerprint,
-        success: true,
-      });
-
-      // Update profile with device info
-      await supabase
-        .from("profiles")
-        .update({
-          device_fingerprint: fingerprint,
-          last_device_info: deviceInfo,
-          last_login_at: new Date().toISOString(),
-        })
-        .eq("user_id", userId);
-      
-      // Clear failed attempts on successful login
-      await supabase.rpc("clear_failed_attempts", { _user_id: userId });
-
-      return true;
     } catch (error) {
       console.error("Error validating device:", error);
       return true; // Allow on error to not block users

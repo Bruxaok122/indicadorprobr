@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import logoJuriszap from "@/assets/logo-juriszap.png";
 import {
   LayoutDashboard,
   MessageSquare,
@@ -17,6 +16,7 @@ import {
   ChevronRight,
   Menu,
   X,
+  Scale,
 } from "lucide-react";
 import {
   Tooltip,
@@ -90,10 +90,16 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex h-14 md:h-16 items-center justify-between border-b border-sidebar-border px-3">
         <div className={cn("flex items-center gap-3", !inSheet && isCollapsed && "hidden")}>
-          <img src={logoJuriszap} alt="JurisZap" className="h-10 md:h-12 w-auto" />
+          <div className="flex h-10 md:h-12 w-10 md:w-12 items-center justify-center rounded-xl bg-sidebar-accent/30">
+            <Scale className="h-6 md:h-7 w-6 md:w-7 text-primary-foreground" />
+          </div>
           <span className="font-bold text-base md:text-lg">JurisZap</span>
         </div>
-        {!inSheet && isCollapsed && <img src={logoJuriszap} alt="JurisZap" className="h-10 w-auto mx-auto" />}
+        {!inSheet && isCollapsed && (
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sidebar-accent/30 mx-auto">
+            <Scale className="h-6 w-6 text-primary-foreground" />
+          </div>
+        )}
         {!inSheet && (
           <Button
             variant="ghost"
@@ -207,7 +213,9 @@ export function Sidebar() {
             </SheetContent>
           </Sheet>
           <div className="flex items-center gap-2 ml-2">
-            <img src={logoJuriszap} alt="JurisZap" className="h-8 w-auto" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-accent/30">
+              <Scale className="h-5 w-5 text-primary-foreground" />
+            </div>
             <span className="font-bold text-base">JurisZap</span>
           </div>
         </div>
