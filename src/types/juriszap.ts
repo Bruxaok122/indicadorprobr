@@ -95,6 +95,10 @@ export interface Profile {
   last_login_at?: string;
   messages_sent: number;
   templates_sent: number;
+  failed_device_attempts?: number;
+  temp_banned_until?: string;
+  ban_reason?: string;
+  last_failed_attempt_at?: string;
   created_at: string;
   updated_at: string;
 }

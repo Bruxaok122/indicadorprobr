@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 export interface MetaTemplate {
   id: string;
@@ -20,6 +21,7 @@ export interface MetaTemplate {
 
 export function useMetaTemplates() {
   const queryClient = useQueryClient();
+  const { user } = useAuthContext();
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["meta-templates"],
@@ -42,7 +44,7 @@ export function useMetaTemplates() {
       templateLanguage?: string;
     }) => {
       const { data, error } = await supabase.functions.invoke("send-bulk-template", {
-        body: params,
+        body: { ...params, userId: user?.id },
       });
 
       if (error) throw error;

@@ -16,7 +16,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { contactId, documentUrl, documentName, caption } = await req.json();
+    const { contactId, documentUrl, documentName, caption, userId } = await req.json();
 
     if (!contactId || !documentUrl) {
       return new Response(
@@ -25,16 +25,51 @@ serve(async (req) => {
       );
     }
 
-    // Get WhatsApp config
-    const { data: config, error: configError } = await supabase
-      .from("whatsapp_config")
-      .select("*")
-      .limit(1)
-      .single();
+    // Check if user has permission to use shared API
+    let config = null;
+    
+    if (userId) {
+      // First check if user can use shared API
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("can_use_shared_api")
+        .eq("user_id", userId)
+        .single();
+      
+      if (userProfile?.can_use_shared_api) {
+        // User has permission, use shared config
+        const { data: sharedConfig } = await supabase
+          .from("whatsapp_config")
+          .select("*")
+          .limit(1)
+          .single();
+        config = sharedConfig;
+      } else {
+        // User doesn't have permission, check for personal config
+        const { data: userConfig } = await supabase
+          .from("user_whatsapp_config")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("is_validated", true)
+          .single();
+        
+        if (userConfig) {
+          config = userConfig;
+        }
+      }
+    } else {
+      // No userId provided, try shared config (for admin or legacy calls)
+      const { data: sharedConfig } = await supabase
+        .from("whatsapp_config")
+        .select("*")
+        .limit(1)
+        .single();
+      config = sharedConfig;
+    }
 
-    if (configError || !config) {
+    if (!config) {
       return new Response(
-        JSON.stringify({ error: "WhatsApp não configurado. Configure o Access Token primeiro." }),
+        JSON.stringify({ error: "WhatsApp não configurado ou você não tem permissão para usar a API compartilhada." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

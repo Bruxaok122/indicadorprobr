@@ -7,7 +7,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 
 export function useMessages(contactId: string | null) {
   const queryClient = useQueryClient();
-  const { isAdmin } = useAuthContext();
+  const { isAdmin, user } = useAuthContext();
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ["messages", contactId, isAdmin],
@@ -64,7 +64,7 @@ export function useMessages(contactId: string | null) {
       isTemplate?: boolean;
     }) => {
       const { data, error } = await supabase.functions.invoke("send-whatsapp-message", {
-        body: params,
+        body: { ...params, userId: user?.id },
       });
 
       if (error) throw error;
@@ -90,7 +90,7 @@ export function useMessages(contactId: string | null) {
       caption?: string;
     }) => {
       const { data, error } = await supabase.functions.invoke("send-whatsapp-document", {
-        body: params,
+        body: { ...params, userId: user?.id },
       });
 
       if (error) throw error;
