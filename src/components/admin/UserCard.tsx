@@ -84,19 +84,26 @@
              <span className="text-muted-foreground">Tentativas:</span>
              <span className="ml-1 font-mono">{user.failed_device_attempts || 0}</span>
            </div>
-           {user.last_device_info && (
-             <div className="col-span-2 flex items-center gap-1">
-               <Monitor className="h-3 w-3 text-muted-foreground" />
-               <span className="text-xs text-muted-foreground truncate">
-                 {(user.last_device_info as any).browser} / {(user.last_device_info as any).os}
-               </span>
-             </div>
-           )}
-           {user.last_login_at && (
-             <div className="col-span-2 text-xs text-muted-foreground">
-               Último acesso: {format(new Date(user.last_login_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-             </div>
-           )}
+          {(user as any).active_session ? (
+            <div className="col-span-2 flex items-center gap-1">
+              <Monitor className="h-3 w-3 text-success" />
+              <span className="text-xs text-success">
+                Online - {format(new Date((user as any).active_session.last_seen_at), "HH:mm", { locale: ptBR })}
+              </span>
+            </div>
+          ) : user.last_device_info ? (
+            <div className="col-span-2 flex items-center gap-1">
+              <Monitor className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground truncate">
+                Offline - {(user.last_device_info as any).browser} / {(user.last_device_info as any).os}
+              </span>
+            </div>
+          ) : null}
+          {user.last_login_at && (
+            <div className="col-span-2 text-xs text-muted-foreground">
+              Último acesso: {format(new Date(user.last_login_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+            </div>
+          )}
          </div>
  
          {/* Actions */}

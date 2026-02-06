@@ -21,17 +21,35 @@ interface AdminStats {
 export function useAdmin() {
   const queryClient = useQueryClient();
 
-  // Fetch all users with profiles
+  // Fetch all users with profiles and their latest session
   const { data: users = [], isLoading: isLoadingUsers } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch profiles
+      const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data as Profile[];
+      if (profilesError) throw profilesError;
+
+      // Fetch active sessions for all users
+      const { data: sessions } = await supabase
+        .from("device_sessions")
+        .select("*")
+        .eq("is_active", true)
+        .order("last_seen_at", { ascending: false });
+
+      // Merge session data into profiles
+      const usersWithSessions = (profiles || []).map(profile => {
+        const userSession = sessions?.find(s => s.user_id === profile.user_id);
+        return {
+          ...profile,
+          active_session: userSession || null,
+        };
+      });
+
+      return usersWithSessions as (Profile & { active_session: any })[];
     },
   });
 
