@@ -81,9 +81,15 @@ export function useMessages(contactId: string | null) {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
     },
     onError: (error: any) => {
-      toast.error("Erro ao enviar mensagem", {
-        description: error.message,
-      });
+      if (error.message?.includes("já foi atendido")) {
+        toast.info("Contato indisponível", {
+          description: "Este contato já está sendo atendido por outro usuário.",
+        });
+      } else {
+        toast.error("Erro ao enviar mensagem", {
+          description: error.message,
+        });
+      }
     },
   });
 
