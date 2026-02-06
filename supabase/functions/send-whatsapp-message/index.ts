@@ -88,15 +88,26 @@ serve(async (req) => {
       );
     }
 
-    // Check if contact was already contacted by another user
-    if (userId && contact.user_id && contact.user_id !== userId) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Este contato já foi atendido por outro usuário.",
-          code: "CONTACT_ALREADY_CLAIMED"
-        }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Check if this PHONE is already owned by another user (even if different contact record)
+    if (userId) {
+      const { data: existingOwner } = await supabase
+        .from("contacts")
+        .select("user_id")
+        .eq("phone", contact.phone)
+        .not("user_id", "is", null)
+        .neq("user_id", userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingOwner) {
+        return new Response(
+          JSON.stringify({ 
+            error: "Este contato já foi atendido por outro usuário.",
+            code: "CONTACT_ALREADY_CLAIMED"
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Use the contact's user_id if available, otherwise use the provided userId

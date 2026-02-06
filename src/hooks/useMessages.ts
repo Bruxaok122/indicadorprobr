@@ -10,26 +10,22 @@ export function useMessages(contactId: string | null) {
   const { isAdmin, user } = useAuthContext();
 
   const { data: messages = [], isLoading } = useQuery({
-    queryKey: ["messages", contactId, isAdmin, user?.id],
+    queryKey: ["messages", contactId, user?.id],
     queryFn: async () => {
-      if (!contactId) return [];
+      if (!contactId || !user?.id) return [];
 
-      let query = supabase
+      // All users (including admin) see only messages linked to their user_id
+      const { data, error } = await supabase
         .from("messages")
         .select("*")
-        .eq("contact_id", contactId);
-
-      // For non-admins, only show messages belonging to them
-      if (!isAdmin && user?.id) {
-        query = query.or(`user_id.eq.${user.id},user_id.is.null`);
-      }
-
-      const { data, error } = await query.order("created_at", { ascending: true });
+        .eq("contact_id", contactId)
+        .or(`user_id.eq.${user.id},user_id.is.null`)
+        .order("created_at", { ascending: true });
 
       if (error) throw error;
       return data as Message[];
     },
-    enabled: !!contactId && isAdmin !== undefined,
+    enabled: !!contactId && !!user?.id,
   });
 
   // Check if conversation has any messages (to enforce template-first rule)
