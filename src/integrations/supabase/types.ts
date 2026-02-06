@@ -431,6 +431,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_messages_sent: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
+      increment_templates_sent: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_temp_banned: { Args: { _user_id: string }; Returns: boolean }
       is_user_blocked: { Args: { _user_id: string }; Returns: boolean }
