@@ -71,33 +71,22 @@ serve(async (req) => {
 
                 console.log(`Processing message from ${phone}: ${message.type}`);
 
-                // Find existing contact by phone (prioritize ones with user_id set)
-                let { data: existingContact } = await supabase
+                // Find existing contact by phone - prioritize ones with user_id set
+                // This prevents duplicate contacts and ensures messages go to the right owner
+                const { data: contactsWithPhone } = await supabase
                   .from("contacts")
                   .select("*")
                   .eq("phone", phone)
-                  .not("user_id", "is", null)
-                  .order("created_at", { ascending: true })
-                  .limit(1)
-                  .single();
+                  .order("user_id", { ascending: false, nullsFirst: false }) // user_id NOT NULL first
+                  .order("created_at", { ascending: true });
 
-                // If no contact with user_id, check for any contact with this phone
-                if (!existingContact) {
-                  const { data: anyContact } = await supabase
-                    .from("contacts")
-                    .select("*")
-                    .eq("phone", phone)
-                    .order("created_at", { ascending: true })
-                    .limit(1)
-                    .single();
-                  
-                  existingContact = anyContact;
-                }
+                let existingContact = contactsWithPhone?.[0] || null;
 
                 let contactId: string;
+                let contactUserId: string | null = null;
 
                 if (!existingContact) {
-                  // Create new contact
+                  // Create new contact WITHOUT user_id (will be assigned on first outgoing message)
                   const { data: newContact, error: contactError } = await supabase
                     .from("contacts")
                     .insert({
@@ -117,7 +106,9 @@ serve(async (req) => {
                   console.log(`Created new contact: ${contactId}`);
                 } else {
                   contactId = existingContact.id;
-                  console.log(`Using existing contact: ${contactId} (user_id: ${existingContact.user_id})`);
+                  contactUserId = existingContact.user_id;
+                  console.log(`Using existing contact: ${contactId} (user_id: ${contactUserId})`);
+                  
                   // Update contact status and last message
                   await supabase
                     .from("contacts")
@@ -145,7 +136,7 @@ serve(async (req) => {
                     .from("conversations")
                     .insert({
                       contact_id: contactId,
-                      user_id: existingContact?.user_id || null,
+                      user_id: contactUserId,
                       is_active: true,
                       window_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
                     })
@@ -248,7 +239,7 @@ serve(async (req) => {
                 const messageInsert: any = {
                   conversation_id: conversationId,
                   contact_id: contactId,
-                  user_id: existingContact?.user_id || null,
+                  user_id: contactUserId,
                   direction: "incoming",
                   message_type: messageType,
                   content: content,

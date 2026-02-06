@@ -15,16 +15,11 @@ export function useContacts() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      // Admins see all contacts, regular users see only their own
-      let query = supabase
+      // All users (including admin) see ONLY their own contacts in the normal app
+      const { data, error } = await supabase
         .from("contacts")
-        .select("*");
-      
-      if (!isAdmin) {
-        query = query.eq("user_id", user.id);
-      }
-      
-      const { data, error } = await query
+        .select("*")
+        .eq("user_id", user.id)
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
 

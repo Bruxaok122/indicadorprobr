@@ -108,11 +108,22 @@ serve(async (req) => {
 
     for (const contact of contacts) {
       try {
-        // Check if contact was already contacted by another user
-        if (userId && contact.user_id && contact.user_id !== userId) {
-          results.failed++;
-          results.errors.push(`${contact.name}: Este contato já foi atendido por outro usuário`);
-          continue;
+        // Check if this PHONE is already owned by another user (even if different contact record)
+        if (userId) {
+          const { data: existingOwner } = await supabase
+            .from("contacts")
+            .select("user_id")
+            .eq("phone", contact.phone)
+            .not("user_id", "is", null)
+            .neq("user_id", userId)
+            .limit(1)
+            .maybeSingle();
+
+          if (existingOwner) {
+            results.failed++;
+            results.errors.push(`${contact.name}: Este contato já foi atendido por outro usuário`);
+            continue;
+          }
         }
 
         // Use the contact's user_id if available, otherwise use the provided userId
