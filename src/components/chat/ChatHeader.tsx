@@ -1,7 +1,9 @@
 import { Contact } from "@/types/juriszap";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { ArrowLeft, Phone, FileText } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ArrowLeft, Phone, FileText, ClipboardCopy } from "lucide-react";
+import { toast } from "sonner";
 
 interface ChatHeaderProps {
   contact: Contact;
@@ -9,7 +11,43 @@ interface ChatHeaderProps {
   onBack: () => void;
 }
 
+function buildContactTemplate(contact: Contact): string {
+  return `ADVOGADO: ${contact.lawyer_name || "—"}
+
+PROCESSO: ${contact.process_number || "—"}
+
+👤 Nome: ${contact.name}
+
+💳 Doc.: CPF: 
+
+📞 Telefones: ${contact.phone}
+
+💰 Valor da Causa: R$ 
+
+DATA AGENDADA: 
+
+Dados bancários:
+
+CPF: 
+
+Caixa Econômica
+
+Agência: 
+
+Conta: `;
+}
+
 export function ChatHeader({ contact, isMobile, onBack }: ChatHeaderProps) {
+  const handleCopyTemplate = async () => {
+    const text = buildContactTemplate(contact);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Modelo copiado!", { description: "Cole onde precisar." });
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  };
+
   return (
     <div className="flex items-center justify-between border-b bg-card px-3 md:px-5 py-2.5 md:py-3">
       <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -42,7 +80,33 @@ export function ChatHeader({ contact, isMobile, onBack }: ChatHeaderProps) {
           </div>
         </div>
       </div>
-      <StatusBadge status={contact.status} />
+      <div className="flex items-center gap-2">
+        {isMobile ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleCopyTemplate}
+            className="text-muted-foreground"
+          >
+            <ClipboardCopy className="h-5 w-5" />
+          </Button>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCopyTemplate}
+                className="text-muted-foreground"
+              >
+                <ClipboardCopy className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Copiar modelo de mensagem</TooltipContent>
+          </Tooltip>
+        )}
+        <StatusBadge status={contact.status} />
+      </div>
     </div>
   );
 }

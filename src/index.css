@@ -200,3 +200,20 @@ div[style*="Edit with Lovable"],
 .bubble-incoming {
   border-radius: 0 7.5px 7.5px 7.5px;
 }
+
+/* Anti-copy protections */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Allow selection in inputs and textareas */
+.no-select input,
+.no-select textarea {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
