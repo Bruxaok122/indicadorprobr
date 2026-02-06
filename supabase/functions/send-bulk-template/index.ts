@@ -108,6 +108,9 @@ serve(async (req) => {
 
     for (const contact of contacts) {
       try {
+        // Use the contact's user_id if available, otherwise use the provided userId
+        const effectiveUserId = contact.user_id || userId || null;
+
         const requestBody = {
           messaging_product: "whatsapp",
           to: contact.phone,
@@ -138,7 +141,7 @@ serve(async (req) => {
           continue;
         }
 
-        // Get or create conversation
+        // Get or create conversation - IMPORTANT: include user_id
         let { data: conversation } = await supabase
           .from("conversations")
           .select("*")
@@ -151,18 +154,26 @@ serve(async (req) => {
             .from("conversations")
             .insert({
               contact_id: contact.id,
+              user_id: effectiveUserId,
               is_active: true,
               window_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
             })
             .select()
             .single();
           conversation = newConversation;
+        } else if (!conversation.user_id && effectiveUserId) {
+          // Update existing conversation with user_id if missing
+          await supabase
+            .from("conversations")
+            .update({ user_id: effectiveUserId })
+            .eq("id", conversation.id);
         }
 
-        // Save message
+        // Save message - IMPORTANT: include user_id
         await supabase.from("messages").insert({
           conversation_id: conversation!.id,
           contact_id: contact.id,
+          user_id: effectiveUserId,
           direction: "outgoing",
           message_type: "template",
           content: `[Template: ${templateName}]`,
@@ -179,6 +190,11 @@ serve(async (req) => {
             last_message_at: new Date().toISOString(),
           })
           .eq("id", contact.id);
+
+        // Update user stats - increment templates_sent
+        if (effectiveUserId) {
+          await supabase.rpc("increment_templates_sent", { _user_id: effectiveUserId });
+        }
 
         results.sent++;
 

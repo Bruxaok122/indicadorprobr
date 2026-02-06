@@ -88,6 +88,9 @@ serve(async (req) => {
       );
     }
 
+    // Use the contact's user_id if available, otherwise use the provided userId
+    const effectiveUserId = contact.user_id || userId || null;
+
     // Build WhatsApp API request
     const whatsappUrl = `https://graph.facebook.com/v18.0/${config.phone_number_id}/messages`;
 
@@ -138,7 +141,7 @@ serve(async (req) => {
       );
     }
 
-    // Get or create conversation
+    // Get or create conversation - IMPORTANT: include user_id
     let { data: conversation } = await supabase
       .from("conversations")
       .select("*")
@@ -151,18 +154,26 @@ serve(async (req) => {
         .from("conversations")
         .insert({
           contact_id: contactId,
+          user_id: effectiveUserId,
           is_active: true,
           window_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         })
         .select()
         .single();
       conversation = newConversation;
+    } else if (!conversation.user_id && effectiveUserId) {
+      // Update existing conversation with user_id if missing
+      await supabase
+        .from("conversations")
+        .update({ user_id: effectiveUserId })
+        .eq("id", conversation.id);
     }
 
-    // Save message to database
+    // Save message to database - IMPORTANT: include user_id
     const { error: messageError } = await supabase.from("messages").insert({
       conversation_id: conversation!.id,
       contact_id: contactId,
+      user_id: effectiveUserId,
       direction: "outgoing",
       message_type: isTemplate ? "template" : "text",
       content: message || `[Template: ${templateName}]`,
@@ -183,6 +194,15 @@ serve(async (req) => {
         last_message_at: new Date().toISOString(),
       })
       .eq("id", contactId);
+
+    // Update user stats - increment messages_sent or templates_sent
+    if (effectiveUserId) {
+      if (isTemplate) {
+        await supabase.rpc("increment_templates_sent", { _user_id: effectiveUserId });
+      } else {
+        await supabase.rpc("increment_messages_sent", { _user_id: effectiveUserId });
+      }
+    }
 
     return new Response(
       JSON.stringify({ 
