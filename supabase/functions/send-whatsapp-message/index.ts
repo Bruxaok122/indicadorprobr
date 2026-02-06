@@ -88,6 +88,17 @@ serve(async (req) => {
       );
     }
 
+    // Check if contact was already contacted by another user
+    if (userId && contact.user_id && contact.user_id !== userId) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Este contato já foi atendido por outro usuário.",
+          code: "CONTACT_ALREADY_CLAIMED"
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Use the contact's user_id if available, otherwise use the provided userId
     const effectiveUserId = contact.user_id || userId || null;
 

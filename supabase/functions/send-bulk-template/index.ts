@@ -108,6 +108,13 @@ serve(async (req) => {
 
     for (const contact of contacts) {
       try {
+        // Check if contact was already contacted by another user
+        if (userId && contact.user_id && contact.user_id !== userId) {
+          results.failed++;
+          results.errors.push(`${contact.name}: Este contato já foi atendido por outro usuário`);
+          continue;
+        }
+
         // Use the contact's user_id if available, otherwise use the provided userId
         const effectiveUserId = contact.user_id || userId || null;
 
