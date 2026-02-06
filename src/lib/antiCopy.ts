@@ -46,10 +46,11 @@ export function initAntiCopyProtections() {
       }
     }
 
-    // Ctrl+C, Ctrl+X (Copy/Cut) - except inside inputs/textareas
+    // Ctrl+C, Ctrl+X (Copy/Cut) - except inside inputs/textareas/chat
     if (e.ctrlKey && ["C", "X"].includes(e.key.toUpperCase())) {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag !== "INPUT" && tag !== "TEXTAREA") {
+      const target = e.target as HTMLElement;
+      const tag = target?.tagName;
+      if (tag !== "INPUT" && tag !== "TEXTAREA" && !target?.closest(".chat-selectable")) {
         e.preventDefault();
         return false;
       }
@@ -65,19 +66,21 @@ export function initAntiCopyProtections() {
     return false;
   });
 
-  // 5. Disable copy event
+  // 5. Disable copy event (except in inputs/textareas/chat)
   document.addEventListener("copy", (e) => {
-    const tag = (e.target as HTMLElement)?.tagName;
-    if (tag !== "INPUT" && tag !== "TEXTAREA") {
+    const target = e.target as HTMLElement;
+    const tag = target?.tagName;
+    if (tag !== "INPUT" && tag !== "TEXTAREA" && !target?.closest(".chat-selectable")) {
       e.preventDefault();
       return false;
     }
   });
 
-  // 6. Disable cut event
+  // 6. Disable cut event (except in inputs/textareas/chat)
   document.addEventListener("cut", (e) => {
-    const tag = (e.target as HTMLElement)?.tagName;
-    if (tag !== "INPUT" && tag !== "TEXTAREA") {
+    const target = e.target as HTMLElement;
+    const tag = target?.tagName;
+    if (tag !== "INPUT" && tag !== "TEXTAREA" && !target?.closest(".chat-selectable")) {
       e.preventDefault();
       return false;
     }

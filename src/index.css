@@ -209,9 +209,11 @@ div[style*="Edit with Lovable"],
   user-select: none;
 }
 
-/* Allow selection in inputs and textareas */
+/* Allow selection in inputs, textareas and chat messages */
 .no-select input,
-.no-select textarea {
+.no-select textarea,
+.no-select .chat-selectable,
+.no-select .chat-selectable * {
   -webkit-user-select: text;
   -moz-user-select: text;
   -ms-user-select: text;

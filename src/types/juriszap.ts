@@ -4,6 +4,8 @@ export interface Contact {
   phone: string;
   lawyer_name?: string;
   process_number?: string;
+  cpf?: string;
+  valor_da_causa?: number;
   status: 'novo' | 'aguardando' | 'respondido' | 'encerrado';
   last_message_at?: string;
   created_at: string;

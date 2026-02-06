@@ -11,24 +11,32 @@ interface ChatHeaderProps {
   onBack: () => void;
 }
 
+function formatCurrency(value?: number): string {
+  if (value == null) return "";
+  return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function buildContactTemplate(contact: Contact): string {
+  const cpf = contact.cpf || "";
+  const valor = formatCurrency(contact.valor_da_causa);
+
   return `ADVOGADO: ${contact.lawyer_name || "—"}
 
 PROCESSO: ${contact.process_number || "—"}
 
 👤 Nome: ${contact.name}
 
-💳 Doc.: CPF: 
+💳 Doc.: CPF: ${cpf}
 
 📞 Telefones: ${contact.phone}
 
-💰 Valor da Causa: R$ 
+💰 Valor da Causa: R$ ${valor}
 
 DATA AGENDADA: 
 
 Dados bancários:
 
-CPF: 
+CPF: ${cpf}
 
 Caixa Econômica
 
