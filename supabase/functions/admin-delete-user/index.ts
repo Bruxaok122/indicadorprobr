@@ -37,8 +37,10 @@ serve(async (req) => {
       });
     }
 
-    // Check if requesting user is admin
-    const { data: roles } = await anonClient
+    // Use service role to check admin status (bypasses RLS)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    const { data: roles } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", requestingUser.id);
@@ -50,9 +52,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    // Delete user with service role
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Parse request body
     const { userId } = await req.json();
 
     // Prevent self-deletion
