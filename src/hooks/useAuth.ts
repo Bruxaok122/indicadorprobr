@@ -88,7 +88,7 @@ export function useAuth() {
       // Check ALL active sessions for this user
       const { data: existingSessions, error: existingSessionsError } = await supabase
         .from("device_sessions")
-        .select("id, device_fingerprint")
+        .select("id, device_fingerprint, last_seen_at")
         .eq("user_id", userId)
         .eq("is_active", true);
 
@@ -117,9 +117,14 @@ export function useAuth() {
         return true;
       }
 
-      // If there are no active sessions (e.g., user was unblocked by admin),
-      // allow login from any device without restriction
-      if (!existingSessions || existingSessions.length === 0) {
+      const activateThisDevice = async () => {
+        // Ensure single active device: deactivate all, then activate this one.
+        const { error: deactivateError } = await supabase
+          .from("device_sessions")
+          .update({ is_active: false })
+          .eq("user_id", userId);
+        if (deactivateError) throw deactivateError;
+
         const { error: upsertSessionError } = await supabase
           .from("device_sessions")
           .upsert(
@@ -131,7 +136,6 @@ export function useAuth() {
             },
             { onConflict: "user_id,device_fingerprint" }
           );
-
         if (upsertSessionError) throw upsertSessionError;
 
         // Audit log (não deve bloquear login se falhar)
@@ -154,7 +158,6 @@ export function useAuth() {
             last_login_at: new Date().toISOString(),
           })
           .eq("user_id", userId);
-
         if (updateProfileError) throw updateProfileError;
 
         const { error: clearAttemptsError } = await supabase.rpc(
@@ -164,9 +167,35 @@ export function useAuth() {
         if (clearAttemptsError) throw clearAttemptsError;
 
         return true;
+      };
+
+      // If there are no active sessions, allow login from any device.
+      if (!existingSessions || existingSessions.length === 0) {
+        await activateThisDevice();
+        return true;
       }
 
-      // If user has another active device, record failed attempt and deny access
+      // There is at least one active session from another device.
+      // If the other session(s) look stale (crash/closed browser), self-heal by taking over.
+      const otherSessions = (existingSessions || []).filter(
+        (s) => s.device_fingerprint !== fingerprint
+      );
+      const STALE_MS = 2 * 60 * 1000;
+      const allOtherStale = otherSessions.length > 0 && otherSessions.every((s) => {
+        const ts = s.last_seen_at ? new Date(s.last_seen_at).getTime() : 0;
+        return ts > 0 && ts < Date.now() - STALE_MS;
+      });
+
+      if (allOtherStale) {
+        await activateThisDevice();
+        toast.info("Sessão anterior expirada", {
+          description: "Detectamos uma sessão antiga/inativa e liberamos o acesso neste dispositivo.",
+          duration: 6000,
+        });
+        return true;
+      }
+
+      // Not stale: apply device-change attempt logic, but still allow takeover unless the account is actually banned.
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("failed_device_attempts")
@@ -177,15 +206,8 @@ export function useAuth() {
 
       const currentAttempts = profile?.failed_device_attempts || 0;
 
-      // First attempt: warn and allow device change (by deactivating old sessions)
       if (currentAttempts === 0) {
-        const { error: deactivateError } = await supabase
-          .from("device_sessions")
-          .update({ is_active: false })
-          .eq("user_id", userId);
-
-        if (deactivateError) throw deactivateError;
-
+        // First device change: warn and allow.
         const { error: warningUpdateError } = await supabase
           .from("profiles")
           .update({
@@ -196,53 +218,18 @@ export function useAuth() {
 
         if (warningUpdateError) throw warningUpdateError;
 
-        const { error: upsertSessionError } = await supabase
-          .from("device_sessions")
-          .upsert(
-            {
-              user_id: userId,
-              device_fingerprint: fingerprint,
-              device_info: deviceInfo,
-              is_active: true,
-            },
-            { onConflict: "user_id,device_fingerprint" }
-          );
-
-        if (upsertSessionError) throw upsertSessionError;
-
-        // Audit log (não deve bloquear login se falhar)
-        const { error: logAttemptError } = await supabase
-          .from("login_attempts")
-          .insert({
-            user_id: userId,
-            device_fingerprint: fingerprint,
-            success: true,
-          });
-        if (logAttemptError) {
-          console.warn("login_attempts insert failed:", logAttemptError);
-        }
-
-        const { error: updateProfileError } = await supabase
-          .from("profiles")
-          .update({
-            device_fingerprint: fingerprint,
-            last_device_info: deviceInfo,
-            last_login_at: new Date().toISOString(),
-          })
-          .eq("user_id", userId);
-
-        if (updateProfileError) throw updateProfileError;
+        await activateThisDevice();
 
         toast.warning("Dispositivo alterado", {
           description:
-            "Você estava conectado em outro dispositivo. Este agora é seu dispositivo ativo. Mais trocas podem resultar em bloqueio temporário.",
+            "Você estava conectado em outro dispositivo. Este agora é seu dispositivo ativo. Trocas frequentes podem gerar bloqueio temporário.",
           duration: 8000,
         });
 
         return true;
       }
 
-      // Already had a warning, now apply ban logic
+      // Attempts already started: record the attempt and check if a temp ban was applied.
       const { data: banResult, error: banError } = await supabase.rpc(
         "record_failed_device_attempt",
         { _user_id: userId }
@@ -261,26 +248,30 @@ export function useAuth() {
           description: `Múltiplas tentativas de acesso detectadas. Bloqueio de ${banHours} hora(s).`,
           duration: 10000,
         });
-      } else {
-        toast.error("Limite de trocas de dispositivo excedido", {
-          description: `Por segurança, não é possível trocar de dispositivo novamente. Tentativa ${attempts}/3 antes do bloqueio temporário.`,
-          duration: 8000,
-        });
+
+        const { error: logFailedAttemptError } = await supabase
+          .from("login_attempts")
+          .insert({
+            user_id: userId,
+            device_fingerprint: fingerprint,
+            success: false,
+          });
+        if (logFailedAttemptError) {
+          console.warn("login_attempts insert failed:", logFailedAttemptError);
+        }
+
+        await supabase.auth.signOut();
+        return false;
       }
 
-      const { error: logFailedAttemptError } = await supabase
-        .from("login_attempts")
-        .insert({
-          user_id: userId,
-          device_fingerprint: fingerprint,
-          success: false,
-        });
-      if (logFailedAttemptError) {
-        console.warn("login_attempts insert failed:", logFailedAttemptError);
-      }
+      await activateThisDevice();
 
-      await supabase.auth.signOut();
-      return false;
+      toast.warning("Dispositivo alterado novamente", {
+        description: `Troca registrada (${attempts}). Trocas frequentes podem gerar bloqueio temporário.`,
+        duration: 8000,
+      });
+
+      return true;
     } catch (error) {
       console.error("Error validating device:", error);
       toast.error("Falha ao validar dispositivo", {
@@ -495,13 +486,7 @@ export function useAuth() {
         );
       }
 
-      // Enforce single-device rule
-      const ok = await validateDevice(data.user.id);
-      if (!ok) {
-        throw new Error(
-          "Acesso negado: sua conta já está ativa em outro dispositivo."
-        );
-      }
+      // Device enforcement is handled by the auth listener (SIGNED_IN) to avoid race conditions.
     }
 
     return data;
