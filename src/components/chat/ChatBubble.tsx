@@ -84,7 +84,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
     <div className={cn("flex mb-1 px-2 md:px-4", isOutgoing ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "relative max-w-[75%] md:max-w-[65%] px-3 py-1.5 shadow-sm",
+          "relative max-w-[75%] md:max-w-[65%] px-3 py-1.5 shadow-sm chat-selectable",
           isOutgoing
             ? "bubble-outgoing bg-chat-outgoing text-chat-outgoing-foreground"
             : "bubble-incoming bg-chat-incoming text-chat-incoming-foreground"

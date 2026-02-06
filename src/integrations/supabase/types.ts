@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       contacts: {
         Row: {
+          cpf: string | null
           created_at: string
           id: string
           last_message_at: string | null
@@ -26,8 +27,10 @@ export type Database = {
           status: string | null
           updated_at: string
           user_id: string | null
+          valor_da_causa: number | null
         }
         Insert: {
+          cpf?: string | null
           created_at?: string
           id?: string
           last_message_at?: string | null
@@ -38,8 +41,10 @@ export type Database = {
           status?: string | null
           updated_at?: string
           user_id?: string | null
+          valor_da_causa?: number | null
         }
         Update: {
+          cpf?: string | null
           created_at?: string
           id?: string
           last_message_at?: string | null
@@ -50,6 +55,7 @@ export type Database = {
           status?: string | null
           updated_at?: string
           user_id?: string | null
+          valor_da_causa?: number | null
         }
         Relationships: []
       }
