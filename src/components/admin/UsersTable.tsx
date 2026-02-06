@@ -111,26 +111,46 @@
                    }
                  />
                </TableCell>
-               <TableCell>
-                 {user.last_device_info ? (
-                   <Tooltip>
-                     <TooltipTrigger>
-                       <div className="flex items-center gap-1 text-sm">
-                         <Monitor className="h-3 w-3" />
-                         {(user.last_device_info as any).device || "Desktop"}
-                       </div>
-                     </TooltipTrigger>
-                     <TooltipContent>
-                       <div className="text-xs">
-                         <p>Browser: {(user.last_device_info as any).browser}</p>
-                         <p>OS: {(user.last_device_info as any).os}</p>
-                       </div>
-                     </TooltipContent>
-                   </Tooltip>
-                 ) : (
-                   <span className="text-muted-foreground">-</span>
-                 )}
-               </TableCell>
+            <TableCell>
+              {(user as any).active_session ? (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div className="flex items-center gap-1 text-sm">
+                      <Monitor className="h-3 w-3 text-success" />
+                      <span className="text-success">Online</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="text-xs">
+                      {(user as any).active_session.device_info && (
+                        <>
+                          <p>Browser: {(user as any).active_session.device_info.browser}</p>
+                          <p>OS: {(user as any).active_session.device_info.os}</p>
+                        </>
+                      )}
+                      <p>Última atividade: {format(new Date((user as any).active_session.last_seen_at), "dd/MM HH:mm", { locale: ptBR })}</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              ) : user.last_device_info ? (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Monitor className="h-3 w-3" />
+                      Offline
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="text-xs">
+                      <p>Browser: {(user.last_device_info as any).browser}</p>
+                      <p>OS: {(user.last_device_info as any).os}</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <span className="text-muted-foreground">-</span>
+              )}
+            </TableCell>
                <TableCell>
                  <span className="font-mono">{user.messages_sent}</span>
                </TableCell>
