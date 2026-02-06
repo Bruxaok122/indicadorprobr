@@ -47,6 +47,14 @@
 
     --radius: 0.5rem;
 
+    /* WhatsApp chat colors */
+    --chat-bg: 30 15% 87%;
+    --chat-outgoing: 120 35% 87%;
+    --chat-incoming: 0 0% 100%;
+    --chat-outgoing-foreground: 0 0% 10%;
+    --chat-incoming-foreground: 0 0% 10%;
+    --chat-timestamp: 0 0% 50%;
+
     --sidebar-background: 213 53% 24%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 43 84% 38%;
@@ -85,6 +93,14 @@
     --border: 213 39% 18%;
     --input: 213 39% 18%;
     --ring: 43 84% 50%;
+
+    /* WhatsApp chat colors (dark) */
+    --chat-bg: 200 18% 10%;
+    --chat-outgoing: 165 55% 16%;
+    --chat-incoming: 210 15% 16%;
+    --chat-outgoing-foreground: 0 0% 93%;
+    --chat-incoming-foreground: 0 0% 93%;
+    --chat-timestamp: 0 0% 60%;
 
     --sidebar-background: 213 39% 6%;
     --sidebar-foreground: 210 20% 98%;
@@ -168,4 +184,19 @@ div[style*="Edit with Lovable"],
 
 .typing-dot:nth-child(3) {
   animation-delay: 0.4s;
+}
+
+/* WhatsApp chat background pattern */
+.chat-wallpaper {
+  background-color: hsl(var(--chat-bg));
+  background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.06'%3E%3Cpath d='M50 50c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10zM10 10c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10S0 25.523 0 20s4.477-10 10-10zm10 8a8 8 0 100-16 8 8 0 000 16zm40 40a8 8 0 100-16 8 8 0 000 16z' /%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* WhatsApp bubble tails */
+.bubble-outgoing {
+  border-radius: 7.5px 0 7.5px 7.5px;
+}
+
+.bubble-incoming {
+  border-radius: 0 7.5px 7.5px 7.5px;
 }
