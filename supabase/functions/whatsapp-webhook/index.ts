@@ -244,10 +244,11 @@ serve(async (req) => {
                   content = `[${message.type}]`;
                 }
 
-                // Save message
+                // Save message - IMPORTANT: include user_id from the contact owner
                 const messageInsert: any = {
                   conversation_id: conversationId,
                   contact_id: contactId,
+                  user_id: existingContact?.user_id || null,
                   direction: "incoming",
                   message_type: messageType,
                   content: content,
