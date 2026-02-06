@@ -75,6 +75,13 @@ export function useAuth() {
 
   const validateDevice = useCallback(async (userId: string) => {
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      // If there's no authenticated session (or it doesn't match), do nothing.
+      if (!session?.user || session.user.id !== userId) return false;
+
       const fingerprint = await generateDeviceFingerprint();
       const deviceInfo = getDeviceInfo();
 
@@ -113,17 +120,21 @@ export function useAuth() {
       // If there are no active sessions (e.g., user was unblocked by admin),
       // allow login from any device without restriction
       if (!existingSessions || existingSessions.length === 0) {
-        const { error: insertSessionError } = await supabase
+        const { error: upsertSessionError } = await supabase
           .from("device_sessions")
-          .insert({
-            user_id: userId,
-            device_fingerprint: fingerprint,
-            device_info: deviceInfo,
-            is_active: true,
-          });
+          .upsert(
+            {
+              user_id: userId,
+              device_fingerprint: fingerprint,
+              device_info: deviceInfo,
+              is_active: true,
+            },
+            { onConflict: "user_id,device_fingerprint" }
+          );
 
-        if (insertSessionError) throw insertSessionError;
+        if (upsertSessionError) throw upsertSessionError;
 
+        // Audit log (não deve bloquear login se falhar)
         const { error: logAttemptError } = await supabase
           .from("login_attempts")
           .insert({
@@ -131,7 +142,9 @@ export function useAuth() {
             device_fingerprint: fingerprint,
             success: true,
           });
-        if (logAttemptError) throw logAttemptError;
+        if (logAttemptError) {
+          console.warn("login_attempts insert failed:", logAttemptError);
+        }
 
         const { error: updateProfileError } = await supabase
           .from("profiles")
@@ -183,17 +196,21 @@ export function useAuth() {
 
         if (warningUpdateError) throw warningUpdateError;
 
-        const { error: insertSessionError } = await supabase
+        const { error: upsertSessionError } = await supabase
           .from("device_sessions")
-          .insert({
-            user_id: userId,
-            device_fingerprint: fingerprint,
-            device_info: deviceInfo,
-            is_active: true,
-          });
+          .upsert(
+            {
+              user_id: userId,
+              device_fingerprint: fingerprint,
+              device_info: deviceInfo,
+              is_active: true,
+            },
+            { onConflict: "user_id,device_fingerprint" }
+          );
 
-        if (insertSessionError) throw insertSessionError;
+        if (upsertSessionError) throw upsertSessionError;
 
+        // Audit log (não deve bloquear login se falhar)
         const { error: logAttemptError } = await supabase
           .from("login_attempts")
           .insert({
@@ -201,7 +218,9 @@ export function useAuth() {
             device_fingerprint: fingerprint,
             success: true,
           });
-        if (logAttemptError) throw logAttemptError;
+        if (logAttemptError) {
+          console.warn("login_attempts insert failed:", logAttemptError);
+        }
 
         const { error: updateProfileError } = await supabase
           .from("profiles")
@@ -256,7 +275,9 @@ export function useAuth() {
           device_fingerprint: fingerprint,
           success: false,
         });
-      if (logFailedAttemptError) throw logFailedAttemptError;
+      if (logFailedAttemptError) {
+        console.warn("login_attempts insert failed:", logFailedAttemptError);
+      }
 
       await supabase.auth.signOut();
       return false;
@@ -365,6 +386,12 @@ export function useAuth() {
 
       const tick = async () => {
         try {
+          // Se já deslogou, não faça mais chamadas.
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (!session?.user || session.user.id !== userId) return;
+
           const { data: current, error: currentError } = await supabase
             .from("device_sessions")
             .select("id")
@@ -387,18 +414,21 @@ export function useAuth() {
 
             if (anyActiveError) throw anyActiveError;
 
-            // No active sessions at all (common after deploy / cleared sessions): register this device.
+            // No active sessions at all: register this device (upsert to avoid unique conflicts).
             if (!anyActive?.id) {
-              const { error: insertError } = await supabase
+              const { error: upsertError } = await supabase
                 .from("device_sessions")
-                .insert({
-                  user_id: userId,
-                  device_fingerprint: fingerprint,
-                  device_info: deviceInfo,
-                  is_active: true,
-                });
+                .upsert(
+                  {
+                    user_id: userId,
+                    device_fingerprint: fingerprint,
+                    device_info: deviceInfo,
+                    is_active: true,
+                  },
+                  { onConflict: "user_id,device_fingerprint" }
+                );
 
-              if (insertError) throw insertError;
+              if (upsertError) throw upsertError;
               return;
             }
 
