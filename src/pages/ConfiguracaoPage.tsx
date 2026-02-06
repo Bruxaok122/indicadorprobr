@@ -62,7 +62,7 @@ export default function ConfiguracaoPage() {
               <AlertBanner type="info" title="API Compartilhada">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4" />
-                  <span>Integração já realizada pelo administrador./span>
+                  <span>Integração já realizada pelo administrador.</span>
                 </div>
               </AlertBanner>
             )}
