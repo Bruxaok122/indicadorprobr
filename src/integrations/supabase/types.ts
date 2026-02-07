@@ -295,6 +295,8 @@ export type Database = {
           last_failed_attempt_at: string | null
           last_login_at: string | null
           messages_sent: number | null
+          subscription_expires_at: string | null
+          subscription_plan: string | null
           temp_banned_until: string | null
           templates_sent: number | null
           updated_at: string
@@ -314,6 +316,8 @@ export type Database = {
           last_failed_attempt_at?: string | null
           last_login_at?: string | null
           messages_sent?: number | null
+          subscription_expires_at?: string | null
+          subscription_plan?: string | null
           temp_banned_until?: string | null
           templates_sent?: number | null
           updated_at?: string
@@ -333,6 +337,8 @@ export type Database = {
           last_failed_attempt_at?: string | null
           last_login_at?: string | null
           messages_sent?: number | null
+          subscription_expires_at?: string | null
+          subscription_plan?: string | null
           temp_banned_until?: string | null
           templates_sent?: number | null
           updated_at?: string
@@ -508,11 +514,16 @@ export type Database = {
         Returns: undefined
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_subscription_expired: { Args: { _user_id: string }; Returns: boolean }
       is_temp_banned: { Args: { _user_id: string }; Returns: boolean }
       is_user_blocked: { Args: { _user_id: string }; Returns: boolean }
       record_failed_device_attempt: {
         Args: { _user_id: string }
         Returns: Json
+      }
+      set_subscription_plan: {
+        Args: { _plan: string; _user_id: string }
+        Returns: undefined
       }
     }
     Enums: {

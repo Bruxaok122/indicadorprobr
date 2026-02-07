@@ -32,6 +32,7 @@ export default function AdminPage() {
     toggleApiPermission,
     deleteUser,
     clearTempBan,
+    setSubscriptionPlan,
   } = useAdmin();
 
   const {
@@ -98,6 +99,7 @@ export default function AdminPage() {
                     onDelete={deleteUser}
                     onClearTempBan={clearTempBan}
                     onManagePhones={setPhonePermUser}
+                    onSetPlan={setSubscriptionPlan}
                   />
                 ))}
               </div>
@@ -109,6 +111,7 @@ export default function AdminPage() {
                 onDelete={deleteUser}
                 onClearTempBan={clearTempBan}
                 onManagePhones={setPhonePermUser}
+                onSetPlan={setSubscriptionPlan}
               />
             )}
           </CardContent>

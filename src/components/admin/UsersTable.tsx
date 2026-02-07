@@ -1,8 +1,15 @@
  import { Profile } from "@/types/juriszap";
  import { Badge } from "@/components/ui/badge";
- import { Phone } from "lucide-react";
+ import { Phone, CalendarClock } from "lucide-react";
  import { Switch } from "@/components/ui/switch";
  import { Button } from "@/components/ui/button";
+ import {
+   Select,
+   SelectContent,
+   SelectItem,
+   SelectTrigger,
+   SelectValue,
+ } from "@/components/ui/select";
  import {
    Table,
    TableBody,
@@ -31,23 +38,25 @@
  import { format } from "date-fns";
  import { ptBR } from "date-fns/locale";
  
- interface UsersTableProps {
-   users: Profile[];
-   onToggleBlock: (params: { userId: string; isBlocked: boolean }) => void;
-   onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
-   onDelete: (userId: string) => void;
-   onClearTempBan: (userId: string) => void;
-   onManagePhones: (user: Profile) => void;
- }
+interface UsersTableProps {
+  users: Profile[];
+  onToggleBlock: (params: { userId: string; isBlocked: boolean }) => void;
+  onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
+  onDelete: (userId: string) => void;
+  onClearTempBan: (userId: string) => void;
+  onManagePhones: (user: Profile) => void;
+  onSetPlan: (params: { userId: string; plan: string | null }) => void;
+}
  
- export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones }: UsersTableProps) {
+ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan }: UsersTableProps) {
    return (
      <Table>
        <TableHeader>
          <TableRow>
            <TableHead>Usuário</TableHead>
-           <TableHead>Status</TableHead>
-           <TableHead>API Compartilhada</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Plano</TableHead>
+            <TableHead>API Compartilhada</TableHead>
            <TableHead>Dispositivo</TableHead>
            <TableHead>Mensagens</TableHead>
            <TableHead>Último Acesso</TableHead>
@@ -101,18 +110,49 @@
                      </Tooltip>
                    )}
                  </div>
-               </TableCell>
-               <TableCell>
-                 <Switch
-                   checked={user.can_use_shared_api || false}
-                   onCheckedChange={(checked) =>
-                     onToggleApiPermission({
-                       userId: user.user_id,
-                       canUseSharedApi: checked,
-                     })
-                   }
-                 />
-               </TableCell>
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col gap-1">
+                    <Select
+                      value={user.subscription_plan || "none"}
+                      onValueChange={(value) =>
+                        onSetPlan({
+                          userId: user.user_id,
+                          plan: value === "none" ? null : value,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="w-[130px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sem plano</SelectItem>
+                        <SelectItem value="semanal">Semanal</SelectItem>
+                        <SelectItem value="mensal">Mensal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {user.subscription_expires_at && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <CalendarClock className="h-3 w-3" />
+                        {new Date(user.subscription_expires_at) > new Date() 
+                          ? `Até ${format(new Date(user.subscription_expires_at), "dd/MM/yyyy", { locale: ptBR })}`
+                          : "Expirado"
+                        }
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Switch
+                    checked={user.can_use_shared_api || false}
+                    onCheckedChange={(checked) =>
+                      onToggleApiPermission({
+                        userId: user.user_id,
+                        canUseSharedApi: checked,
+                      })
+                    }
+                  />
+                </TableCell>
             <TableCell>
               {(user as any).active_session ? (
                 <Tooltip>

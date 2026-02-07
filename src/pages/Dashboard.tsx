@@ -15,7 +15,10 @@ import {
   ArrowRight,
   AlertTriangle,
   ShieldCheck,
+  CalendarClock,
 } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -80,6 +83,34 @@ export default function Dashboard() {
                   <p className="font-medium text-foreground">API Compartilhada Ativa</p>
                   <p className="text-sm text-muted-foreground">
                     Você tem acesso à API do administrador. Pode enviar mensagens sem configuração adicional.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Subscription Plan Info */}
+            {profile?.subscription_plan && (
+              <div className={cn(
+                "flex items-center gap-3 rounded-lg border p-4",
+                profile.subscription_expires_at && new Date(profile.subscription_expires_at) > new Date()
+                  ? "border-success/30 bg-success/10"
+                  : "border-destructive/30 bg-destructive/10"
+              )}>
+                <CalendarClock className={cn(
+                  "h-5 w-5",
+                  profile.subscription_expires_at && new Date(profile.subscription_expires_at) > new Date()
+                    ? "text-success"
+                    : "text-destructive"
+                )} />
+                <div className="flex-1">
+                  <p className="font-medium text-foreground">
+                    Plano {profile.subscription_plan === 'semanal' ? 'Semanal' : 'Mensal'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {profile.subscription_expires_at && new Date(profile.subscription_expires_at) > new Date()
+                      ? `Válido até ${format(new Date(profile.subscription_expires_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`
+                      : "Plano expirado. Entre em contato com o administrador para renovar."
+                    }
                   </p>
                 </div>
               </div>

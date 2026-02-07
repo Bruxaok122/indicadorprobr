@@ -3,7 +3,14 @@
  import { Badge } from "@/components/ui/badge";
  import { Switch } from "@/components/ui/switch";
  import { Button } from "@/components/ui/button";
- import { Lock, Unlock, Trash2, Timer, Monitor, Phone } from "lucide-react";
+ import { Lock, Unlock, Trash2, Timer, Monitor, Phone, CalendarClock } from "lucide-react";
+ import {
+   Select,
+   SelectContent,
+   SelectItem,
+   SelectTrigger,
+   SelectValue,
+ } from "@/components/ui/select";
  import {
    AlertDialog,
    AlertDialogAction,
@@ -22,12 +29,13 @@
    user: Profile;
    onToggleBlock: (params: { userId: string; isBlocked: boolean }) => void;
    onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
-   onDelete: (userId: string) => void;
-   onClearTempBan: (userId: string) => void;
-   onManagePhones: (user: Profile) => void;
- }
- 
- export function UserCard({ user, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones }: UserCardProps) {
+  onDelete: (userId: string) => void;
+  onClearTempBan: (userId: string) => void;
+  onManagePhones: (user: Profile) => void;
+  onSetPlan: (params: { userId: string; plan: string | null }) => void;
+}
+
+export function UserCard({ user, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan }: UserCardProps) {
    const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
  
    return (
@@ -106,9 +114,41 @@
             </div>
           )}
          </div>
- 
-         {/* Actions */}
-         <div className="flex items-center justify-between pt-2 border-t">
+
+          {/* Plan selector */}
+          <div className="space-y-1">
+            <span className="text-sm text-muted-foreground">Plano</span>
+            <Select
+              value={user.subscription_plan || "none"}
+              onValueChange={(value) =>
+                onSetPlan({
+                  userId: user.user_id,
+                  plan: value === "none" ? null : value,
+                })
+              }
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem plano</SelectItem>
+                <SelectItem value="semanal">Semanal</SelectItem>
+                <SelectItem value="mensal">Mensal</SelectItem>
+              </SelectContent>
+            </Select>
+            {user.subscription_expires_at && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <CalendarClock className="h-3 w-3" />
+                {new Date(user.subscription_expires_at) > new Date()
+                  ? `Até ${format(new Date(user.subscription_expires_at), "dd/MM/yyyy", { locale: ptBR })}`
+                  : "Expirado"
+                }
+              </span>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-2 border-t">
            <div className="flex items-center gap-2">
              <span className="text-sm text-muted-foreground">API</span>
              <Switch
