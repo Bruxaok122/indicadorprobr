@@ -40,7 +40,7 @@ import {
 
 export default function ConversasPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { contacts, isLoading: contactsLoading } = useContacts();
+  const { contacts, isLoading: contactsLoading, toggleContactBlock, isTogglingBlock } = useContacts();
   const { templates } = useMetaTemplates();
   const { phones } = useWabaPhones();
   const isMobile = useIsMobile();
@@ -197,6 +197,8 @@ export default function ConversasPage() {
                 contact={selectedContact}
                 isMobile={isMobile}
                 onBack={handleBackToList}
+                onToggleBlock={(contactId, blocked) => toggleContactBlock({ contactId, blocked })}
+                isTogglingBlock={isTogglingBlock}
               />
               
               <ChatMessages

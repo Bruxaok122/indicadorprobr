@@ -167,6 +167,28 @@ export function useContacts() {
     },
   });
 
+  const toggleContactBlockMutation = useMutation({
+    mutationFn: async ({ contactId, blocked }: { contactId: string; blocked: boolean }) => {
+      const newStatus = blocked ? "encerrado" : "novo";
+      const { error } = await supabase
+        .from("contacts")
+        .update({ status: newStatus })
+        .eq("id", contactId);
+
+      if (error) throw error;
+      return { blocked };
+    },
+    onSuccess: (result) => {
+      toast.success(result.blocked ? "Cliente bloqueado" : "Cliente desbloqueado");
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao alterar status do cliente", {
+        description: error.message,
+      });
+    },
+  });
+
   return {
     contacts,
     isLoading,
@@ -178,5 +200,7 @@ export function useContacts() {
     isDeleting: deleteContactMutation.isPending,
     deleteContacts: deleteContactsMutation.mutate,
     isDeletingContacts: deleteContactsMutation.isPending,
+    toggleContactBlock: toggleContactBlockMutation.mutate,
+    isTogglingBlock: toggleContactBlockMutation.isPending,
   };
 }
