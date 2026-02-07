@@ -2,13 +2,15 @@ import { Contact } from "@/types/juriszap";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, Phone, FileText, ClipboardCopy } from "lucide-react";
+import { ArrowLeft, Phone, FileText, ClipboardCopy, Lock, LockOpen } from "lucide-react";
 import { toast } from "sonner";
 
 interface ChatHeaderProps {
   contact: Contact;
   isMobile: boolean;
   onBack: () => void;
+  onToggleBlock: (contactId: string, blocked: boolean) => void;
+  isTogglingBlock?: boolean;
 }
 
 function formatCurrency(value?: number): string {
@@ -45,7 +47,9 @@ Agência:
 Conta: `;
 }
 
-export function ChatHeader({ contact, isMobile, onBack }: ChatHeaderProps) {
+export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglingBlock }: ChatHeaderProps) {
+  const isBlocked = contact.status === "encerrado";
+
   const handleCopyTemplate = async () => {
     const text = buildContactTemplate(contact);
     try {
@@ -55,6 +59,22 @@ export function ChatHeader({ contact, isMobile, onBack }: ChatHeaderProps) {
       toast.error("Não foi possível copiar");
     }
   };
+
+  const handleToggleBlock = () => {
+    onToggleBlock(contact.id, !isBlocked);
+  };
+
+  const blockButton = (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={handleToggleBlock}
+      disabled={isTogglingBlock}
+      className={isBlocked ? "text-emerald-500 hover:text-emerald-600" : "text-destructive hover:text-destructive/80"}
+    >
+      {isBlocked ? <LockOpen className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+    </Button>
+  );
 
   return (
     <div className="flex items-center justify-between border-b bg-card px-3 md:px-5 py-2.5 md:py-3">
@@ -88,30 +108,41 @@ export function ChatHeader({ contact, isMobile, onBack }: ChatHeaderProps) {
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         {isMobile ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleCopyTemplate}
-            className="text-muted-foreground"
-          >
-            <ClipboardCopy className="h-5 w-5" />
-          </Button>
+          <>
+            {blockButton}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleCopyTemplate}
+              className="text-muted-foreground"
+            >
+              <ClipboardCopy className="h-5 w-5" />
+            </Button>
+          </>
         ) : (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleCopyTemplate}
-                className="text-muted-foreground"
-              >
-                <ClipboardCopy className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Copiar modelo de mensagem</TooltipContent>
-          </Tooltip>
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {blockButton}
+              </TooltipTrigger>
+              <TooltipContent>{isBlocked ? "Desbloquear cliente" : "Bloquear cliente"}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleCopyTemplate}
+                  className="text-muted-foreground"
+                >
+                  <ClipboardCopy className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copiar modelo de mensagem</TooltipContent>
+            </Tooltip>
+          </>
         )}
         <StatusBadge status={contact.status} />
       </div>
