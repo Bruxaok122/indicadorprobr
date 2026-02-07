@@ -1,5 +1,6 @@
  import { Profile } from "@/types/juriszap";
  import { Badge } from "@/components/ui/badge";
+ import { Phone } from "lucide-react";
  import { Switch } from "@/components/ui/switch";
  import { Button } from "@/components/ui/button";
  import {
@@ -36,9 +37,10 @@
    onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
    onDelete: (userId: string) => void;
    onClearTempBan: (userId: string) => void;
+   onManagePhones: (user: Profile) => void;
  }
  
- export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan }: UsersTableProps) {
+ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones }: UsersTableProps) {
    return (
      <Table>
        <TableHeader>
@@ -167,6 +169,19 @@
                </TableCell>
                <TableCell className="text-right">
                  <div className="flex justify-end gap-1">
+                   <Tooltip>
+                     <TooltipTrigger asChild>
+                       <Button
+                         variant="ghost"
+                         size="icon"
+                         className="h-8 w-8"
+                         onClick={() => onManagePhones(user)}
+                       >
+                         <Phone className="h-4 w-4 text-primary" />
+                       </Button>
+                     </TooltipTrigger>
+                     <TooltipContent>Gerenciar números de disparo</TooltipContent>
+                   </Tooltip>
                    {isTempBanned && (
                      <Tooltip>
                        <TooltipTrigger asChild>

@@ -63,6 +63,7 @@ export function useMessages(contactId: string | null) {
       message?: string;
       templateName?: string;
       isTemplate?: boolean;
+      selectedPhoneNumberId?: string;
     }) => {
       const { data, error } = await supabase.functions.invoke("send-whatsapp-message", {
         body: { ...params, userId: user?.id },

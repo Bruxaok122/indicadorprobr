@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,8 @@ import { AlertBanner } from "@/components/ui/alert-banner";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
 import { useContacts } from "@/hooks/useContacts";
+import { useWabaPhones } from "@/hooks/useWabaPhones";
+import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
 import {
   FileText,
   RefreshCw,
@@ -25,24 +27,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 
 export default function TemplatesPage() {
   const { templates, allTemplates, isLoading, error, refetch, sendBulk, isSendingBulk } = useMetaTemplates();
   const { contacts } = useContacts();
+  const { phones } = useWabaPhones();
   
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
+  const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
+
+  // Auto-select phone if only one available
+  useEffect(() => {
+    if (phones.length === 1 && !selectedPhoneNumberId) {
+      setSelectedPhoneNumberId(phones[0].phone_number_id);
+    }
+  }, [phones, selectedPhoneNumberId]);
 
   const handleOpenBulkDialog = (template: MetaTemplate) => {
     setSelectedTemplate(template);
@@ -68,11 +73,16 @@ export default function TemplatesPage() {
 
   const handleSendBulk = () => {
     if (!selectedTemplate || selectedContacts.length === 0) return;
+    if (phones.length > 0 && !selectedPhoneNumberId) {
+      toast.error("Selecione um número de disparo");
+      return;
+    }
     
     sendBulk({
       contactIds: selectedContacts,
       templateName: selectedTemplate.name,
       templateLanguage: selectedTemplate.language,
+      selectedPhoneNumberId: selectedPhoneNumberId || undefined,
     }, {
       onSuccess: () => {
         setShowBulkDialog(false);
@@ -232,11 +242,23 @@ export default function TemplatesPage() {
           <DialogHeader>
             <DialogTitle>Disparar Template em Massa</DialogTitle>
             <DialogDescription>
-              Selecione os contatos que receberão o template "{selectedTemplate?.name}"
+              Selecione o número de disparo e os contatos que receberão o template "{selectedTemplate?.name}"
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
+            {/* Phone number selector */}
+            {phones.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Número de Disparo</label>
+                <PhoneNumberSelector
+                  phones={phones}
+                  selectedPhoneNumberId={selectedPhoneNumberId}
+                  onSelect={setSelectedPhoneNumberId}
+                />
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
                 {selectedContacts.length} de {contacts.length} selecionado(s)
@@ -286,7 +308,7 @@ export default function TemplatesPage() {
             </Button>
             <Button 
               onClick={handleSendBulk} 
-              disabled={selectedContacts.length === 0 || isSendingBulk}
+              disabled={selectedContacts.length === 0 || isSendingBulk || (phones.length > 0 && !selectedPhoneNumberId)}
             >
               {isSendingBulk ? (
                 <>

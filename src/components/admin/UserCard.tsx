@@ -3,7 +3,7 @@
  import { Badge } from "@/components/ui/badge";
  import { Switch } from "@/components/ui/switch";
  import { Button } from "@/components/ui/button";
- import { Lock, Unlock, Trash2, Timer, Monitor } from "lucide-react";
+ import { Lock, Unlock, Trash2, Timer, Monitor, Phone } from "lucide-react";
  import {
    AlertDialog,
    AlertDialogAction,
@@ -24,9 +24,10 @@
    onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
    onDelete: (userId: string) => void;
    onClearTempBan: (userId: string) => void;
+   onManagePhones: (user: Profile) => void;
  }
  
- export function UserCard({ user, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan }: UserCardProps) {
+ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones }: UserCardProps) {
    const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
  
    return (
@@ -121,6 +122,14 @@
              />
            </div>
            <div className="flex gap-1">
+             <Button
+               variant="ghost"
+               size="icon"
+               className="h-8 w-8"
+               onClick={() => onManagePhones(user)}
+             >
+               <Phone className="h-4 w-4 text-primary" />
+             </Button>
              <Button
                variant="ghost"
                size="icon"

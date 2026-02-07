@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useContacts } from "@/hooks/useContacts";
 import { useMessages } from "@/hooks/useMessages";
 import { useMetaTemplates } from "@/hooks/useMetaTemplates";
+import { useWabaPhones } from "@/hooks/useWabaPhones";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import { ChatContactList } from "@/components/chat/ChatContactList";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ChatInput } from "@/components/chat/ChatInput";
+import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +42,7 @@ export default function ConversasPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { contacts, isLoading: contactsLoading } = useContacts();
   const { templates } = useMetaTemplates();
+  const { phones } = useWabaPhones();
   const isMobile = useIsMobile();
 
   const [search, setSearch] = useState("");
@@ -54,6 +57,7 @@ export default function ConversasPage() {
   const [docCaption, setDocCaption] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [selectedTemplateName, setSelectedTemplateName] = useState("");
+  const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
 
   const {
     messages,
@@ -65,6 +69,13 @@ export default function ConversasPage() {
   } = useMessages(selectedContactId);
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
+
+  // Auto-select phone if only one available
+  useEffect(() => {
+    if (phones.length === 1 && !selectedPhoneNumberId) {
+      setSelectedPhoneNumberId(phones[0].phone_number_id);
+    }
+  }, [phones, selectedPhoneNumberId]);
 
   const handleSelectContact = (contactId: string) => {
     setSelectedContactId(contactId);
@@ -89,18 +100,31 @@ export default function ConversasPage() {
       });
       return;
     }
-    sendMessage({ contactId: selectedContactId, message: messageText.trim() });
+    if (phones.length > 0 && !selectedPhoneNumberId) {
+      toast.error("Selecione um número de disparo");
+      return;
+    }
+    sendMessage({
+      contactId: selectedContactId,
+      message: messageText.trim(),
+      selectedPhoneNumberId: selectedPhoneNumberId || undefined,
+    });
     setMessageText("");
   };
 
   const handleSendTemplate = () => {
     if (!selectedTemplateName || !selectedContactId) return;
+    if (phones.length > 0 && !selectedPhoneNumberId) {
+      toast.error("Selecione um número de disparo");
+      return;
+    }
     const template = templates.find((t) => t.name === selectedTemplateName);
     if (!template) return;
     sendMessage({
       contactId: selectedContactId,
       templateName: template.name,
       isTemplate: true,
+      selectedPhoneNumberId: selectedPhoneNumberId || undefined,
     });
     setShowTemplateDialog(false);
     setSelectedTemplateName("");
@@ -113,12 +137,17 @@ export default function ConversasPage() {
 
   const handleSendDocument = async () => {
     if (!selectedFile || !selectedContactId) return;
+    if (phones.length > 0 && !selectedPhoneNumberId) {
+      toast.error("Selecione um número de disparo");
+      return;
+    }
     setIsUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
       formData.append("contactId", selectedContactId);
       if (docCaption.trim()) formData.append("caption", docCaption.trim());
+      if (selectedPhoneNumberId) formData.append("selectedPhoneNumberId", selectedPhoneNumberId);
 
       const { data, error } = await supabase.functions.invoke("upload-document", {
         body: formData,
@@ -169,6 +198,17 @@ export default function ConversasPage() {
                 isMobile={isMobile}
                 onBack={handleBackToList}
               />
+              {/* Phone number selector bar */}
+              {phones.length > 0 && (
+                <div className="border-b bg-card px-3 md:px-5 py-2">
+                  <PhoneNumberSelector
+                    phones={phones}
+                    selectedPhoneNumberId={selectedPhoneNumberId}
+                    onSelect={setSelectedPhoneNumberId}
+                    className="max-w-sm"
+                  />
+                </div>
+              )}
               <ChatMessages
                 messages={messages}
                 isLoading={messagesLoading}
