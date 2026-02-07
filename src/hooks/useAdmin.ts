@@ -190,6 +190,30 @@ export function useAdmin() {
     },
   });
 
+  // Set subscription plan mutation
+  const setSubscriptionPlanMutation = useMutation({
+    mutationFn: async ({ userId, plan }: { userId: string; plan: string | null }) => {
+      const { error } = await supabase.rpc("set_subscription_plan", {
+        _user_id: userId,
+        _plan: plan || "",
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_, { plan }) => {
+      toast.success(
+        plan 
+          ? `Plano ${plan} ativado com sucesso!` 
+          : "Plano removido!"
+      );
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao alterar plano", {
+        description: error.message,
+      });
+    },
+  });
+
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -228,5 +252,7 @@ export function useAdmin() {
     isDeletingUser: deleteUserMutation.isPending,
     clearTempBan: clearTempBanMutation.mutate,
     isClearingTempBan: clearTempBanMutation.isPending,
+    setSubscriptionPlan: setSubscriptionPlanMutation.mutate,
+    isSettingPlan: setSubscriptionPlanMutation.isPending,
   };
 }

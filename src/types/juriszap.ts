@@ -101,6 +101,8 @@ export interface Profile {
   temp_banned_until?: string;
   ban_reason?: string;
   last_failed_attempt_at?: string;
+  subscription_plan?: string | null;
+  subscription_expires_at?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -314,6 +314,30 @@ export function useAuth() {
             return;
           }
 
+          // Check subscription expiration
+          const profileData = await supabase
+            .from("profiles")
+            .select("subscription_plan, subscription_expires_at")
+            .eq("user_id", session.user.id)
+            .single();
+          
+          if (profileData.data?.subscription_plan && 
+              profileData.data?.subscription_expires_at &&
+              new Date(profileData.data.subscription_expires_at) < new Date()) {
+            // Auto-block expired subscription
+            await supabase
+              .from("profiles")
+              .update({ is_blocked: true })
+              .eq("user_id", session.user.id);
+            
+            toast.error("Plano expirado", {
+              description: "Seu plano expirou. Entre em contato com o administrador para renovar.",
+              duration: 10000,
+            });
+            await supabase.auth.signOut();
+            return;
+          }
+
           if (isBlocked) {
             toast.error("Conta bloqueada", {
               description: "Entre em contato com o administrador.",

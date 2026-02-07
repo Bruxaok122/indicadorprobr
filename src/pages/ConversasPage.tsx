@@ -15,7 +15,7 @@ import { ChatContactList } from "@/components/chat/ChatContactList";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ChatInput } from "@/components/chat/ChatInput";
-import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -198,17 +198,7 @@ export default function ConversasPage() {
                 isMobile={isMobile}
                 onBack={handleBackToList}
               />
-              {/* Phone number selector bar */}
-              {phones.length > 0 && (
-                <div className="border-b bg-card px-3 md:px-5 py-2">
-                  <PhoneNumberSelector
-                    phones={phones}
-                    selectedPhoneNumberId={selectedPhoneNumberId}
-                    onSelect={setSelectedPhoneNumberId}
-                    className="max-w-sm"
-                  />
-                </div>
-              )}
+              
               <ChatMessages
                 messages={messages}
                 isLoading={messagesLoading}
