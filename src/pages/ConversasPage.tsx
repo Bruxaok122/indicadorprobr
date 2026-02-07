@@ -216,6 +216,7 @@ export default function ConversasPage() {
                 isSending={isSending}
                 isMobile={isMobile}
                 templatesAvailable={templates.length > 0}
+                isContactBlocked={selectedContact.status === "encerrado"}
                 onSendMessage={handleSendMessage}
                 onOpenTemplateDialog={() => setShowTemplateDialog(true)}
                 onFileSelected={handleFileSelected}

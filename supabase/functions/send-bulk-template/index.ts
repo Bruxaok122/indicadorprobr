@@ -150,6 +150,12 @@ serve(async (req) => {
 
     for (const contact of contacts) {
       try {
+        // Skip blocked contacts
+        if (contact.status === "encerrado") {
+          results.failed++;
+          results.errors.push(`${contact.name}: Cliente bloqueado`);
+          continue;
+        }
         // Check if this PHONE is already owned by another user (even if different contact record)
         if (userId) {
           const { data: existingOwner } = await supabase

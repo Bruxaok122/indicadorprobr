@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Send, Paperclip, FileText } from "lucide-react";
+import { Send, Paperclip, FileText, Lock } from "lucide-react";
 import { toast } from "sonner";
 
 interface ChatInputProps {
@@ -14,6 +14,7 @@ interface ChatInputProps {
   isSending: boolean;
   isMobile: boolean;
   templatesAvailable: boolean;
+  isContactBlocked?: boolean;
   onSendMessage: () => void;
   onOpenTemplateDialog: () => void;
   onFileSelected: (file: File) => void;
@@ -27,6 +28,7 @@ export function ChatInput({
   isSending,
   isMobile,
   templatesAvailable,
+  isContactBlocked,
   onSendMessage,
   onOpenTemplateDialog,
   onFileSelected,
@@ -65,6 +67,19 @@ export function ChatInput({
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
   };
+
+  if (isContactBlocked) {
+    return (
+      <div className={cn("border-t bg-card px-2 md:px-4 py-3", isMobile && "pb-5")}>
+        <div className="flex items-center justify-center gap-2 rounded-lg bg-destructive/10 px-3 py-3">
+          <Lock className="h-4 w-4 text-destructive" />
+          <p className="text-sm font-medium text-destructive">
+            Cliente bloqueado — desbloqueie para enviar mensagens
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("border-t bg-card px-2 md:px-4 py-2", isMobile && "pb-5")}>
