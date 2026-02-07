@@ -4,8 +4,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { AlertBanner } from "@/components/ui/alert-banner";
-import { Lock, Mail, Eye, EyeOff, Scale } from "lucide-react";
+import { Lock, Mail, Eye, EyeOff, Scale, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -113,9 +112,17 @@ export function LoginGlassCard() {
             animate={{ height: "auto", opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <AlertBanner type="error" title="Erro">
-              {error}
-            </AlertBanner>
+            <div
+              className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm"
+              style={{
+                background: "hsla(0, 70%, 50%, 0.12)",
+                border: "1px solid hsla(0, 70%, 50%, 0.2)",
+                color: "hsl(0, 85%, 75%)",
+              }}
+            >
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
           </motion.div>
         )}
 
