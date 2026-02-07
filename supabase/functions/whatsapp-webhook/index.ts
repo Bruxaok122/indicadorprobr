@@ -185,47 +185,83 @@ serve(async (req) => {
                       .limit(1)
                       .single();
                     
+                    console.log("WhatsApp config found:", !!config, "has token:", !!config?.access_token);
+                    
                     if (config?.access_token && message.image?.id) {
-                      // Get media URL from WhatsApp
+                      const accessToken = config.access_token;
+                      const mediaId = message.image.id;
+                      const mimeType = message.image.mime_type || "image/jpeg";
+                      const ext = mimeType.split('/')[1] || 'jpg';
+                      const fileName = `${Date.now()}-${mediaId}.${ext}`;
+                      
+                      // Step 1: Get media download URL from WhatsApp Graph API
+                      console.log(`Fetching media URL for ID: ${mediaId}`);
                       const mediaResponse = await fetch(
-                        `https://graph.facebook.com/v18.0/${message.image.id}`,
+                        `https://graph.facebook.com/v21.0/${mediaId}`,
                         {
-                          headers: {
-                            Authorization: `Bearer ${config.access_token}`,
-                          },
+                          headers: { Authorization: `Bearer ${accessToken}` },
                         }
                       );
                       
+                      console.log("Media API response status:", mediaResponse.status);
+                      
+                      let downloadUrl: string | null = null;
+                      
                       if (mediaResponse.ok) {
                         const mediaData = await mediaResponse.json();
-                        
-                        // Download the actual image
-                        const imageResponse = await fetch(mediaData.url, {
-                          headers: {
-                            Authorization: `Bearer ${config.access_token}`,
-                          },
+                        downloadUrl = mediaData.url;
+                        console.log("Got media download URL from Graph API");
+                      } else {
+                        const errorText = await mediaResponse.text();
+                        console.error("Media API error:", errorText);
+                        // Fallback: try the direct URL from webhook payload
+                        if (message.image.url) {
+                          downloadUrl = message.image.url;
+                          console.log("Using fallback URL from webhook payload");
+                        }
+                      }
+                      
+                      if (downloadUrl) {
+                        // Step 2: Download the actual image binary
+                        console.log("Downloading image from URL...");
+                        const imageResponse = await fetch(downloadUrl, {
+                          headers: { Authorization: `Bearer ${accessToken}` },
                         });
                         
+                        console.log("Image download status:", imageResponse.status);
+                        
                         if (imageResponse.ok) {
-                          const imageBlob = await imageResponse.blob();
-                          const fileName = `${Date.now()}-${message.image.id}.${mediaData.mime_type?.split('/')[1] || 'jpg'}`;
+                          const arrayBuffer = await imageResponse.arrayBuffer();
+                          const uint8Array = new Uint8Array(arrayBuffer);
+                          console.log(`Image downloaded, size: ${uint8Array.length} bytes`);
                           
-                          // Upload to Supabase Storage
+                          // Step 3: Upload to Supabase Storage
                           const { data: uploadData, error: uploadError } = await supabase
                             .storage
                             .from("documents")
-                            .upload(`images/${fileName}`, imageBlob, {
-                              contentType: mediaData.mime_type || "image/jpeg",
+                            .upload(`images/${fileName}`, uint8Array, {
+                              contentType: mimeType,
+                              upsert: false,
                             });
                           
-                          if (!uploadError && uploadData) {
+                          if (uploadError) {
+                            console.error("Storage upload error:", uploadError);
+                          } else {
                             const { data: urlData } = supabase.storage
                               .from("documents")
                               .getPublicUrl(`images/${fileName}`);
                             imageUrl = urlData.publicUrl;
+                            console.log("Image uploaded successfully, URL:", imageUrl);
                           }
+                        } else {
+                          const errText = await imageResponse.text();
+                          console.error("Image download failed:", errText);
                         }
+                      } else {
+                        console.error("No download URL available for image");
                       }
+                    } else {
+                      console.error("Missing config or image ID. Config:", !!config, "Image ID:", message.image?.id);
                     }
                   } catch (imgError) {
                     console.error("Error downloading image:", imgError);
