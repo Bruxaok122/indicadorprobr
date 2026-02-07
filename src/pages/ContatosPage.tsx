@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useContacts } from "@/hooks/useContacts";
 import { useMetaTemplates } from "@/hooks/useMetaTemplates";
+import { useWabaPhones } from "@/hooks/useWabaPhones";
+import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
 import { LoadingPage, LoadingSpinner } from "@/components/ui/loading-spinner";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -67,6 +69,7 @@ import { Label } from "@/components/ui/label";
 export default function ContatosPage() {
   const { contacts, isLoading, deleteContact, isDeleting, deleteContacts, isDeletingContacts } = useContacts();
   const { templates, sendBulk, isSendingBulk } = useMetaTemplates();
+  const { phones } = useWabaPhones();
   
   const [search, setSearch] = useState("");
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
@@ -75,6 +78,7 @@ export default function ContatosPage() {
   const [showDeleteBulkDialog, setShowDeleteBulkDialog] = useState(false);
   const [singleContactId, setSingleContactId] = useState<string | null>(null);
   const [selectedTemplateName, setSelectedTemplateName] = useState<string>("");
+  const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState<string>("");
 
   const filteredContacts = contacts.filter((contact) => {
     const searchLower = search.toLowerCase();
@@ -105,17 +109,19 @@ export default function ContatosPage() {
   const handleOpenBulkDialog = () => {
     if (selectedContacts.length === 0) return;
     setSelectedTemplateName("");
+    setSelectedPhoneNumberId(phones.length === 1 ? phones[0].phone_number_id : "");
     setShowBulkDialog(true);
   };
 
   const handleOpenSingleDialog = (contactId: string) => {
     setSingleContactId(contactId);
     setSelectedTemplateName("");
+    setSelectedPhoneNumberId(phones.length === 1 ? phones[0].phone_number_id : "");
     setShowSingleDialog(true);
   };
 
   const handleSendBulk = () => {
-    if (!selectedTemplateName || selectedContacts.length === 0) return;
+    if (!selectedTemplateName || selectedContacts.length === 0 || !selectedPhoneNumberId) return;
 
     const template = templates.find(t => t.name === selectedTemplateName);
     if (!template) return;
@@ -124,6 +130,7 @@ export default function ContatosPage() {
       contactIds: selectedContacts,
       templateName: template.name,
       templateLanguage: template.language,
+      selectedPhoneNumberId,
     }, {
       onSuccess: () => {
         setShowBulkDialog(false);
@@ -134,7 +141,7 @@ export default function ContatosPage() {
   };
 
   const handleSendSingle = () => {
-    if (!selectedTemplateName || !singleContactId) return;
+    if (!selectedTemplateName || !singleContactId || !selectedPhoneNumberId) return;
 
     const template = templates.find(t => t.name === selectedTemplateName);
     if (!template) return;
@@ -143,6 +150,7 @@ export default function ContatosPage() {
       contactIds: [singleContactId],
       templateName: template.name,
       templateLanguage: template.language,
+      selectedPhoneNumberId,
     }, {
       onSuccess: () => {
         setShowSingleDialog(false);
@@ -420,6 +428,16 @@ export default function ContatosPage() {
                 </Select>
               )}
             </div>
+            {phones.length > 0 && (
+              <div className="space-y-2">
+                <Label>Número de Disparo</Label>
+                <PhoneNumberSelector
+                  phones={phones}
+                  selectedPhoneNumberId={selectedPhoneNumberId}
+                  onSelect={setSelectedPhoneNumberId}
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowBulkDialog(false)}>
@@ -427,7 +445,7 @@ export default function ContatosPage() {
             </Button>
             <Button
               onClick={handleSendBulk}
-              disabled={!selectedTemplateName || isSendingBulk}
+              disabled={!selectedTemplateName || !selectedPhoneNumberId || isSendingBulk}
             >
               {isSendingBulk ? (
                 <>
@@ -489,6 +507,16 @@ export default function ContatosPage() {
                 </Select>
               )}
             </div>
+            {phones.length > 0 && (
+              <div className="space-y-2">
+                <Label>Número de Disparo</Label>
+                <PhoneNumberSelector
+                  phones={phones}
+                  selectedPhoneNumberId={selectedPhoneNumberId}
+                  onSelect={setSelectedPhoneNumberId}
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowSingleDialog(false)}>
@@ -496,7 +524,7 @@ export default function ContatosPage() {
             </Button>
             <Button
               onClick={handleSendSingle}
-              disabled={!selectedTemplateName || isSendingBulk}
+              disabled={!selectedTemplateName || !selectedPhoneNumberId || isSendingBulk}
             >
               {isSendingBulk ? (
                 <>
