@@ -108,6 +108,12 @@ serve(async (req) => {
                   contactId = existingContact.id;
                   contactUserId = existingContact.user_id;
                   console.log(`Using existing contact: ${contactId} (user_id: ${contactUserId})`);
+
+                  // If contact is blocked (encerrado), ignore the incoming message
+                  if (existingContact.status === "encerrado") {
+                    console.log(`Contact ${contactId} is blocked (encerrado). Ignoring message from ${phone}.`);
+                    continue;
+                  }
                   
                   // Update contact status and last message
                   await supabase

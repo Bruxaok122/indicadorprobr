@@ -88,6 +88,14 @@ serve(async (req) => {
       );
     }
 
+    // Block sending to contacts with status "encerrado"
+    if (contact.status === "encerrado") {
+      return new Response(
+        JSON.stringify({ error: "Este cliente está bloqueado. Desbloqueie-o antes de enviar mensagens." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Check if this PHONE is already owned by another user (even if different contact record)
     if (userId) {
       const { data: existingOwner } = await supabase
