@@ -82,7 +82,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-3 rounded-lg border border-info/30 bg-info/10 p-4">
                 <ShieldCheck className="h-5 w-5 text-info" />
                 <div className="flex-1">
-                  <p className="font-medium text-foreground">API Compartilhada Ativa</p>
+                  <p className="font-medium text-foreground">Conta Ativa</p>
                   <p className="text-sm text-muted-foreground">Tudo ok! Você já pode começar a enviar mensagem.</p>
                 </div>
               </div>
