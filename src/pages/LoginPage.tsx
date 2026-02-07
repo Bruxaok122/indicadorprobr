@@ -13,7 +13,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen overflow-hidden">
+    <div className="relative flex h-screen overflow-auto">
       <LoginBackground />
 
       {/* Content layer */}
