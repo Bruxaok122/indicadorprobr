@@ -11,6 +11,7 @@ interface ChatHeaderProps {
   onBack: () => void;
   onToggleBlock: (contactId: string, blocked: boolean) => void;
   isTogglingBlock?: boolean;
+  onOpenProfile?: () => void;
 }
 
 function formatCurrency(value?: number): string {
@@ -47,7 +48,7 @@ Agência:
 Conta: `;
 }
 
-export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglingBlock }: ChatHeaderProps) {
+export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglingBlock, onOpenProfile }: ChatHeaderProps) {
   const isBlocked = contact.status === "encerrado";
 
   const handleCopyTemplate = async () => {
@@ -89,24 +90,30 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
-          {contact.name.charAt(0).toUpperCase()}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-sm truncate">{contact.name}</h3>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Phone className="h-3 w-3" />
-              {contact.phone}
-            </span>
-            {contact.process_number && !isMobile && (
-              <span className="flex items-center gap-1">
-                <FileText className="h-3 w-3" />
-                {contact.process_number}
-              </span>
-            )}
+        <button
+          type="button"
+          onClick={onOpenProfile}
+          className="flex items-center gap-3 min-w-0 flex-1 rounded-lg hover:bg-muted/50 transition-colors -m-1 p-1 cursor-pointer"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
+            {contact.name.charAt(0).toUpperCase()}
           </div>
-        </div>
+          <div className="min-w-0 flex-1 text-left">
+            <h3 className="font-semibold text-sm truncate">{contact.name}</h3>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Phone className="h-3 w-3" />
+                {contact.phone}
+              </span>
+              {contact.process_number && !isMobile && (
+                <span className="flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  {contact.process_number}
+                </span>
+              )}
+            </div>
+          </div>
+        </button>
       </div>
       <div className="flex items-center gap-1">
         {isMobile ? (

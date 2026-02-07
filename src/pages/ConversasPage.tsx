@@ -15,6 +15,7 @@ import { ChatContactList } from "@/components/chat/ChatContactList";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ChatInput } from "@/components/chat/ChatInput";
+import { ContactProfileDrawer } from "@/components/chat/ContactProfileDrawer";
 
 
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ export default function ConversasPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedTemplateName, setSelectedTemplateName] = useState("");
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
+  const [showProfileDrawer, setShowProfileDrawer] = useState(false);
 
   const {
     messages,
@@ -199,6 +201,7 @@ export default function ConversasPage() {
                 onBack={handleBackToList}
                 onToggleBlock={(contactId, blocked) => toggleContactBlock({ contactId, blocked })}
                 isTogglingBlock={isTogglingBlock}
+                onOpenProfile={() => setShowProfileDrawer(true)}
               />
               
               <ChatMessages
@@ -352,6 +355,13 @@ export default function ConversasPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Contact Profile Drawer */}
+      <ContactProfileDrawer
+        contact={selectedContact ?? null}
+        open={showProfileDrawer}
+        onOpenChange={setShowProfileDrawer}
+      />
     </AppLayout>
   );
 }
