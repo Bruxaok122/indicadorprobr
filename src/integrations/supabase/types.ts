@@ -340,6 +340,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_phone_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          phone_number_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          phone_number_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          phone_number_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_phone_permissions_phone_number_id_fkey"
+            columns: ["phone_number_id"]
+            isOneToOne: false
+            referencedRelation: "waba_phone_numbers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -391,6 +420,39 @@ export type Database = {
           updated_at?: string
           user_id?: string
           waba_id?: string | null
+        }
+        Relationships: []
+      }
+      waba_phone_numbers: {
+        Row: {
+          created_at: string
+          display_phone_number: string
+          id: string
+          is_active: boolean
+          phone_number_id: string
+          quality_rating: string | null
+          updated_at: string
+          verified_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_phone_number: string
+          id?: string
+          is_active?: boolean
+          phone_number_id: string
+          quality_rating?: string | null
+          updated_at?: string
+          verified_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_phone_number?: string
+          id?: string
+          is_active?: boolean
+          phone_number_id?: string
+          quality_rating?: string | null
+          updated_at?: string
+          verified_name?: string | null
         }
         Relationships: []
       }

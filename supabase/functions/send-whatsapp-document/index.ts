@@ -16,7 +16,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { contactId, documentUrl, documentName, caption, userId } = await req.json();
+    const { contactId, documentUrl, documentName, caption, userId, selectedPhoneNumberId } = await req.json();
 
     if (!contactId || !documentUrl) {
       return new Response(
@@ -91,8 +91,48 @@ serve(async (req) => {
     // Use the contact's user_id if available, otherwise use the provided userId
     const effectiveUserId = contact.user_id || userId || null;
 
+    // Determine which phone_number_id to use
+    let finalPhoneNumberId = config.phone_number_id;
+
+    if (selectedPhoneNumberId) {
+      const { data: phoneRecord } = await supabase
+        .from("waba_phone_numbers")
+        .select("id")
+        .eq("phone_number_id", selectedPhoneNumberId)
+        .eq("is_active", true)
+        .single();
+
+      if (!phoneRecord) {
+        return new Response(
+          JSON.stringify({ error: "Número de disparo inválido ou inativo." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (effectiveUserId) {
+        const { data: isUserAdmin } = await supabase.rpc("is_admin", { _user_id: effectiveUserId });
+        if (!isUserAdmin) {
+          const { data: permission } = await supabase
+            .from("user_phone_permissions")
+            .select("id")
+            .eq("user_id", effectiveUserId)
+            .eq("phone_number_id", phoneRecord.id)
+            .maybeSingle();
+
+          if (!permission) {
+            return new Response(
+              JSON.stringify({ error: "Você não tem permissão para usar este número de disparo." }),
+              { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
+
+      finalPhoneNumberId = selectedPhoneNumberId;
+    }
+
     // Send document via WhatsApp API
-    const whatsappUrl = `https://graph.facebook.com/v18.0/${config.phone_number_id}/messages`;
+    const whatsappUrl = `https://graph.facebook.com/v18.0/${finalPhoneNumberId}/messages`;
 
     const requestBody = {
       messaging_product: "whatsapp",

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useWabaPhones } from "@/hooks/useWabaPhones";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -12,6 +13,9 @@ import { StatsCards } from "@/components/admin/StatsCards";
 import { UserCard } from "@/components/admin/UserCard";
 import { UsersTable } from "@/components/admin/UsersTable";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
+import { PhoneNumbersSection } from "@/components/admin/PhoneNumbersSection";
+import { PhonePermissionsDialog } from "@/components/admin/PhonePermissionsDialog";
+import { Profile } from "@/types/juriszap";
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -30,7 +34,15 @@ export default function AdminPage() {
     clearTempBan,
   } = useAdmin();
 
+  const {
+    allPhones,
+    getUserPermissions,
+    updatePermissions,
+    isUpdatingPermissions,
+  } = useWabaPhones();
+
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [phonePermUser, setPhonePermUser] = useState<Profile | null>(null);
 
   const handleLogout = async () => {
     await signOut();
@@ -43,6 +55,8 @@ export default function AdminPage() {
 
       <main className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
         <StatsCards stats={stats} isLoading={isLoadingStats} />
+
+        <PhoneNumbersSection />
 
         <Card>
           <CardHeader>
@@ -83,6 +97,7 @@ export default function AdminPage() {
                     onToggleApiPermission={toggleApiPermission}
                     onDelete={deleteUser}
                     onClearTempBan={clearTempBan}
+                    onManagePhones={setPhonePermUser}
                   />
                 ))}
               </div>
@@ -93,6 +108,7 @@ export default function AdminPage() {
                 onToggleApiPermission={toggleApiPermission}
                 onDelete={deleteUser}
                 onClearTempBan={clearTempBan}
+                onManagePhones={setPhonePermUser}
               />
             )}
           </CardContent>
@@ -110,6 +126,16 @@ export default function AdminPage() {
         onOpenChange={setShowCreateDialog}
         onCreate={createUser}
         isCreating={isCreatingUser}
+      />
+
+      <PhonePermissionsDialog
+        open={!!phonePermUser}
+        onOpenChange={(open) => !open && setPhonePermUser(null)}
+        user={phonePermUser}
+        phones={allPhones}
+        getUserPermissions={getUserPermissions}
+        onSave={updatePermissions}
+        isSaving={isUpdatingPermissions}
       />
     </div>
   );
