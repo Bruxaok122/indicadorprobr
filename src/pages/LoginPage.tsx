@@ -19,14 +19,14 @@ export default function LoginPage() {
 
       {/* Content layer */}
       <div className="relative z-10 flex w-full flex-col lg:flex-row">
-        {/* Left — Glass login card */}
-        <div className="flex flex-1 items-center justify-center p-6 sm:p-10 lg:justify-end lg:pr-8 xl:pr-16">
-          <LoginGlassCard />
+        {/* Left — Lawyer hero image */}
+        <div className="hidden flex-1 lg:block">
+          <LoginHeroImage />
         </div>
 
-        {/* Right — Lawyer hero image */}
-        <div className="flex-1">
-          <LoginHeroImage />
+        {/* Right — Glass login card */}
+        <div className="flex flex-1 items-center justify-center p-6 sm:p-10 lg:justify-start lg:pl-8 xl:pl-16">
+          <LoginGlassCard />
         </div>
       </div>
     </div>

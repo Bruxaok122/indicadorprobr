@@ -92,7 +92,7 @@ export function LoginGlassCard() {
         className="mb-8"
       >
         <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-          Bem-vindo de volta
+          Bem-vindo
         </h2>
         <p className="mt-2 text-sm text-white/50">
           Insira suas credenciais para acessar o sistema
