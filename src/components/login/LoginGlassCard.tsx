@@ -47,7 +47,7 @@ export function LoginGlassCard() {
       initial={{ y: 40, opacity: 0, scale: 0.95 }}
       animate={{ y: 0, opacity: 1, scale: 1 }}
       transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-      className="relative w-full max-w-[440px] rounded-3xl p-8 sm:p-10"
+      className="relative w-full max-w-[440px] rounded-3xl p-6 sm:p-8 lg:p-10"
       style={{
         background: "hsla(213, 40%, 16%, 0.55)",
         backdropFilter: "blur(24px) saturate(1.4)",
@@ -62,7 +62,7 @@ export function LoginGlassCard() {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.6 }}
-        className="mb-8 flex items-center gap-3"
+        className="mb-5 lg:mb-8 flex items-center gap-3"
       >
         <div
           className="flex h-12 w-12 items-center justify-center rounded-xl"
@@ -89,7 +89,7 @@ export function LoginGlassCard() {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.6 }}
-        className="mb-8"
+        className="mb-5 lg:mb-8"
       >
         <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
           Bem-vindo
@@ -105,7 +105,7 @@ export function LoginGlassCard() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.4, duration: 0.6 }}
         onSubmit={handleSubmit}
-        className="space-y-6"
+        className="space-y-4 lg:space-y-6"
       >
         {error && (
           <motion.div
@@ -212,7 +212,7 @@ export function LoginGlassCard() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.7, duration: 0.5 }}
-        className="mt-8 flex items-center gap-3"
+        className="mt-5 lg:mt-8 flex items-center gap-3"
       >
         <div className="h-px flex-1 bg-white/10" />
         <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/25">
