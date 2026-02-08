@@ -59,7 +59,7 @@ export function useAdmin() {
     queryFn: async () => {
       const [profilesRes, messagesRes, contactsRes] = await Promise.all([
         supabase.from("profiles").select("id, is_blocked", { count: "exact" }),
-        supabase.from("messages").select("id", { count: "exact" }),
+        supabase.from("messages").select("id", { count: "exact" }).eq("direction", "outgoing"),
         supabase.from("contacts").select("id", { count: "exact" }),
       ]);
 
@@ -303,11 +303,17 @@ export function useAdmin() {
     },
   });
 
+  const refreshAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+  };
+
   return {
     users,
     isLoadingUsers,
     stats,
     isLoadingStats,
+    refreshAll,
     createUser: createUserMutation.mutate,
     isCreatingUser: createUserMutation.isPending,
     toggleBlock: toggleBlockMutation.mutate,

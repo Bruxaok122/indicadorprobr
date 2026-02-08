@@ -50,7 +50,12 @@ export function initAntiCopyProtections() {
     if (e.ctrlKey && ["C", "X"].includes(e.key.toUpperCase())) {
       const target = e.target as HTMLElement;
       const tag = target?.tagName;
-      if (tag !== "INPUT" && tag !== "TEXTAREA" && !target?.closest(".chat-selectable")) {
+      const selection = window.getSelection();
+      const anchorEl = selection?.anchorNode instanceof HTMLElement 
+        ? selection.anchorNode 
+        : selection?.anchorNode?.parentElement;
+      const inChat = !!anchorEl?.closest(".chat-selectable");
+      if (tag !== "INPUT" && tag !== "TEXTAREA" && !inChat) {
         e.preventDefault();
         return false;
       }
@@ -66,11 +71,20 @@ export function initAntiCopyProtections() {
     return false;
   });
 
+  // Helper: check if current selection is inside an allowed element
+  const isSelectionInAllowedArea = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return false;
+    const anchorNode = selection.anchorNode;
+    const element = anchorNode instanceof HTMLElement ? anchorNode : anchorNode?.parentElement;
+    if (!element) return false;
+    const tag = element.tagName;
+    return tag === "INPUT" || tag === "TEXTAREA" || !!element.closest(".chat-selectable");
+  };
+
   // 5. Disable copy event (except in inputs/textareas/chat)
   document.addEventListener("copy", (e) => {
-    const target = e.target as HTMLElement;
-    const tag = target?.tagName;
-    if (tag !== "INPUT" && tag !== "TEXTAREA" && !target?.closest(".chat-selectable")) {
+    if (!isSelectionInAllowedArea()) {
       e.preventDefault();
       return false;
     }
@@ -78,9 +92,7 @@ export function initAntiCopyProtections() {
 
   // 6. Disable cut event (except in inputs/textareas/chat)
   document.addEventListener("cut", (e) => {
-    const target = e.target as HTMLElement;
-    const tag = target?.tagName;
-    if (tag !== "INPUT" && tag !== "TEXTAREA" && !target?.closest(".chat-selectable")) {
+    if (!isSelectionInAllowedArea()) {
       e.preventDefault();
       return false;
     }
