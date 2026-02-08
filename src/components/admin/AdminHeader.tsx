@@ -6,12 +6,23 @@ import { useState } from "react";
 
 interface AdminHeaderProps {
   onLogout: () => void;
-  onRefresh?: () => void;
+  onRefresh?: () => Promise<void> | void;
   mobileMenu?: React.ReactNode;
 }
  
- export function AdminHeader({ onLogout, onRefresh, mobileMenu }: AdminHeaderProps) {
-   const [mobileOpen, setMobileOpen] = useState(false);
+export function AdminHeader({ onLogout, onRefresh, mobileMenu }: AdminHeaderProps) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (!onRefresh || isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
  
    return (
      <header className="border-b bg-primary text-primary-foreground">
@@ -28,11 +39,12 @@ interface AdminHeaderProps {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={onRefresh}
+                onClick={handleRefresh}
+                disabled={isRefreshing}
                 className="text-primary-foreground hover:bg-primary-foreground/10"
                 title="Atualizar dados"
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               </Button>
             )}
             <ThemeToggle />
