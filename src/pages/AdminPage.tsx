@@ -26,6 +26,7 @@ export default function AdminPage() {
     isLoadingUsers,
     stats,
     isLoadingStats,
+    refreshAll,
     createUser,
     isCreatingUser,
     toggleBlock,
@@ -54,7 +55,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AdminHeader onLogout={handleLogout} />
+      <AdminHeader onLogout={handleLogout} onRefresh={refreshAll} />
 
       <main className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
         <StatsCards stats={stats} isLoading={isLoadingStats} />

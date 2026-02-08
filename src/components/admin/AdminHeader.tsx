@@ -1,15 +1,16 @@
- import { Shield, LogOut, Menu } from "lucide-react";
- import { Button } from "@/components/ui/button";
- import { ThemeToggle } from "@/components/ThemeToggle";
- import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
- import { useState } from "react";
+import { Shield, LogOut, Menu, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useState } from "react";
+
+interface AdminHeaderProps {
+  onLogout: () => void;
+  onRefresh?: () => void;
+  mobileMenu?: React.ReactNode;
+}
  
- interface AdminHeaderProps {
-   onLogout: () => void;
-   mobileMenu?: React.ReactNode;
- }
- 
- export function AdminHeader({ onLogout, mobileMenu }: AdminHeaderProps) {
+ export function AdminHeader({ onLogout, onRefresh, mobileMenu }: AdminHeaderProps) {
    const [mobileOpen, setMobileOpen] = useState(false);
  
    return (
@@ -22,8 +23,19 @@
              <p className="text-xs text-primary-foreground/70 hidden sm:block">Painel de Administração</p>
            </div>
          </div>
-         <div className="flex items-center gap-2">
-           <ThemeToggle />
+          <div className="flex items-center gap-2">
+            {onRefresh && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onRefresh}
+                className="text-primary-foreground hover:bg-primary-foreground/10"
+                title="Atualizar dados"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            )}
+            <ThemeToggle />
            <Button
              variant="ghost"
              size="sm"

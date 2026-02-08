@@ -20,7 +20,7 @@
      { title: "Total Usuários", value: stats?.totalUsers, icon: Users, color: "" },
      { title: "Ativos", value: stats?.activeUsers, icon: Activity, color: "text-success" },
      { title: "Bloqueados", value: stats?.blockedUsers, icon: Lock, color: "text-destructive" },
-     { title: "Mensagens", value: stats?.totalMessages, icon: MessageSquare, color: "" },
+     { title: "Msgs Enviadas", value: stats?.totalMessages, icon: MessageSquare, color: "" },
      { title: "Contatos", value: stats?.totalContacts, icon: Phone, color: "" },
    ];
  
