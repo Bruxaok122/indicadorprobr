@@ -77,7 +77,7 @@ export function ChatMessages({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto chat-wallpaper scrollbar-thin py-2">
+    <div className="flex-1 overflow-y-auto chat-wallpaper scrollbar-thin py-2 min-h-0">
       {renderMessages()}
       {isSending && <TypingIndicator className="px-2 md:px-4 mb-1" />}
       <div ref={messagesEndRef} />

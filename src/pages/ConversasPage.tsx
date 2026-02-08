@@ -169,7 +169,7 @@ export default function ConversasPage() {
 
   return (
     <AppLayout>
-      <div className="flex h-screen overflow-hidden relative">
+      <div className="flex h-screen overflow-hidden relative min-h-0">
         {/* Contact list */}
         <ChatContactList
           contacts={contacts}
@@ -185,7 +185,7 @@ export default function ConversasPage() {
         {/* Chat area */}
         <div
           className={cn(
-            "flex flex-1 flex-col",
+            "flex flex-1 flex-col min-h-0 min-w-0",
             isMobile &&
               cn(
                 "absolute inset-0 z-10 transition-transform duration-300 bg-background",
