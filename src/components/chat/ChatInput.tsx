@@ -82,7 +82,7 @@ export function ChatInput({
   }
 
   return (
-    <div className={cn("border-t bg-card px-2 md:px-4 py-2", isMobile && "pb-5")}>
+    <div className={cn("border-t bg-card px-2 md:px-4 py-2 shrink-0", isMobile && "pb-5")}>
       {!canSendFreeText && hasMessages && (
         <div className="mb-2 flex items-center justify-between rounded-lg bg-warning/10 px-3 py-2">
           <p className="text-xs text-warning">
