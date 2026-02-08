@@ -156,25 +156,23 @@ interface UsersTableProps {
                   />
                 </TableCell>
             <TableCell>
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 {user.authorized_fingerprint ? (
                   <Tooltip>
                     <TooltipTrigger>
                       <div className="flex items-center gap-1 text-sm">
                         <Smartphone className="h-3 w-3 text-success" />
-                        <span className="text-success text-xs">Autorizado</span>
+                        <span className="text-success text-xs font-medium">Autorizado</span>
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="text-xs">
-                        {(user.authorized_device_info as any)?.browser && (
-                          <p>Browser: {(user.authorized_device_info as any).browser}</p>
-                        )}
-                        {(user.authorized_device_info as any)?.os && (
-                          <p>OS: {(user.authorized_device_info as any).os}</p>
-                        )}
-                        <p className="font-mono text-[10px] mt-1 opacity-60">
-                          {user.authorized_fingerprint?.slice(0, 12)}...
+                    <TooltipContent side="left" className="max-w-xs">
+                      <div className="text-xs space-y-1">
+                        <p className="font-semibold text-success">✓ Dispositivo autorizado</p>
+                        <p>
+                          {(user.authorized_device_info as any)?.device || "Desktop"} — {(user.authorized_device_info as any)?.browser || "?"} no {(user.authorized_device_info as any)?.os || "?"}
+                        </p>
+                        <p className="font-mono text-[10px] opacity-60">
+                          ID: {user.authorized_fingerprint?.slice(0, 16)}
                         </p>
                       </div>
                     </TooltipContent>
@@ -184,17 +182,22 @@ interface UsersTableProps {
                     <TooltipTrigger>
                       <div className="flex items-center gap-1 text-sm">
                         <SmartphoneNfc className="h-3 w-3 text-warning" />
-                        <span className="text-warning text-xs">Pendente</span>
+                        <span className="text-warning text-xs font-medium">Pendente</span>
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="text-xs">
-                        <p className="font-semibold text-warning mb-1">Aguardando autorização</p>
-                        {(user.last_device_info as any)?.browser && (
-                          <p>Browser: {(user.last_device_info as any).browser}</p>
-                        )}
-                        {(user.last_device_info as any)?.os && (
-                          <p>OS: {(user.last_device_info as any).os}</p>
+                    <TooltipContent side="left" className="max-w-xs">
+                      <div className="text-xs space-y-1">
+                        <p className="font-semibold text-warning">⏳ Aguardando autorização</p>
+                        <p>
+                          {(user.last_device_info as any)?.device || "Desktop"} — {(user.last_device_info as any)?.browser || "?"} no {(user.last_device_info as any)?.os || "?"}
+                        </p>
+                        <p className="font-mono text-[10px] opacity-60">
+                          ID: {user.device_fingerprint?.slice(0, 16)}
+                        </p>
+                        {user.last_login_at && (
+                          <p className="opacity-60">
+                            Tentou em: {format(new Date(user.last_login_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </p>
                         )}
                       </div>
                     </TooltipContent>
@@ -202,6 +205,35 @@ interface UsersTableProps {
                 ) : (
                   <span className="text-muted-foreground text-xs">Nenhum</span>
                 )}
+
+                {/* Pending NEW device indicator */}
+                {user.authorized_fingerprint && user.device_fingerprint && user.device_fingerprint !== user.authorized_fingerprint && (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <div className="flex items-center gap-1 text-sm">
+                        <SmartphoneNfc className="h-3 w-3 text-warning animate-pulse" />
+                        <span className="text-warning text-[10px]">Novo pendente</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="max-w-xs">
+                      <div className="text-xs space-y-1">
+                        <p className="font-semibold text-warning">🔄 Novo dispositivo tentou acessar</p>
+                        <p>
+                          {(user.last_device_info as any)?.device || "Desktop"} — {(user.last_device_info as any)?.browser || "?"} no {(user.last_device_info as any)?.os || "?"}
+                        </p>
+                        <p className="font-mono text-[10px] opacity-60">
+                          ID: {user.device_fingerprint?.slice(0, 16)}
+                        </p>
+                        {user.last_login_at && (
+                          <p className="opacity-60">
+                            Tentou em: {format(new Date(user.last_login_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </p>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+
                 {/* Device action buttons */}
                 <div className="flex gap-1">
                   {user.device_fingerprint && user.device_fingerprint !== user.authorized_fingerprint && (
@@ -216,7 +248,9 @@ interface UsersTableProps {
                           <Smartphone className="h-3 w-3 text-success" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Autorizar dispositivo pendente</TooltipContent>
+                      <TooltipContent>
+                        {user.authorized_fingerprint ? "Trocar para o novo dispositivo" : "Autorizar dispositivo"}
+                      </TooltipContent>
                     </Tooltip>
                   )}
                   {user.authorized_fingerprint && (

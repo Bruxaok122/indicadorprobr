@@ -103,64 +103,93 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onDelete,
          </div>
 
          {/* Device authorization */}
-         <div className="space-y-2 border rounded-md p-2">
-           <span className="text-sm font-medium">Dispositivo</span>
+         <div className="space-y-2 border rounded-md p-3">
+           <span className="text-sm font-medium">Dispositivo Autorizado</span>
            {user.authorized_fingerprint ? (
-             <div className="flex items-center gap-2">
-               <Smartphone className="h-4 w-4 text-success" />
-               <div className="flex-1 min-w-0">
-                 <p className="text-xs text-success font-medium">Autorizado</p>
-                 <p className="text-xs text-muted-foreground truncate">
-                   {(user.authorized_device_info as any)?.browser} / {(user.authorized_device_info as any)?.os}
-                 </p>
+             <div className="space-y-1">
+               <div className="flex items-start gap-2">
+                 <Smartphone className="h-4 w-4 text-success mt-0.5 shrink-0" />
+                 <div className="flex-1 min-w-0 space-y-0.5">
+                   <p className="text-xs text-success font-semibold">✓ Autorizado</p>
+                   <p className="text-xs text-foreground">
+                     {(user.authorized_device_info as any)?.device || "Desktop"} — {(user.authorized_device_info as any)?.browser || "?"} no {(user.authorized_device_info as any)?.os || "?"}
+                   </p>
+                   <p className="text-[10px] font-mono text-muted-foreground">
+                     ID: {user.authorized_fingerprint?.slice(0, 16)}
+                   </p>
+                 </div>
                </div>
                <Button
                  variant="outline"
                  size="sm"
-                 className="h-7 text-xs text-destructive"
+                 className="w-full h-7 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
                  onClick={() => onResetDevice(user.user_id)}
                >
-                 Revogar
+                 <SmartphoneNfc className="mr-1 h-3 w-3" />
+                 Revogar Autorização
                </Button>
              </div>
            ) : user.device_fingerprint ? (
-             <div className="flex items-center gap-2">
-               <SmartphoneNfc className="h-4 w-4 text-warning" />
-               <div className="flex-1 min-w-0">
-                 <p className="text-xs text-warning font-medium">Pendente</p>
-                 <p className="text-xs text-muted-foreground truncate">
-                   {(user.last_device_info as any)?.browser} / {(user.last_device_info as any)?.os}
-                 </p>
+             <div className="space-y-1">
+               <div className="flex items-start gap-2">
+                 <SmartphoneNfc className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                 <div className="flex-1 min-w-0 space-y-0.5">
+                   <p className="text-xs text-warning font-semibold">⏳ Aguardando autorização</p>
+                   <p className="text-xs text-foreground">
+                     {(user.last_device_info as any)?.device || "Desktop"} — {(user.last_device_info as any)?.browser || "?"} no {(user.last_device_info as any)?.os || "?"}
+                   </p>
+                   <p className="text-[10px] font-mono text-muted-foreground">
+                     ID: {user.device_fingerprint?.slice(0, 16)}
+                   </p>
+                   {user.last_login_at && (
+                     <p className="text-[10px] text-muted-foreground">
+                       Tentou em: {format(new Date(user.last_login_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                     </p>
+                   )}
+                 </div>
                </div>
                <Button
                  variant="outline"
                  size="sm"
-                 className="h-7 text-xs text-success"
+                 className="w-full h-7 text-xs text-success border-success/30 hover:bg-success/10"
                  onClick={() => onAuthorizeDevice(user.user_id)}
                >
-                 Autorizar
+                 <Smartphone className="mr-1 h-3 w-3" />
+                 Autorizar Este Dispositivo
                </Button>
              </div>
            ) : (
-             <p className="text-xs text-muted-foreground">Nenhum login registrado</p>
+             <p className="text-xs text-muted-foreground italic">Nenhum login registrado ainda</p>
            )}
-           {/* Show pending device if authorized but a different one is pending */}
+
+           {/* Show pending NEW device if authorized but a different one tried */}
            {user.authorized_fingerprint && user.device_fingerprint && user.device_fingerprint !== user.authorized_fingerprint && (
-             <div className="flex items-center gap-2 border-t pt-2">
-               <SmartphoneNfc className="h-4 w-4 text-warning" />
-               <div className="flex-1 min-w-0">
-                 <p className="text-xs text-warning font-medium">Novo dispositivo pendente</p>
-                 <p className="text-xs text-muted-foreground truncate">
-                   {(user.last_device_info as any)?.browser} / {(user.last_device_info as any)?.os}
-                 </p>
+             <div className="border-t pt-2 space-y-1">
+               <div className="flex items-start gap-2">
+                 <SmartphoneNfc className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                 <div className="flex-1 min-w-0 space-y-0.5">
+                   <p className="text-xs text-warning font-semibold">🔄 Novo dispositivo tentou acessar</p>
+                   <p className="text-xs text-foreground">
+                     {(user.last_device_info as any)?.device || "Desktop"} — {(user.last_device_info as any)?.browser || "?"} no {(user.last_device_info as any)?.os || "?"}
+                   </p>
+                   <p className="text-[10px] font-mono text-muted-foreground">
+                     ID: {user.device_fingerprint?.slice(0, 16)}
+                   </p>
+                   {user.last_login_at && (
+                     <p className="text-[10px] text-muted-foreground">
+                       Tentou em: {format(new Date(user.last_login_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                     </p>
+                   )}
+                 </div>
                </div>
                <Button
                  variant="outline"
                  size="sm"
-                 className="h-7 text-xs text-success"
+                 className="w-full h-7 text-xs text-success border-success/30 hover:bg-success/10"
                  onClick={() => onAuthorizeDevice(user.user_id)}
                >
-                 Autorizar
+                 <Smartphone className="mr-1 h-3 w-3" />
+                 Trocar para Este Dispositivo
                </Button>
              </div>
            )}
