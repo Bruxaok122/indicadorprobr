@@ -33,6 +33,8 @@ export default function AdminPage() {
     deleteUser,
     clearTempBan,
     setSubscriptionPlan,
+    authorizeDevice,
+    resetDevice,
   } = useAdmin();
 
   const {
@@ -100,6 +102,8 @@ export default function AdminPage() {
                     onClearTempBan={clearTempBan}
                     onManagePhones={setPhonePermUser}
                     onSetPlan={setSubscriptionPlan}
+                    onAuthorizeDevice={authorizeDevice}
+                    onResetDevice={resetDevice}
                   />
                 ))}
               </div>
@@ -112,6 +116,8 @@ export default function AdminPage() {
                 onClearTempBan={clearTempBan}
                 onManagePhones={setPhonePermUser}
                 onSetPlan={setSubscriptionPlan}
+                onAuthorizeDevice={authorizeDevice}
+                onResetDevice={resetDevice}
               />
             )}
           </CardContent>

@@ -214,6 +214,72 @@ export function useAdmin() {
     },
   });
 
+  // Authorize device mutation
+  const authorizeDeviceMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      // Get user's current device fingerprint and info
+      const { data: profile, error: fetchError } = await supabase
+        .from("profiles")
+        .select("device_fingerprint, last_device_info")
+        .eq("user_id", userId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!profile?.device_fingerprint) {
+        throw new Error("Usuário ainda não fez login em nenhum dispositivo.");
+      }
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          authorized_fingerprint: profile.device_fingerprint,
+          authorized_device_info: profile.last_device_info,
+        })
+        .eq("user_id", userId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Dispositivo autorizado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao autorizar dispositivo", {
+        description: error.message,
+      });
+    },
+  });
+
+  // Reset authorized device mutation
+  const resetDeviceMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          authorized_fingerprint: null,
+          authorized_device_info: null,
+        })
+        .eq("user_id", userId);
+
+      if (error) throw error;
+
+      // Also deactivate sessions
+      await supabase
+        .from("device_sessions")
+        .update({ is_active: false })
+        .eq("user_id", userId);
+    },
+    onSuccess: () => {
+      toast.success("Dispositivo desautorizado! Usuário precisará de nova autorização.");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao resetar dispositivo", {
+        description: error.message,
+      });
+    },
+  });
+
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -254,5 +320,9 @@ export function useAdmin() {
     isClearingTempBan: clearTempBanMutation.isPending,
     setSubscriptionPlan: setSubscriptionPlanMutation.mutate,
     isSettingPlan: setSubscriptionPlanMutation.isPending,
+    authorizeDevice: authorizeDeviceMutation.mutate,
+    isAuthorizingDevice: authorizeDeviceMutation.isPending,
+    resetDevice: resetDeviceMutation.mutate,
+    isResettingDevice: resetDeviceMutation.isPending,
   };
 }
