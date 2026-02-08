@@ -94,6 +94,12 @@ export interface Profile {
     device?: string;
     ip?: string;
   };
+  authorized_fingerprint?: string | null;
+  authorized_device_info?: {
+    browser?: string;
+    os?: string;
+    device?: string;
+  } | null;
   last_login_at?: string;
   messages_sent: number;
   templates_sent: number;

@@ -282,6 +282,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          authorized_device_info: Json | null
+          authorized_fingerprint: string | null
           ban_reason: string | null
           can_use_shared_api: boolean | null
           created_at: string
@@ -303,6 +305,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          authorized_device_info?: Json | null
+          authorized_fingerprint?: string | null
           ban_reason?: string | null
           can_use_shared_api?: boolean | null
           created_at?: string
@@ -324,6 +328,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          authorized_device_info?: Json | null
+          authorized_fingerprint?: string | null
           ban_reason?: string | null
           can_use_shared_api?: boolean | null
           created_at?: string

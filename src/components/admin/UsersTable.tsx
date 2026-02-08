@@ -1,6 +1,6 @@
  import { Profile } from "@/types/juriszap";
  import { Badge } from "@/components/ui/badge";
- import { Phone, CalendarClock } from "lucide-react";
+ import { Phone, CalendarClock, Smartphone, SmartphoneNfc } from "lucide-react";
  import { Switch } from "@/components/ui/switch";
  import { Button } from "@/components/ui/button";
  import {
@@ -46,9 +46,11 @@ interface UsersTableProps {
   onClearTempBan: (userId: string) => void;
   onManagePhones: (user: Profile) => void;
   onSetPlan: (params: { userId: string; plan: string | null }) => void;
+  onAuthorizeDevice: (userId: string) => void;
+  onResetDevice: (userId: string) => void;
 }
  
- export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan }: UsersTableProps) {
+ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice }: UsersTableProps) {
    return (
      <Table>
        <TableHeader>
@@ -154,44 +156,86 @@ interface UsersTableProps {
                   />
                 </TableCell>
             <TableCell>
-              {(user as any).active_session ? (
-                <Tooltip>
-                  <TooltipTrigger>
-                    <div className="flex items-center gap-1 text-sm">
-                      <Monitor className="h-3 w-3 text-success" />
-                      <span className="text-success">Online</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="text-xs">
-                      {(user as any).active_session.device_info && (
-                        <>
-                          <p>Browser: {(user as any).active_session.device_info.browser}</p>
-                          <p>OS: {(user as any).active_session.device_info.os}</p>
-                        </>
-                      )}
-                      <p>Última atividade: {format(new Date((user as any).active_session.last_seen_at), "dd/MM HH:mm", { locale: ptBR })}</p>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              ) : user.last_device_info ? (
-                <Tooltip>
-                  <TooltipTrigger>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Monitor className="h-3 w-3" />
-                      Offline
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="text-xs">
-                      <p>Browser: {(user.last_device_info as any).browser}</p>
-                      <p>OS: {(user.last_device_info as any).os}</p>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <span className="text-muted-foreground">-</span>
-              )}
+              <div className="flex flex-col gap-1">
+                {user.authorized_fingerprint ? (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <div className="flex items-center gap-1 text-sm">
+                        <Smartphone className="h-3 w-3 text-success" />
+                        <span className="text-success text-xs">Autorizado</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="text-xs">
+                        {(user.authorized_device_info as any)?.browser && (
+                          <p>Browser: {(user.authorized_device_info as any).browser}</p>
+                        )}
+                        {(user.authorized_device_info as any)?.os && (
+                          <p>OS: {(user.authorized_device_info as any).os}</p>
+                        )}
+                        <p className="font-mono text-[10px] mt-1 opacity-60">
+                          {user.authorized_fingerprint?.slice(0, 12)}...
+                        </p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : user.device_fingerprint ? (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <div className="flex items-center gap-1 text-sm">
+                        <SmartphoneNfc className="h-3 w-3 text-warning" />
+                        <span className="text-warning text-xs">Pendente</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="text-xs">
+                        <p className="font-semibold text-warning mb-1">Aguardando autorização</p>
+                        {(user.last_device_info as any)?.browser && (
+                          <p>Browser: {(user.last_device_info as any).browser}</p>
+                        )}
+                        {(user.last_device_info as any)?.os && (
+                          <p>OS: {(user.last_device_info as any).os}</p>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <span className="text-muted-foreground text-xs">Nenhum</span>
+                )}
+                {/* Device action buttons */}
+                <div className="flex gap-1">
+                  {user.device_fingerprint && user.device_fingerprint !== user.authorized_fingerprint && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => onAuthorizeDevice(user.user_id)}
+                        >
+                          <Smartphone className="h-3 w-3 text-success" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Autorizar dispositivo pendente</TooltipContent>
+                    </Tooltip>
+                  )}
+                  {user.authorized_fingerprint && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => onResetDevice(user.user_id)}
+                        >
+                          <SmartphoneNfc className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Revogar dispositivo autorizado</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+              </div>
             </TableCell>
                <TableCell>
                  <span className="font-mono">{user.messages_sent}</span>

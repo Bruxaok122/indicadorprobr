@@ -3,7 +3,7 @@
  import { Badge } from "@/components/ui/badge";
  import { Switch } from "@/components/ui/switch";
  import { Button } from "@/components/ui/button";
- import { Lock, Unlock, Trash2, Timer, Monitor, Phone, CalendarClock } from "lucide-react";
+ import { Lock, Unlock, Trash2, Timer, Monitor, Phone, CalendarClock, Smartphone, SmartphoneNfc } from "lucide-react";
  import {
    Select,
    SelectContent,
@@ -25,17 +25,19 @@
  import { format } from "date-fns";
  import { ptBR } from "date-fns/locale";
  
- interface UserCardProps {
-   user: Profile;
-   onToggleBlock: (params: { userId: string; isBlocked: boolean }) => void;
-   onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
+interface UserCardProps {
+  user: Profile;
+  onToggleBlock: (params: { userId: string; isBlocked: boolean }) => void;
+  onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
   onDelete: (userId: string) => void;
   onClearTempBan: (userId: string) => void;
   onManagePhones: (user: Profile) => void;
   onSetPlan: (params: { userId: string; plan: string | null }) => void;
+  onAuthorizeDevice: (userId: string) => void;
+  onResetDevice: (userId: string) => void;
 }
 
-export function UserCard({ user, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan }: UserCardProps) {
+export function UserCard({ user, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice }: UserCardProps) {
    const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
  
    return (
@@ -93,26 +95,75 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onDelete,
              <span className="text-muted-foreground">Tentativas:</span>
              <span className="ml-1 font-mono">{user.failed_device_attempts || 0}</span>
            </div>
-          {(user as any).active_session ? (
-            <div className="col-span-2 flex items-center gap-1">
-              <Monitor className="h-3 w-3 text-success" />
-              <span className="text-xs text-success">
-                Online - {format(new Date((user as any).active_session.last_seen_at), "HH:mm", { locale: ptBR })}
-              </span>
-            </div>
-          ) : user.last_device_info ? (
-            <div className="col-span-2 flex items-center gap-1">
-              <Monitor className="h-3 w-3 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground truncate">
-                Offline - {(user.last_device_info as any).browser} / {(user.last_device_info as any).os}
-              </span>
-            </div>
-          ) : null}
-          {user.last_login_at && (
-            <div className="col-span-2 text-xs text-muted-foreground">
-              Último acesso: {format(new Date(user.last_login_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-            </div>
-          )}
+           {user.last_login_at && (
+             <div className="col-span-2 text-xs text-muted-foreground">
+               Último acesso: {format(new Date(user.last_login_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+             </div>
+           )}
+         </div>
+
+         {/* Device authorization */}
+         <div className="space-y-2 border rounded-md p-2">
+           <span className="text-sm font-medium">Dispositivo</span>
+           {user.authorized_fingerprint ? (
+             <div className="flex items-center gap-2">
+               <Smartphone className="h-4 w-4 text-success" />
+               <div className="flex-1 min-w-0">
+                 <p className="text-xs text-success font-medium">Autorizado</p>
+                 <p className="text-xs text-muted-foreground truncate">
+                   {(user.authorized_device_info as any)?.browser} / {(user.authorized_device_info as any)?.os}
+                 </p>
+               </div>
+               <Button
+                 variant="outline"
+                 size="sm"
+                 className="h-7 text-xs text-destructive"
+                 onClick={() => onResetDevice(user.user_id)}
+               >
+                 Revogar
+               </Button>
+             </div>
+           ) : user.device_fingerprint ? (
+             <div className="flex items-center gap-2">
+               <SmartphoneNfc className="h-4 w-4 text-warning" />
+               <div className="flex-1 min-w-0">
+                 <p className="text-xs text-warning font-medium">Pendente</p>
+                 <p className="text-xs text-muted-foreground truncate">
+                   {(user.last_device_info as any)?.browser} / {(user.last_device_info as any)?.os}
+                 </p>
+               </div>
+               <Button
+                 variant="outline"
+                 size="sm"
+                 className="h-7 text-xs text-success"
+                 onClick={() => onAuthorizeDevice(user.user_id)}
+               >
+                 Autorizar
+               </Button>
+             </div>
+           ) : (
+             <p className="text-xs text-muted-foreground">Nenhum login registrado</p>
+           )}
+           {/* Show pending device if authorized but a different one is pending */}
+           {user.authorized_fingerprint && user.device_fingerprint && user.device_fingerprint !== user.authorized_fingerprint && (
+             <div className="flex items-center gap-2 border-t pt-2">
+               <SmartphoneNfc className="h-4 w-4 text-warning" />
+               <div className="flex-1 min-w-0">
+                 <p className="text-xs text-warning font-medium">Novo dispositivo pendente</p>
+                 <p className="text-xs text-muted-foreground truncate">
+                   {(user.last_device_info as any)?.browser} / {(user.last_device_info as any)?.os}
+                 </p>
+               </div>
+               <Button
+                 variant="outline"
+                 size="sm"
+                 className="h-7 text-xs text-success"
+                 onClick={() => onAuthorizeDevice(user.user_id)}
+               >
+                 Autorizar
+               </Button>
+             </div>
+           )}
          </div>
 
           {/* Plan selector */}
