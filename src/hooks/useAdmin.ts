@@ -303,9 +303,12 @@ export function useAdmin() {
     },
   });
 
-  const refreshAll = () => {
-    queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-    queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+  const refreshAll = async () => {
+    await Promise.all([
+      queryClient.refetchQueries({ queryKey: ["admin-users"] }),
+      queryClient.refetchQueries({ queryKey: ["admin-stats"] }),
+    ]);
+    toast.success("Dados atualizados!");
   };
 
   return {
