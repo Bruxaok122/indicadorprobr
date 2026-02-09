@@ -180,7 +180,7 @@ export default function ContatosPage() {
           <div className="flex items-center gap-2">
             {selectedContacts.length > 0 && (
               <>
-                <Button onClick={handleOpenBulkDialog} variant="default">
+                <Button onClick={handleOpenBulkDialog} variant="default" data-tour="contacts-bulk-send">
                   <Send className="mr-2 h-4 w-4" />
                   Disparar ({selectedContacts.length})
                 </Button>
@@ -190,7 +190,7 @@ export default function ContatosPage() {
                 </Button>
               </>
             )}
-            <Button asChild>
+            <Button asChild data-tour="contacts-import-btn">
               <Link to="/importar">
                 <Users className="mr-2 h-4 w-4" />
                 Importar

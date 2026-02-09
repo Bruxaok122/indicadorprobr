@@ -215,7 +215,7 @@ Requerido (Polo Passivo):
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* File Upload */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4" data-tour="import-file-upload">
                       <input
                         type="file"
                         ref={fileInputRef}
@@ -288,6 +288,7 @@ Requerido (Polo Passivo):
                       disabled={!validation.isValid}
                       className="w-full"
                       size="lg"
+                      data-tour="import-process-btn"
                     >
                       <Upload className="mr-2 h-4 w-4" />
                       Processar Lista
@@ -296,7 +297,7 @@ Requerido (Polo Passivo):
                 </Card>
 
                 {/* Format Example */}
-                <Card>
+                <Card data-tour="import-format-example">
                   <CardHeader>
                     <CardTitle className="text-base">Formato Esperado</CardTitle>
                     <CardDescription>
@@ -322,7 +323,7 @@ Requerido (Polo Passivo):
 
               {/* Tab: Add Single Contact */}
               <TabsContent value="individual" className="space-y-6">
-                <Card>
+                <Card data-tour="import-individual">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <UserPlus className="h-5 w-5 text-accent" />
