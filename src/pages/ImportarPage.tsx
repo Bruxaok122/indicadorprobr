@@ -188,7 +188,7 @@ Requerido (Polo Passivo):
 
         <div className="flex-1 overflow-auto p-6">
           <div className="mx-auto max-w-4xl space-y-6">
-            <Tabs defaultValue="lista" className="w-full">
+            <Tabs defaultValue="lista" className="w-full" data-tour="import-tabs">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="lista" className="gap-2">
                   <Upload className="h-4 w-4" />
@@ -254,7 +254,7 @@ Requerido (Polo Passivo):
                       </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2" data-tour="import-textarea">
                       <Label htmlFor="rawText">Lista de Contatos</Label>
                       <Textarea
                         id="rawText"
