@@ -202,7 +202,8 @@ export default function ContatosPage() {
         <div className="flex-1 overflow-hidden p-6">
           <div className="flex h-full flex-col space-y-4">
             {/* Search */}
-            <div className="relative">
+
+            <div className="relative" data-tour="contacts-search">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome, telefone, processo ou advogado..."
@@ -213,7 +214,7 @@ export default function ContatosPage() {
             </div>
 
             {/* Table */}
-            <Card className="flex-1 overflow-hidden">
+            <Card className="flex-1 overflow-hidden" data-tour="contacts-table">
               <CardContent className="h-full overflow-auto p-0">
                 {filteredContacts.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center py-12">

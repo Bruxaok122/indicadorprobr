@@ -22,7 +22,7 @@ import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { OnboardingTour } from "@/components/tour/OnboardingTour";
+
 
 export default function Dashboard() {
   const { isConfigured, isLoading: configLoading } = useWhatsAppConfig();
@@ -68,7 +68,6 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <OnboardingTour />
       <div className="flex h-screen flex-col overflow-hidden">
         <PageHeader
           title="Painel de Controle"
@@ -138,7 +137,7 @@ export default function Dashboard() {
             )}
 
             {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-4" data-tour="dashboard-stats">
               <Card>
                 <CardHeader className="pb-2">
                   <CardDescription>Total de Contatos</CardDescription>
@@ -184,7 +183,7 @@ export default function Dashboard() {
 
             <div className="grid gap-6 lg:grid-cols-2">
               {/* Setup Checklist */}
-              <Card>
+              <Card data-tour="dashboard-checklist">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-accent" />

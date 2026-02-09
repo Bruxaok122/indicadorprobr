@@ -138,7 +138,7 @@ export default function TemplatesPage() {
 
         <div className="flex-1 overflow-auto p-6">
           <div className="mx-auto max-w-4xl space-y-6">
-            <AlertBanner type="info" title="Sobre Templates">
+            <AlertBanner type="info" title="Sobre Templates" data-tour="templates-info">
               <p>
                 Templates são modelos de mensagem pré-aprovados pela Meta. Para enviar a primeira
                 mensagem a um cliente, você precisa usar um template aprovado. Após o cliente
@@ -176,7 +176,7 @@ export default function TemplatesPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4">
+              <div className="grid gap-4" data-tour="templates-list">
                 {templates.map((template) => (
                   <Card key={template.id}>
                     <CardHeader className="pb-3">

@@ -36,6 +36,7 @@ export function ChatContactList({
 
   return (
     <div
+      data-tour="chat-contact-list"
       className={cn(
         "flex flex-col border-r bg-card",
         isMobile

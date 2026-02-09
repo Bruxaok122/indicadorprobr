@@ -79,7 +79,7 @@ export default function ConfiguracaoPage() {
             ) : null}
 
             {/* Configuration Card */}
-            <Card className={canUseSharedApi && !isAdmin ? "opacity-50" : ""}>
+            <Card className={canUseSharedApi && !isAdmin ? "opacity-50" : ""} data-tour="config-credentials">
               <CardHeader>
                 <CardTitle>
                   {canUseSharedApi && !isAdmin ? "Sua API Própria (opcional)" : "Credenciais da API"}
@@ -213,7 +213,7 @@ export default function ConfiguracaoPage() {
             </Card>
 
             {/* Help Card */}
-            <Card>
+            <Card data-tour="config-help">
               <CardHeader>
                 <CardTitle className="text-base">Como obter as credenciais?</CardTitle>
               </CardHeader>
