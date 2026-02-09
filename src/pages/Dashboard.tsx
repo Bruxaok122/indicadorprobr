@@ -22,6 +22,7 @@ import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { OnboardingTour } from "@/components/tour/OnboardingTour";
 
 export default function Dashboard() {
   const { isConfigured, isLoading: configLoading } = useWhatsAppConfig();
@@ -67,6 +68,7 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
+      <OnboardingTour />
       <div className="flex h-screen flex-col overflow-hidden">
         <PageHeader
           title="Painel de Controle"
