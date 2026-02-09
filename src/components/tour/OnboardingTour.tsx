@@ -13,7 +13,7 @@ const tourSteps: TourStep[] = [
   // === WELCOME ===
   {
     target: "body",
-    content: "Bem-vindo ao JurisZap! 🎉 Vamos fazer um tour rápido para você aprender a usar o sistema. Leva menos de 2 minutos!",
+    content: "Bem-vindo ao JurisZap! 🎉 Vamos te ensinar passo a passo como adicionar seus contatos e fazer seu primeiro disparo de template. Leva menos de 2 minutos!",
     placement: "center",
     disableBeacon: true,
     route: "/",
@@ -22,104 +22,94 @@ const tourSteps: TourStep[] = [
   // === DASHBOARD ===
   {
     target: '[data-tour="dashboard-checklist"]',
-    content: "Este é o seu checklist de configuração. Siga esses passos na ordem para deixar tudo pronto.",
+    content: "Este é o seu checklist. Ele mostra o que você precisa fazer para começar: configurar o WhatsApp, importar contatos e enviar mensagens. Siga na ordem!",
     route: "/",
   },
   {
     target: '[data-tour="dashboard-stats"]',
-    content: "Aqui você acompanha seus números: total de contatos, novos, aguardando resposta e respondidos.",
+    content: "Estes cards mostram seus números em tempo real: quantos contatos você tem, quantos são novos, quantos aguardam resposta e quantos já responderam.",
     route: "/",
   },
 
-  // === CONFIGURAÇÃO ===
-  {
-    target: "body",
-    content: "Agora vamos ver a página de Configuração. É aqui que você conecta sua conta do WhatsApp Business.",
-    placement: "center",
-    route: "/configuracao",
-  },
+  // === CONFIGURAÇÃO (breve) ===
   {
     target: '[data-tour="config-credentials"]',
-    content: "Preencha aqui suas credenciais da API do WhatsApp: Access Token, WABA ID e Phone Number ID. Se o administrador já configurou, você verá uma mensagem de 'Conta Ativa'.",
-    route: "/configuracao",
-  },
-  {
-    target: '[data-tour="config-help"]',
-    content: "Não sabe onde encontrar as credenciais? Este guia passo-a-passo te ajuda a obter tudo no Meta Developers.",
+    content: "Primeiro passo: conectar o WhatsApp. Se o administrador já configurou para você, vai aparecer 'Conta Ativa' e você pode pular esta etapa. Caso contrário, preencha suas credenciais aqui.",
     route: "/configuracao",
   },
 
-  // === IMPORTAR ===
+  // === IMPORTAR — FLUXO DETALHADO ===
   {
     target: "body",
-    content: "Vamos para a página de Importação de contatos!",
+    content: "Agora vamos aprender a adicionar contatos! Existem duas formas: importar uma lista jurídica inteira ou adicionar contatos um a um.",
     placement: "center",
     route: "/importar",
   },
   {
     target: '[data-tour="import-tabs"]',
-    content: "Você tem duas formas de adicionar contatos: importar uma lista jurídica inteira, ou adicionar um contato individual.",
+    content: "Use estas abas para escolher: 'Importar Lista' para adicionar vários contatos de uma vez, ou 'Adicionar Individual' para cadastrar um por um.",
+    route: "/importar",
+  },
+  {
+    target: '[data-tour="import-file-upload"]',
+    content: "📁 Opção 1: Carregue um arquivo .txt com sua lista jurídica. O sistema lê o arquivo e extrai todos os dados automaticamente.",
     route: "/importar",
   },
   {
     target: '[data-tour="import-textarea"]',
-    content: "Para importar em massa, cole sua lista jurídica aqui ou carregue um arquivo .txt. O sistema extrai automaticamente nomes, telefones e processos.",
+    content: "📋 Opção 2: Cole o texto da sua lista jurídica diretamente aqui. O sistema identifica os emojis (👤 nome, 📞 telefone, ⚖️ advogado) e separa cada contato pelo divisor '===='.",
+    route: "/importar",
+  },
+  {
+    target: '[data-tour="import-format-example"]',
+    content: "Não sabe o formato? Veja este exemplo! Você pode até clicar em 'Usar Exemplo' para testar com dados fictícios antes de importar seus dados reais.",
+    route: "/importar",
+  },
+  {
+    target: '[data-tour="import-process-btn"]',
+    content: "Depois de colar ou carregar a lista, clique em 'Processar Lista'. O sistema vai mostrar uma prévia com todos os contatos encontrados para você conferir antes de confirmar.",
     route: "/importar",
   },
 
-  // === CONTATOS ===
+  // === CONTATOS — GERENCIAR E DISPARAR ===
   {
     target: "body",
-    content: "Agora vamos ver a página de Contatos!",
+    content: "Após importar, seus contatos aparecem aqui na página de Contatos. Vamos ver como fazer o primeiro disparo!",
     placement: "center",
     route: "/contatos",
   },
   {
     target: '[data-tour="contacts-search"]',
-    content: "Use a busca para encontrar contatos por nome, telefone, processo ou advogado.",
+    content: "🔍 Use a busca para encontrar rapidamente qualquer contato por nome, telefone, número do processo ou advogado.",
     route: "/contatos",
   },
   {
     target: '[data-tour="contacts-table"]',
-    content: "Aqui está a lista completa dos seus contatos. Você pode selecionar vários para disparo em massa, enviar templates individualmente ou abrir a conversa.",
+    content: "Esta é a lista dos seus contatos. Cada linha mostra nome, telefone, processo, advogado e status. Use o checkbox à esquerda para selecionar contatos para disparo em massa.",
+    route: "/contatos",
+  },
+  {
+    target: '[data-tour="contacts-import-btn"]',
+    content: "Precisa adicionar mais contatos? Este botão te leva direto para a importação.",
     route: "/contatos",
   },
 
-  // === CONVERSAS ===
-  {
-    target: "body",
-    content: "Esta é a página de Conversas — seu chat com os clientes!",
-    placement: "center",
-    route: "/conversas",
-  },
-  {
-    target: '[data-tour="chat-contact-list"]',
-    content: "Na lista à esquerda, você vê todos os contatos com conversas. Clique em um para abrir o chat.",
-    route: "/conversas",
-  },
-
-  // === TEMPLATES ===
-  {
-    target: "body",
-    content: "Por último, a página de Templates!",
-    placement: "center",
-    route: "/templates",
-  },
+  // === TEMPLATES (breve) ===
   {
     target: '[data-tour="templates-info"]',
-    content: "Templates são modelos de mensagem aprovados pela Meta. Para o primeiro contato com um cliente, você PRECISA usar um template.",
+    content: "⚠️ Regra importante: para o PRIMEIRO contato com um cliente, você precisa usar um template aprovado pela Meta. Depois que ele responder, você pode enviar mensagens livres por 24 horas.",
     route: "/templates",
   },
   {
     target: '[data-tour="templates-list"]',
-    content: "Aqui ficam seus templates aprovados. Clique em 'Disparar para Contatos' para enviar em massa.",
+    content: "Aqui ficam seus templates aprovados. Clique em 'Disparar para Contatos' em qualquer template, selecione os contatos desejados e envie! Simples assim.",
     route: "/templates",
   },
 
   // === FIM ===
   {
     target: "body",
-    content: "Tour completo! 🚀 Resumo: Configure o WhatsApp → Importe contatos → Envie templates. Qualquer dúvida, explore as páginas. Bom trabalho!",
+    content: "Tour completo! 🚀\n\nResumo do fluxo:\n1️⃣ Configure o WhatsApp (ou peça ao admin)\n2️⃣ Importe seus contatos (lista ou individual)\n3️⃣ Vá em Templates e dispare para os contatos\n\nAgora é com você! Boa sorte! 💪",
     placement: "center",
     route: "/",
   },
