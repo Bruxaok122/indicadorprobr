@@ -137,7 +137,7 @@ export default function Dashboard() {
             )}
 
             {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-4" data-tour="dashboard-stats">
+            <div className="grid gap-4 md:grid-cols-4">
               <Card>
                 <CardHeader className="pb-2">
                   <CardDescription>Total de Contatos</CardDescription>
@@ -183,7 +183,7 @@ export default function Dashboard() {
 
             <div className="grid gap-6 lg:grid-cols-2">
               {/* Setup Checklist */}
-              <Card data-tour="dashboard-checklist">
+              <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-accent" />

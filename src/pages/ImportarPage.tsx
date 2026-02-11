@@ -188,7 +188,7 @@ Requerido (Polo Passivo):
 
         <div className="flex-1 overflow-auto p-6">
           <div className="mx-auto max-w-4xl space-y-6">
-            <Tabs defaultValue="lista" className="w-full" data-tour="import-tabs">
+            <Tabs defaultValue="lista" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="lista" className="gap-2">
                   <Upload className="h-4 w-4" />
@@ -215,7 +215,7 @@ Requerido (Polo Passivo):
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {/* File Upload */}
-                    <div className="flex items-center gap-4" data-tour="import-file-upload">
+                    <div className="flex items-center gap-4">
                       <input
                         type="file"
                         ref={fileInputRef}
@@ -254,7 +254,7 @@ Requerido (Polo Passivo):
                       </div>
                     </div>
 
-                    <div className="space-y-2" data-tour="import-textarea">
+                    <div className="space-y-2">
                       <Label htmlFor="rawText">Lista de Contatos</Label>
                       <Textarea
                         id="rawText"
@@ -288,7 +288,7 @@ Requerido (Polo Passivo):
                       disabled={!validation.isValid}
                       className="w-full"
                       size="lg"
-                      data-tour="import-process-btn"
+                      
                     >
                       <Upload className="mr-2 h-4 w-4" />
                       Processar Lista
@@ -297,7 +297,7 @@ Requerido (Polo Passivo):
                 </Card>
 
                 {/* Format Example */}
-                <Card data-tour="import-format-example">
+                <Card>
                   <CardHeader>
                     <CardTitle className="text-base">Formato Esperado</CardTitle>
                     <CardDescription>
@@ -323,7 +323,7 @@ Requerido (Polo Passivo):
 
               {/* Tab: Add Single Contact */}
               <TabsContent value="individual" className="space-y-6">
-                <Card data-tour="import-individual">
+                <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <UserPlus className="h-5 w-5 text-accent" />

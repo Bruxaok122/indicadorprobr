@@ -180,7 +180,7 @@ export default function ContatosPage() {
           <div className="flex items-center gap-2">
             {selectedContacts.length > 0 && (
               <>
-                <Button onClick={handleOpenBulkDialog} variant="default" data-tour="contacts-bulk-send">
+                <Button onClick={handleOpenBulkDialog} variant="default">
                   <Send className="mr-2 h-4 w-4" />
                   Disparar ({selectedContacts.length})
                 </Button>
@@ -190,7 +190,7 @@ export default function ContatosPage() {
                 </Button>
               </>
             )}
-            <Button asChild data-tour="contacts-import-btn">
+            <Button asChild>
               <Link to="/importar">
                 <Users className="mr-2 h-4 w-4" />
                 Importar
@@ -203,7 +203,7 @@ export default function ContatosPage() {
           <div className="flex h-full flex-col space-y-4">
             {/* Search */}
 
-            <div className="relative" data-tour="contacts-search">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome, telefone, processo ou advogado..."
@@ -214,7 +214,7 @@ export default function ContatosPage() {
             </div>
 
             {/* Table */}
-            <Card className="flex-1 overflow-hidden" data-tour="contacts-table">
+            <Card className="flex-1 overflow-hidden">
               <CardContent className="h-full overflow-auto p-0">
                 {filteredContacts.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center py-12">
