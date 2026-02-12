@@ -110,7 +110,7 @@ export function ChatInput({
 
         {isMobile ? (
           <>
-            <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} className="shrink-0 h-10 w-10 rounded-full text-muted-foreground">
+            <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} disabled={!canSendFreeText} className="shrink-0 h-10 w-10 rounded-full text-muted-foreground">
               <Paperclip className="h-5 w-5" />
             </Button>
             <Button variant="ghost" size="icon" onClick={onOpenTemplateDialog} disabled={!templatesAvailable} className="shrink-0 h-10 w-10 rounded-full text-muted-foreground">
@@ -121,7 +121,7 @@ export function ChatInput({
           <>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} className="shrink-0 h-10 w-10 rounded-full text-muted-foreground">
+                <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} disabled={!canSendFreeText} className="shrink-0 h-10 w-10 rounded-full text-muted-foreground">
                   <Paperclip className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
