@@ -179,8 +179,9 @@ export default function ContatosPage() {
           description={`${contacts.length} cliente(s) cadastrado(s)`}
         >
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => refetchContacts()} title="Atualizar contatos">
-              <RefreshCw className="h-4 w-4" />
+            <Button variant="outline" onClick={() => refetchContacts()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Atualizar
             </Button>
             {selectedContacts.length > 0 && (
               <>
