@@ -1,7 +1,6 @@
 import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { OnboardingTour } from "@/components/tour/OnboardingTour";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -14,7 +13,6 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className={`flex min-h-screen bg-background ${isMobile ? 'flex-col' : ''}`}>
       <Sidebar />
       <main className="flex-1 overflow-hidden min-w-0">{children}</main>
-      <OnboardingTour />
     </div>
   );
 }
