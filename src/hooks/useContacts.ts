@@ -9,7 +9,7 @@ export function useContacts() {
   const queryClient = useQueryClient();
   const { isAdmin } = useAuthContext();
 
-  const { data: contacts = [], isLoading } = useQuery({
+  const { data: contacts = [], isLoading, refetch: refetchContacts } = useQuery({
     queryKey: ["contacts", isAdmin],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -202,5 +202,6 @@ export function useContacts() {
     isDeletingContacts: deleteContactsMutation.isPending,
     toggleContactBlock: toggleContactBlockMutation.mutate,
     isTogglingBlock: toggleContactBlockMutation.isPending,
+    refetchContacts,
   };
 }

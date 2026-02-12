@@ -19,6 +19,7 @@ import {
   Scale,
   FileText,
   Send,
+  RefreshCw,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -67,7 +68,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 
 export default function ContatosPage() {
-  const { contacts, isLoading, deleteContact, isDeleting, deleteContacts, isDeletingContacts } = useContacts();
+  const { contacts, isLoading, deleteContact, isDeleting, deleteContacts, isDeletingContacts, refetchContacts } = useContacts();
   const { templates, sendBulk, isSendingBulk } = useMetaTemplates();
   const { phones } = useWabaPhones();
   
@@ -178,6 +179,9 @@ export default function ContatosPage() {
           description={`${contacts.length} cliente(s) cadastrado(s)`}
         >
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={() => refetchContacts()} title="Atualizar contatos">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
             {selectedContacts.length > 0 && (
               <>
                 <Button onClick={handleOpenBulkDialog} variant="default">
