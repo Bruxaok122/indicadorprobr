@@ -38,6 +38,7 @@ serve(async (req) => {
 
     const body = await req.json();
     const { action } = body;
+    const userId = user.id;
 
     // Get whatsapp config for access token (shared or user's own)
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
@@ -99,6 +100,19 @@ serve(async (req) => {
       const registerData = await registerRes.json();
       if (!registerRes.ok) {
         throw new Error(registerData.error?.message || "Erro ao registrar número");
+      }
+
+      // Save the number to waba_phone_numbers with created_by
+      if (registerData.id) {
+        await serviceClient
+          .from("waba_phone_numbers")
+          .upsert({
+            phone_number_id: registerData.id,
+            display_phone_number: `+${cc}${phone_number}`,
+            verified_name: verified_name,
+            is_active: true,
+            created_by: userId,
+          }, { onConflict: "phone_number_id" });
       }
 
       return new Response(JSON.stringify({ success: true, data: registerData }), {
