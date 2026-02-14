@@ -9,6 +9,7 @@ import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
 import { useContacts } from "@/hooks/useContacts";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
 import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
+import { CreateTemplateDialog } from "@/components/templates/CreateTemplateDialog";
 import {
   FileText,
   RefreshCw,
@@ -18,6 +19,7 @@ import {
   Send,
   AlertCircle,
   Users,
+  Plus,
 } from "lucide-react";
 import {
   Dialog,
@@ -33,7 +35,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 
 export default function TemplatesPage() {
-  const { templates, allTemplates, isLoading, error, refetch, sendBulk, isSendingBulk } = useMetaTemplates();
+  const { templates, allTemplates, isLoading, error, refetch, sendBulk, isSendingBulk, createTemplate, isCreatingTemplate } = useMetaTemplates();
   const { contacts } = useContacts();
   const { phones } = useWabaPhones();
   
@@ -41,6 +43,7 @@ export default function TemplatesPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   // Auto-select phone if only one available
   useEffect(() => {
@@ -130,10 +133,16 @@ export default function TemplatesPage() {
           title="Templates de Mensagem"
           description="Templates aprovados da sua conta WhatsApp Business"
         >
-          <Button onClick={() => refetch()} disabled={isLoading}>
-            <RefreshCw className={cn("mr-2 h-4 w-4", isLoading && "animate-spin")} />
-            Atualizar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => refetch()} disabled={isLoading}>
+              <RefreshCw className={cn("mr-2 h-4 w-4", isLoading && "animate-spin")} />
+              Atualizar
+            </Button>
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Criar Template
+            </Button>
+          </div>
         </PageHeader>
 
         <div className="flex-1 overflow-auto p-6">
@@ -159,7 +168,7 @@ export default function TemplatesPage() {
               <div className="flex items-center justify-center py-12">
                 <LoadingSpinner size="lg" text="Carregando templates da Meta..." />
               </div>
-            ) : templates.length === 0 ? (
+            ) : allTemplates.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <FileText className="mb-4 h-12 w-12 text-muted-foreground/50" />
@@ -177,8 +186,8 @@ export default function TemplatesPage() {
               </Card>
             ) : (
               <div className="grid gap-4">
-                {templates.map((template) => (
-                  <Card key={template.id}>
+                {allTemplates.map((template) => (
+                  <Card key={template.id} className={cn(template.status !== "APPROVED" && "opacity-80")}>
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div>
@@ -225,13 +234,6 @@ export default function TemplatesPage() {
               </div>
             )}
 
-            {allTemplates.length > templates.length && (
-              <AlertBanner type="warning" title="Templates não aprovados">
-                <p>
-                  {allTemplates.length - templates.length} template(s) não estão aprovados e não podem ser usados para envio.
-                </p>
-              </AlertBanner>
-            )}
           </div>
         </div>
       </div>
@@ -325,6 +327,17 @@ export default function TemplatesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CreateTemplateDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onSubmit={(data) => {
+          createTemplate(data, {
+            onSuccess: () => setShowCreateDialog(false),
+          });
+        }}
+        isSubmitting={isCreatingTemplate}
+      />
     </AppLayout>
   );
 }
