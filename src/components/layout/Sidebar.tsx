@@ -66,7 +66,7 @@ const navItems = [
     description: "WhatsApp API",
   },
   {
-    title: "API WhatsApp",
+    title: "Números",
     href: "/whatsapp-api",
     icon: Smartphone,
     description: "Gerenciar números e perfil",

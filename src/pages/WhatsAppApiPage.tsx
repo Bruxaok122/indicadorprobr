@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,10 +8,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, UserCircle, Send, CheckCircle, RefreshCw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Phone, UserCircle, Send, CheckCircle, RefreshCw, Wifi, WifiOff, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
+
+interface PhoneStatus {
+  id: string;
+  status?: string;
+  code_verification_status?: string;
+  quality_rating?: string;
+  name_status?: string;
+  loading: boolean;
+}
 
 const VERTICALS = [
   { value: "UNDEFINED", label: "Não definido" },
@@ -35,6 +45,23 @@ const VERTICALS = [
   { value: "NOT_A_BIZ", label: "Não é empresa" },
 ];
 
+function getStatusInfo(status?: string) {
+  switch (status) {
+    case "CONNECTED":
+      return { label: "Conectado", variant: "default" as const, icon: Wifi, color: "text-green-500" };
+    case "OFFLINE":
+      return { label: "Desconectado", variant: "destructive" as const, icon: WifiOff, color: "text-destructive" };
+    case "FLAGGED":
+      return { label: "Sinalizado", variant: "secondary" as const, icon: AlertCircle, color: "text-yellow-500" };
+    case "RATE_LIMITED":
+      return { label: "Limitado", variant: "secondary" as const, icon: AlertCircle, color: "text-yellow-500" };
+    case "PENDING":
+      return { label: "Pendente", variant: "outline" as const, icon: AlertCircle, color: "text-muted-foreground" };
+    default:
+      return { label: status || "Desconhecido", variant: "outline" as const, icon: AlertCircle, color: "text-muted-foreground" };
+  }
+}
+
 export default function WhatsAppApiPage() {
   // Phone Registration State
   const [cc, setCc] = useState("55");
@@ -48,8 +75,13 @@ export default function WhatsAppApiPage() {
   const [verificationCode, setVerificationCode] = useState("");
   const [verifyingCode, setVerifyingCode] = useState(false);
 
+  // Phone statuses
+  const { phones, allPhones, syncPhones, isSyncing, isLoading: phonesLoading } = useWabaPhones();
+  const availablePhones = allPhones.length > 0 ? allPhones : phones;
+  const [phoneStatuses, setPhoneStatuses] = useState<Record<string, PhoneStatus>>({});
+  const [checkingAllStatuses, setCheckingAllStatuses] = useState(false);
+
   // Business Profile State
-  const { allPhones, syncPhones, isSyncing } = useWabaPhones();
   const [selectedPhoneId, setSelectedPhoneId] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -60,7 +92,59 @@ export default function WhatsAppApiPage() {
     email: "",
     websites: "",
     vertical: "UNDEFINED",
+    profile_picture_url: "",
   });
+
+  const selectedPhone = availablePhones.find((p) => p.id === selectedPhoneId);
+  const selectedPhoneStatus = selectedPhone ? phoneStatuses[selectedPhone.phone_number_id] : null;
+  const isPhoneConnected = selectedPhoneStatus?.status === "CONNECTED";
+
+  // Check status of a single phone
+  const checkPhoneStatus = async (phoneNumberId: string) => {
+    setPhoneStatuses((prev) => ({
+      ...prev,
+      [phoneNumberId]: { ...prev[phoneNumberId], id: phoneNumberId, loading: true },
+    }));
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
+        body: { action: "check_status", phone_number_id: phoneNumberId },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      setPhoneStatuses((prev) => ({
+        ...prev,
+        [phoneNumberId]: {
+          id: phoneNumberId,
+          status: data.data?.status,
+          code_verification_status: data.data?.code_verification_status,
+          quality_rating: data.data?.quality_rating,
+          name_status: data.data?.name_status,
+          loading: false,
+        },
+      }));
+    } catch {
+      setPhoneStatuses((prev) => ({
+        ...prev,
+        [phoneNumberId]: { ...prev[phoneNumberId], id: phoneNumberId, loading: false },
+      }));
+    }
+  };
+
+  // Check all phone statuses
+  const checkAllStatuses = async () => {
+    setCheckingAllStatuses(true);
+    for (const phone of availablePhones) {
+      await checkPhoneStatus(phone.phone_number_id);
+    }
+    setCheckingAllStatuses(false);
+  };
+
+  // Auto-check statuses when phones load
+  useEffect(() => {
+    if (availablePhones.length > 0 && Object.keys(phoneStatuses).length === 0) {
+      checkAllStatuses();
+    }
+  }, [availablePhones.length]);
 
   const handleRegister = async () => {
     if (!phoneNumber || !verifiedName || !pin) {
@@ -78,12 +162,12 @@ export default function WhatsAppApiPage() {
       });
       if (error) throw error;
       if (data.error) throw new Error(data.error);
-      toast.success("Número registrado com sucesso!", { description: "Agora solicite o código de verificação." });
+      toast.success("Número registrado!", { description: "Solicite o código de verificação." });
       if (data.data?.id) {
         setPhoneNumberIdForCode(data.data.id);
       }
     } catch (err: any) {
-      toast.error("Erro ao registrar número", { description: err.message });
+      toast.error("Erro ao registrar", { description: err.message });
     } finally {
       setRegistering(false);
     }
@@ -131,17 +215,11 @@ export default function WhatsAppApiPage() {
   };
 
   const handleLoadProfile = async () => {
-    if (!selectedPhoneId) {
-      toast.error("Selecione um número");
-      return;
-    }
-    const phone = allPhones.find((p) => p.id === selectedPhoneId);
-    if (!phone) return;
-
+    if (!selectedPhone) return;
     setProfileLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("manage-waba-profile", {
-        body: { action: "get_profile", phone_number_id: phone.phone_number_id },
+        body: { action: "get_profile", phone_number_id: selectedPhone.phone_number_id },
       });
       if (error) throw error;
       if (data.error) throw new Error(data.error);
@@ -153,6 +231,7 @@ export default function WhatsAppApiPage() {
         email: p.email || "",
         websites: (p.websites || []).join(", "),
         vertical: p.vertical || "UNDEFINED",
+        profile_picture_url: p.profile_picture_url || "",
       });
       toast.success("Perfil carregado!");
     } catch (err: any) {
@@ -163,21 +242,14 @@ export default function WhatsAppApiPage() {
   };
 
   const handleSaveProfile = async () => {
-    if (!selectedPhoneId) return;
-    const phone = allPhones.find((p) => p.id === selectedPhoneId);
-    if (!phone) return;
-
+    if (!selectedPhone) return;
     setSavingProfile(true);
     try {
-      const websites = profileData.websites
-        .split(",")
-        .map((w) => w.trim())
-        .filter(Boolean);
-
+      const websites = profileData.websites.split(",").map((w) => w.trim()).filter(Boolean);
       const { data, error } = await supabase.functions.invoke("manage-waba-profile", {
         body: {
           action: "update_profile",
-          phone_number_id: phone.phone_number_id,
+          phone_number_id: selectedPhone.phone_number_id,
           about: profileData.about,
           address: profileData.address,
           description: profileData.description,
@@ -200,21 +272,90 @@ export default function WhatsAppApiPage() {
     <AppLayout>
       <div className="flex h-screen flex-col overflow-hidden">
         <PageHeader
-          title="Gerenciar API WhatsApp"
-          description="Registre números e configure perfis comerciais via API da Meta"
+          title="Números"
+          description="Registre números e configure perfis comerciais"
         />
 
         <div className="flex-1 overflow-auto p-4 md:p-6">
           <div className="mx-auto max-w-3xl space-y-6">
-            {/* Section 1: Register Phone Number */}
+
+            {/* Registered Numbers with Status */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Wifi className="h-5 w-5" />
+                      Números Cadastrados
+                    </CardTitle>
+                    <CardDescription>Status de conexão dos seus números</CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => syncPhones()} disabled={isSyncing}>
+                      <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
+                      Sincronizar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={checkAllStatuses} disabled={checkingAllStatuses}>
+                      {checkingAllStatuses ? <LoadingSpinner size="sm" /> : "Verificar Status"}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {phonesLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <LoadingSpinner size="md" text="Carregando números..." />
+                  </div>
+                ) : availablePhones.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    Nenhum número cadastrado. Registre um número abaixo ou sincronize da Meta.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {availablePhones.map((phone) => {
+                      const ps = phoneStatuses[phone.phone_number_id];
+                      const statusInfo = getStatusInfo(ps?.status);
+                      const StatusIcon = statusInfo.icon;
+                      return (
+                        <div key={phone.id} className="flex items-center justify-between rounded-lg border p-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <StatusIcon className={`h-5 w-5 flex-shrink-0 ${statusInfo.color}`} />
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">{phone.display_phone_number}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {phone.verified_name || "Sem nome verificado"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {ps?.quality_rating && (
+                              <Badge variant="outline" className="text-xs">
+                                {ps.quality_rating}
+                              </Badge>
+                            )}
+                            {ps?.loading ? (
+                              <LoadingSpinner size="sm" />
+                            ) : (
+                              <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Register Phone Number */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Phone className="h-5 w-5" />
-                  Registrar Número de Telefone
+                  Registrar Novo Número
                 </CardTitle>
                 <CardDescription>
-                  Adicione um novo número ao WhatsApp Business Account (WABA) via API da Meta
+                  Adicione um novo número ao WhatsApp Business Account via API da Meta
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -225,20 +366,12 @@ export default function WhatsAppApiPage() {
                   </div>
                   <div className="space-y-2 sm:col-span-2">
                     <Label>Número de Telefone</Label>
-                    <Input
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      placeholder="11999998888"
-                    />
+                    <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="11999998888" />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Nome Verificado (exibido no WhatsApp)</Label>
-                  <Input
-                    value={verifiedName}
-                    onChange={(e) => setVerifiedName(e.target.value)}
-                    placeholder="Nome da Empresa"
-                  />
+                  <Input value={verifiedName} onChange={(e) => setVerifiedName(e.target.value)} placeholder="Nome da Empresa" />
                 </div>
                 <div className="space-y-2">
                   <Label>PIN de 2 Fatores (6 dígitos)</Label>
@@ -254,15 +387,15 @@ export default function WhatsAppApiPage() {
                   {registering ? "Registrando..." : "Registrar Número"}
                 </Button>
 
-                {/* Verification Section */}
+                {/* Verification */}
                 <div className="border-t pt-4 space-y-4">
                   <h4 className="font-medium text-sm">Verificação do Número</h4>
                   <div className="space-y-2">
-                    <Label>Phone Number ID (retornado após registro)</Label>
+                    <Label>Phone Number ID</Label>
                     <Input
                       value={phoneNumberIdForCode}
                       onChange={(e) => setPhoneNumberIdForCode(e.target.value)}
-                      placeholder="ID retornado pela Meta"
+                      placeholder="ID retornado após registro"
                     />
                   </div>
                   <div className="flex gap-2">
@@ -295,7 +428,7 @@ export default function WhatsAppApiPage() {
               </CardContent>
             </Card>
 
-            {/* Section 2: Business Profile */}
+            {/* Business Profile - only when connected */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -303,7 +436,9 @@ export default function WhatsAppApiPage() {
                   Perfil Comercial do WhatsApp
                 </CardTitle>
                 <CardDescription>
-                  Configure o perfil comercial exibido para seus clientes no WhatsApp
+                  {isPhoneConnected
+                    ? "Configure o perfil comercial exibido no WhatsApp"
+                    : "Selecione um número conectado para editar o perfil comercial"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -315,104 +450,136 @@ export default function WhatsAppApiPage() {
                         <SelectValue placeholder="Escolha um número..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {allPhones.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.display_phone_number} {p.verified_name ? `(${p.verified_name})` : ""}
-                          </SelectItem>
-                        ))}
+                        {availablePhones.map((p) => {
+                          const ps = phoneStatuses[p.phone_number_id];
+                          const connected = ps?.status === "CONNECTED";
+                          return (
+                            <SelectItem key={p.id} value={p.id}>
+                              <span className="flex items-center gap-2">
+                                <span className={`inline-block h-2 w-2 rounded-full ${connected ? "bg-green-500" : "bg-destructive"}`} />
+                                {p.display_phone_number} {p.verified_name ? `(${p.verified_name})` : ""}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button variant="outline" size="icon" onClick={() => syncPhones()} disabled={isSyncing} title="Sincronizar números">
-                    <RefreshCw className={`h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-                  </Button>
-                  <Button onClick={handleLoadProfile} disabled={!selectedPhoneId || profileLoading} variant="outline">
+                  <Button
+                    onClick={handleLoadProfile}
+                    disabled={!selectedPhoneId || profileLoading || !isPhoneConnected}
+                    variant="outline"
+                  >
                     {profileLoading ? <LoadingSpinner size="sm" /> : "Carregar Perfil"}
                   </Button>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Sobre (até 139 caracteres)</Label>
-                  <Input
-                    value={profileData.about}
-                    onChange={(e) => setProfileData({ ...profileData, about: e.target.value.slice(0, 139) })}
-                    placeholder="Breve descrição da empresa"
-                    maxLength={139}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Descrição (até 512 caracteres)</Label>
-                  <Textarea
-                    value={profileData.description}
-                    onChange={(e) => setProfileData({ ...profileData, description: e.target.value.slice(0, 512) })}
-                    placeholder="Descrição detalhada da empresa"
-                    maxLength={512}
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Endereço</Label>
-                    <Input
-                      value={profileData.address}
-                      onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
-                      placeholder="Rua, nº - Cidade/UF"
-                    />
+                {selectedPhoneId && !isPhoneConnected && (
+                  <div className="flex items-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm">
+                    <AlertCircle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                    <span>
+                      Este número não está conectado. Aguarde a conexão para editar o perfil comercial.
+                    </span>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input
-                      value={profileData.email}
-                      onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                      placeholder="contato@empresa.com"
-                      type="email"
-                    />
-                  </div>
-                </div>
+                )}
 
-                <div className="space-y-2">
-                  <Label>Websites (separados por vírgula)</Label>
-                  <Input
-                    value={profileData.websites}
-                    onChange={(e) => setProfileData({ ...profileData, websites: e.target.value })}
-                    placeholder="https://empresa.com, https://loja.empresa.com"
-                  />
-                </div>
+                {isPhoneConnected && (
+                  <>
+                    {profileData.profile_picture_url && (
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={profileData.profile_picture_url}
+                          alt="Foto do perfil"
+                          className="h-16 w-16 rounded-full object-cover border"
+                        />
+                        <p className="text-sm text-muted-foreground">Foto atual do perfil</p>
+                      </div>
+                    )}
 
-                <div className="space-y-2">
-                  <Label>Categoria do Negócio</Label>
-                  <Select
-                    value={profileData.vertical}
-                    onValueChange={(v) => setProfileData({ ...profileData, vertical: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {VERTICALS.map((v) => (
-                        <SelectItem key={v.value} value={v.value}>
-                          {v.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="space-y-2">
+                      <Label>Sobre (até 139 caracteres)</Label>
+                      <Input
+                        value={profileData.about}
+                        onChange={(e) => setProfileData({ ...profileData, about: e.target.value.slice(0, 139) })}
+                        placeholder="Breve descrição"
+                        maxLength={139}
+                      />
+                    </div>
 
-                <Button onClick={handleSaveProfile} disabled={!selectedPhoneId || savingProfile} className="w-full">
-                  {savingProfile ? (
-                    <>
-                      <LoadingSpinner size="sm" />
-                      Salvando...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Salvar Perfil Comercial
-                    </>
-                  )}
-                </Button>
+                    <div className="space-y-2">
+                      <Label>Descrição (até 512 caracteres)</Label>
+                      <Textarea
+                        value={profileData.description}
+                        onChange={(e) => setProfileData({ ...profileData, description: e.target.value.slice(0, 512) })}
+                        placeholder="Descrição detalhada"
+                        maxLength={512}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Endereço</Label>
+                        <Input
+                          value={profileData.address}
+                          onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                          placeholder="Rua, nº - Cidade/UF"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Email</Label>
+                        <Input
+                          value={profileData.email}
+                          onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                          placeholder="contato@empresa.com"
+                          type="email"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Websites (separados por vírgula)</Label>
+                      <Input
+                        value={profileData.websites}
+                        onChange={(e) => setProfileData({ ...profileData, websites: e.target.value })}
+                        placeholder="https://empresa.com"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Categoria do Negócio</Label>
+                      <Select
+                        value={profileData.vertical}
+                        onValueChange={(v) => setProfileData({ ...profileData, vertical: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {VERTICALS.map((v) => (
+                            <SelectItem key={v.value} value={v.value}>
+                              {v.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button onClick={handleSaveProfile} disabled={savingProfile} className="w-full">
+                      {savingProfile ? (
+                        <>
+                          <LoadingSpinner size="sm" />
+                          Salvando...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Salvar Perfil Comercial
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>

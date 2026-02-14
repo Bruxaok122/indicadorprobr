@@ -36,42 +36,50 @@ serve(async (req) => {
       });
     }
 
-    // Check admin
-    const { data: roles } = await anonClient.from("user_roles").select("role").eq("user_id", user.id);
-    const isAdmin = roles?.some((r) => r.role === "admin");
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const body = await req.json();
     const { action, phone_number_id } = body;
 
-    // Get admin's whatsapp config for access token
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
-    const { data: waConfig } = await serviceClient
-      .from("whatsapp_config")
+
+    // Get access token (user's own or shared)
+    const { data: userConfig } = await serviceClient
+      .from("user_whatsapp_config")
       .select("access_token")
+      .eq("user_id", user.id)
+      .eq("is_validated", true)
       .limit(1)
       .single();
 
-    if (!waConfig?.access_token) {
+    const { data: profile } = await serviceClient
+      .from("profiles")
+      .select("can_use_shared_api")
+      .eq("user_id", user.id)
+      .single();
+
+    let accessToken: string | null = null;
+
+    if (userConfig?.access_token) {
+      accessToken = userConfig.access_token;
+    } else if (profile?.can_use_shared_api) {
+      const { data: sharedConfig } = await serviceClient
+        .from("whatsapp_config")
+        .select("access_token")
+        .limit(1)
+        .single();
+      accessToken = sharedConfig?.access_token || null;
+    }
+
+    if (!accessToken) {
       return new Response(JSON.stringify({ error: "WhatsApp API não configurada." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const accessToken = waConfig.access_token;
-
     if (action === "get_profile") {
       const res = await fetch(
         `https://graph.facebook.com/v21.0/${phone_number_id}/whatsapp_business_profile?fields=about,address,description,email,profile_picture_url,websites,vertical`,
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
       const data = await res.json();
@@ -86,9 +94,7 @@ serve(async (req) => {
     } else if (action === "update_profile") {
       const { about, address, description, email, websites, vertical, profile_picture_handle } = body;
 
-      const profileData: Record<string, unknown> = {
-        messaging_product: "whatsapp",
-      };
+      const profileData: Record<string, unknown> = { messaging_product: "whatsapp" };
       if (about !== undefined) profileData.about = about;
       if (address !== undefined) profileData.address = address;
       if (description !== undefined) profileData.description = description;

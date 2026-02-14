@@ -36,39 +36,52 @@ serve(async (req) => {
       });
     }
 
-    // Check admin
-    const { data: roles } = await anonClient.from("user_roles").select("role").eq("user_id", user.id);
-    const isAdmin = roles?.some((r) => r.role === "admin");
-    if (!isAdmin) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const body = await req.json();
     const { action } = body;
 
-    // Get admin's whatsapp config for access token
+    // Get whatsapp config for access token (shared or user's own)
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
-    const { data: waConfig } = await serviceClient
-      .from("whatsapp_config")
+    
+    // First check if user has their own config
+    const { data: userConfig } = await serviceClient
+      .from("user_whatsapp_config")
       .select("access_token, waba_id")
+      .eq("user_id", user.id)
+      .eq("is_validated", true)
       .limit(1)
       .single();
 
-    if (!waConfig?.access_token || !waConfig?.waba_id) {
+    // Check if user can use shared API
+    const { data: profile } = await serviceClient
+      .from("profiles")
+      .select("can_use_shared_api")
+      .eq("user_id", user.id)
+      .single();
+
+    let accessToken: string | null = null;
+    let wabaId: string | null = null;
+
+    if (userConfig?.access_token && userConfig?.waba_id) {
+      accessToken = userConfig.access_token;
+      wabaId = userConfig.waba_id;
+    } else if (profile?.can_use_shared_api) {
+      const { data: sharedConfig } = await serviceClient
+        .from("whatsapp_config")
+        .select("access_token, waba_id")
+        .limit(1)
+        .single();
+      accessToken = sharedConfig?.access_token || null;
+      wabaId = sharedConfig?.waba_id || null;
+    }
+
+    if (!accessToken || !wabaId) {
       return new Response(JSON.stringify({ error: "WhatsApp API não configurada. Configure primeiro em Configuração." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const accessToken = waConfig.access_token;
-    const wabaId = waConfig.waba_id;
-
     if (action === "register") {
-      // Register a new phone number to the WABA
       const { cc, phone_number, verified_name, pin } = body;
 
       const registerRes = await fetch(
@@ -79,12 +92,7 @@ serve(async (req) => {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            cc,
-            phone_number,
-            verified_name,
-            pin,
-          }),
+          body: JSON.stringify({ cc, phone_number, verified_name, pin }),
         }
       );
 
@@ -98,7 +106,6 @@ serve(async (req) => {
       });
 
     } else if (action === "request_code") {
-      // Request verification code
       const { phone_number_id, code_method } = body;
 
       const codeRes = await fetch(
@@ -109,10 +116,7 @@ serve(async (req) => {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            code_method: code_method || "SMS",
-            language: "pt_BR",
-          }),
+          body: JSON.stringify({ code_method: code_method || "SMS", language: "pt_BR" }),
         }
       );
 
@@ -126,7 +130,6 @@ serve(async (req) => {
       });
 
     } else if (action === "verify_code") {
-      // Verify the code
       const { phone_number_id, code } = body;
 
       const verifyRes = await fetch(
@@ -147,6 +150,25 @@ serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ success: true, data: verifyData }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
+    } else if (action === "check_status") {
+      const { phone_number_id } = body;
+
+      const statusRes = await fetch(
+        `https://graph.facebook.com/v21.0/${phone_number_id}?fields=verified_name,code_verification_status,display_phone_number,quality_rating,status,name_status`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+
+      const statusData = await statusRes.json();
+      if (!statusRes.ok) {
+        throw new Error(statusData.error?.message || "Erro ao verificar status");
+      }
+
+      return new Response(JSON.stringify({ success: true, data: statusData }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
 
