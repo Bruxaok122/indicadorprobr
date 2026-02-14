@@ -34,25 +34,44 @@ export function useWabaPhones() {
         return data as WabaPhoneNumber[];
       }
 
-      // Regular user: get permitted phones via permissions join
+      // Regular user: get permitted phones via permissions join + own created numbers
       const { data: permissions, error } = await supabase
         .from("user_phone_permissions")
         .select("phone_number_id")
         .eq("user_id", user.id);
 
       if (error) throw error;
-      if (!permissions || permissions.length === 0) return [];
 
-      const phoneIds = permissions.map((p) => p.phone_number_id);
-      const { data: phonesData, error: phonesError } = await supabase
+      const permittedIds = (permissions || []).map((p) => p.phone_number_id);
+
+      // Also get numbers created by this user
+      const { data: ownPhones, error: ownError } = await supabase
         .from("waba_phone_numbers")
         .select("*")
-        .in("id", phoneIds)
-        .eq("is_active", true)
-        .order("display_phone_number");
+        .eq("created_by", user.id)
+        .eq("is_active", true);
 
-      if (phonesError) throw phonesError;
-      return phonesData as WabaPhoneNumber[];
+      if (ownError) throw ownError;
+
+      // Get permitted phones (if any)
+      let permittedPhones: WabaPhoneNumber[] = [];
+      if (permittedIds.length > 0) {
+        const { data: phonesData, error: phonesError } = await supabase
+          .from("waba_phone_numbers")
+          .select("*")
+          .in("id", permittedIds)
+          .eq("is_active", true);
+
+        if (phonesError) throw phonesError;
+        permittedPhones = (phonesData || []) as WabaPhoneNumber[];
+      }
+
+      // Merge and deduplicate
+      const allUserPhones = [...(ownPhones || []), ...permittedPhones];
+      const uniqueMap = new Map(allUserPhones.map((p) => [p.id, p]));
+      return Array.from(uniqueMap.values()).sort((a, b) =>
+        a.display_phone_number.localeCompare(b.display_phone_number)
+      ) as WabaPhoneNumber[];
     },
     enabled: !!user?.id,
   });

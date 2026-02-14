@@ -124,6 +124,98 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
 
+    } else if (action === "upload_profile_photo") {
+      const { phone_number_id: uploadPhoneId } = body;
+
+      // Get the image from the request body (base64)
+      const { image_base64, image_type } = body;
+      if (!image_base64 || !uploadPhoneId) {
+        return new Response(JSON.stringify({ error: "Imagem e phone_number_id são obrigatórios" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Decode base64 to binary
+      const binaryStr = atob(image_base64);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+      const fileSize = bytes.length;
+      const mimeType = image_type || "image/jpeg";
+
+      // Step 1: Create upload session
+      const appId = Deno.env.get("META_APP_ID") || "";
+      const createSessionRes = await fetch(
+        `https://graph.facebook.com/v21.0/${appId}/uploads`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            file_length: fileSize,
+            file_type: mimeType,
+            file_name: "profile_photo.jpg",
+          }),
+        }
+      );
+
+      const sessionData = await createSessionRes.json();
+      if (!createSessionRes.ok) {
+        throw new Error(sessionData.error?.message || "Erro ao criar sessão de upload");
+      }
+
+      const uploadSessionId = sessionData.id;
+
+      // Step 2: Upload the file
+      const uploadRes = await fetch(
+        `https://graph.facebook.com/v21.0/${uploadSessionId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `OAuth ${accessToken}`,
+            file_offset: "0",
+            "Content-Type": mimeType,
+          },
+          body: bytes,
+        }
+      );
+
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) {
+        throw new Error(uploadData.error?.message || "Erro ao fazer upload da imagem");
+      }
+
+      const handle = uploadData.h;
+
+      // Step 3: Set profile picture using handle
+      const setPhotoRes = await fetch(
+        `https://graph.facebook.com/v21.0/${uploadPhoneId}/whatsapp_business_profile`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            profile_picture_handle: handle,
+          }),
+        }
+      );
+
+      const setPhotoData = await setPhotoRes.json();
+      if (!setPhotoRes.ok) {
+        throw new Error(setPhotoData.error?.message || "Erro ao definir foto de perfil");
+      }
+
+      return new Response(JSON.stringify({ success: true, data: setPhotoData }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
     } else {
       return new Response(JSON.stringify({ error: "Ação inválida" }), {
         status: 400,
