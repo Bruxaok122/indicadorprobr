@@ -11,6 +11,7 @@ import {
   Settings,
   Upload,
   Webhook,
+  Smartphone,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -63,6 +64,12 @@ const navItems = [
     href: "/configuracao",
     icon: Settings,
     description: "WhatsApp API",
+  },
+  {
+    title: "API WhatsApp",
+    href: "/whatsapp-api",
+    icon: Smartphone,
+    description: "Gerenciar números e perfil",
   },
   {
     title: "Webhook",
