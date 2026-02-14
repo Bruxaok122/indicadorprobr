@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Phone, UserCircle, Send, CheckCircle, RefreshCw, Wifi, WifiOff, AlertCircle } from "lucide-react";
+import { Phone, UserCircle, Send, CheckCircle, RefreshCw, Wifi, WifiOff, AlertCircle, Upload, Image } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
@@ -85,6 +85,7 @@ export default function WhatsAppApiPage() {
   const [selectedPhoneId, setSelectedPhoneId] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [profileData, setProfileData] = useState({
     about: "",
     address: "",
@@ -265,6 +266,43 @@ export default function WhatsAppApiPage() {
       toast.error("Erro ao salvar perfil", { description: err.message });
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const handleUploadPhoto = async (file: File) => {
+    if (!selectedPhone) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 5MB");
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const { data, error } = await supabase.functions.invoke("manage-waba-profile", {
+        body: {
+          action: "upload_profile_photo",
+          phone_number_id: selectedPhone.phone_number_id,
+          image_base64: base64,
+          image_type: file.type || "image/jpeg",
+        },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      toast.success("Foto de perfil atualizada!");
+      handleLoadProfile();
+    } catch (err: any) {
+      toast.error("Erro ao enviar foto", { description: err.message });
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -485,16 +523,44 @@ export default function WhatsAppApiPage() {
 
                 {isPhoneConnected && (
                   <>
-                    {profileData.profile_picture_url && (
-                      <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
+                      {profileData.profile_picture_url ? (
                         <img
                           src={profileData.profile_picture_url}
                           alt="Foto do perfil"
                           className="h-16 w-16 rounded-full object-cover border"
                         />
-                        <p className="text-sm text-muted-foreground">Foto atual do perfil</p>
+                      ) : (
+                        <div className="h-16 w-16 rounded-full border flex items-center justify-center bg-muted">
+                          <Image className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          {profileData.profile_picture_url ? "Foto atual do perfil" : "Sem foto de perfil"}
+                        </p>
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleUploadPhoto(file);
+                              e.target.value = "";
+                            }}
+                            disabled={uploadingPhoto}
+                          />
+                          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+                            {uploadingPhoto ? (
+                              <><LoadingSpinner size="sm" /> Enviando...</>
+                            ) : (
+                              <><Upload className="h-4 w-4" /> Alterar foto</>
+                            )}
+                          </span>
+                        </label>
                       </div>
-                    )}
+                    </div>
 
                     <div className="space-y-2">
                       <Label>Sobre (até 139 caracteres)</Label>
