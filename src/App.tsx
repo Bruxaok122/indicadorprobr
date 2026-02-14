@@ -12,6 +12,7 @@ import ContatosPage from "./pages/ContatosPage";
 import ConversasPage from "./pages/ConversasPage";
 import TemplatesPage from "./pages/TemplatesPage";
 import WebhookPage from "./pages/WebhookPage";
+import WhatsAppApiPage from "./pages/WhatsAppApiPage";
 import LoginPage from "./pages/LoginPage";
 import AdminPage from "./pages/AdminPage";
 import NotFound from "./pages/NotFound";
@@ -80,6 +81,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <TemplatesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/whatsapp-api"
+              element={
+                <ProtectedRoute>
+                  <WhatsAppApiPage />
                 </ProtectedRoute>
               }
             />

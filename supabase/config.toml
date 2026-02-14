@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.fetch-waba-phones]
 verify_jwt = false
+
+[functions.manage-waba-phone]
+verify_jwt = false
+
+[functions.manage-waba-profile]
+verify_jwt = false
