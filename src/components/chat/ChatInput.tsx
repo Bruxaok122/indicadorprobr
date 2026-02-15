@@ -145,7 +145,7 @@ export function ChatInput({
             value={messageText}
             onChange={handleInput}
             onKeyDown={handleKeyPress}
-            className="w-full resize-none rounded-2xl border border-input bg-background px-4 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full resize-none rounded-2xl border border-input bg-background px-4 py-2.5 text-base md:text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             rows={1}
             style={{ maxHeight: 120 }}
             disabled={!canSendFreeText}
