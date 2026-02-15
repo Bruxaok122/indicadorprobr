@@ -10,7 +10,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const isMobile = useIsMobile();
 
   return (
-    <div className={`flex min-h-screen bg-background ${isMobile ? 'flex-col' : ''}`}>
+    <div className={`flex min-h-screen bg-background overflow-hidden ${isMobile ? 'flex-col' : ''}`}>
       <Sidebar />
       <main className="flex-1 overflow-hidden min-w-0">{children}</main>
     </div>
