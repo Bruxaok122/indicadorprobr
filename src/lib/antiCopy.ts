@@ -98,24 +98,30 @@ export function initAntiCopyProtections() {
     }
   });
 
-  // 7. DevTools detection — redirect if opened
-  const threshold = 160;
-  const detectDevTools = () => {
-    const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-    const heightThreshold = window.outerHeight - window.innerHeight > threshold;
-    if (widthThreshold || heightThreshold) {
-      document.body.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#ef4444;font-family:system-ui;text-align:center;padding:2rem;">
-          <div>
-            <h1 style="font-size:2rem;margin-bottom:1rem;">⚠️ Acesso Bloqueado</h1>
-            <p style="font-size:1.1rem;color:#999;">Ferramentas de desenvolvedor detectadas.<br/>Feche as ferramentas e recarregue a página.</p>
+  // 7. DevTools detection — redirect if opened (desktop only)
+  // Mobile browsers have large differences between outer/inner dimensions
+  // due to address bar, navigation bar, notch, etc. — skip detection on mobile.
+  const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile|webOS/i.test(navigator.userAgent);
+  
+  if (!isMobileDevice) {
+    const threshold = 160;
+    const detectDevTools = () => {
+      const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+      const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+      if (widthThreshold || heightThreshold) {
+        document.body.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#ef4444;font-family:system-ui;text-align:center;padding:2rem;">
+            <div>
+              <h1 style="font-size:2rem;margin-bottom:1rem;">⚠️ Acesso Bloqueado</h1>
+              <p style="font-size:1.1rem;color:#999;">Ferramentas de desenvolvedor detectadas.<br/>Feche as ferramentas e recarregue a página.</p>
+            </div>
           </div>
-        </div>
-      `;
-    }
-  };
+        `;
+      }
+    };
 
-  setInterval(detectDevTools, 1500);
+    setInterval(detectDevTools, 1500);
+  }
 
   // 8. Console warning
   console.log(
