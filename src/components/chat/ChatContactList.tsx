@@ -40,8 +40,8 @@ export function ChatContactList({
       className={cn(
         "flex flex-col border-r bg-card",
         isMobile
-          ? cn("absolute inset-0 z-10 transition-transform duration-300", mobileShowChat && "-translate-x-full")
-          : "w-80"
+          ? cn("absolute inset-0 z-10 transition-transform duration-300 h-full", mobileShowChat && "-translate-x-full")
+          : "w-80 h-full"
       )}
     >
       {/* Header */}
