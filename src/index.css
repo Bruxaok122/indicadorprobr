@@ -149,6 +149,13 @@
   }
 }
 
+/* Mobile viewport fix for virtual keyboard */
+@supports (height: 100dvh) {
+  .h-dvh {
+    height: 100dvh;
+  }
+}
+
 /* Hide Lovable branding */
 a[href*="lovable.dev"],
 iframe[src*="lovable.dev"],
