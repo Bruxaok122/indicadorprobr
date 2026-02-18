@@ -66,50 +66,50 @@
   }
 
   .dark {
-    --background: 220 18% 10%;
-    --foreground: 220 15% 85%;
+    --background: 240 25% 8%;
+    --foreground: 240 10% 88%;
 
-    --card: 220 16% 14%;
-    --card-foreground: 220 15% 85%;
+    --card: 245 22% 12%;
+    --card-foreground: 240 10% 88%;
 
-    --popover: 220 16% 14%;
-    --popover-foreground: 220 15% 85%;
+    --popover: 245 22% 12%;
+    --popover-foreground: 240 10% 88%;
 
-    --primary: 43 55% 52%;
-    --primary-foreground: 220 18% 10%;
+    --primary: 265 45% 58%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 18%;
-    --secondary-foreground: 220 15% 82%;
+    --secondary: 242 20% 16%;
+    --secondary-foreground: 240 10% 85%;
 
-    --muted: 220 12% 18%;
-    --muted-foreground: 220 10% 55%;
+    --muted: 242 18% 16%;
+    --muted-foreground: 240 10% 55%;
 
-    --accent: 43 50% 42%;
+    --accent: 43 55% 48%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 50% 40%;
+    --destructive: 0 50% 42%;
     --destructive-foreground: 0 0% 95%;
 
-    --border: 220 12% 20%;
-    --input: 220 12% 20%;
-    --ring: 43 50% 48%;
+    --border: 245 18% 18%;
+    --input: 245 18% 18%;
+    --ring: 265 45% 55%;
 
     /* WhatsApp chat colors (dark) */
-    --chat-bg: 220 14% 11%;
-    --chat-outgoing: 160 30% 16%;
-    --chat-incoming: 220 12% 17%;
-    --chat-outgoing-foreground: 0 0% 88%;
-    --chat-incoming-foreground: 0 0% 88%;
+    --chat-bg: 240 22% 9%;
+    --chat-outgoing: 265 25% 18%;
+    --chat-incoming: 242 18% 16%;
+    --chat-outgoing-foreground: 0 0% 90%;
+    --chat-incoming-foreground: 0 0% 90%;
     --chat-timestamp: 0 0% 55%;
 
-    --sidebar-background: 220 18% 8%;
-    --sidebar-foreground: 220 15% 85%;
-    --sidebar-primary: 43 55% 52%;
-    --sidebar-primary-foreground: 220 18% 10%;
-    --sidebar-accent: 220 14% 16%;
-    --sidebar-accent-foreground: 220 15% 85%;
-    --sidebar-border: 220 12% 16%;
-    --sidebar-ring: 43 50% 48%;
+    --sidebar-background: 240 28% 6%;
+    --sidebar-foreground: 240 10% 88%;
+    --sidebar-primary: 265 45% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 245 22% 15%;
+    --sidebar-accent-foreground: 240 10% 88%;
+    --sidebar-border: 245 18% 15%;
+    --sidebar-ring: 265 45% 55%;
   }
 }
 
