@@ -6,6 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Extract variable placeholders like {{1}}, {{2}} from text
+function extractVariables(text: string): number[] {
+  const matches = text.match(/\{\{(\d+)\}\}/g);
+  if (!matches) return [];
+  return [...new Set(matches.map(m => parseInt(m.replace(/[{}]/g, ""))))].sort((a, b) => a - b);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -25,7 +32,6 @@ serve(async (req) => {
       );
     }
 
-    // Validate template name: lowercase, underscores only
     const validName = /^[a-z0-9_]+$/.test(name);
     if (!validName) {
       return new Response(
@@ -34,7 +40,6 @@ serve(async (req) => {
       );
     }
 
-    // Get WhatsApp config
     const { data: config, error: configError } = await supabase
       .from("whatsapp_config")
       .select("*")
@@ -48,7 +53,6 @@ serve(async (req) => {
       );
     }
 
-    // Build components array
     const components: any[] = [];
 
     if (headerText) {
@@ -59,12 +63,23 @@ serve(async (req) => {
       });
     }
 
-    components.push({
+    // Detect variables in body and add example if needed
+    const bodyVariables = extractVariables(bodyText);
+    const bodyComponent: any = {
       type: "BODY",
       text: bodyText,
-    });
+    };
 
-    // Submit template to Meta API
+    if (bodyVariables.length > 0) {
+      // Meta requires example values for templates with variables
+      const exampleValues = bodyVariables.map((v) => `exemplo_${v}`);
+      bodyComponent.example = {
+        body_text: [exampleValues],
+      };
+    }
+
+    components.push(bodyComponent);
+
     const metaUrl = `https://graph.facebook.com/v18.0/${config.waba_id}/message_templates`;
 
     const payload = {

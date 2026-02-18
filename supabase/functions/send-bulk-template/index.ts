@@ -6,8 +6,20 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Add delay between messages to respect Meta rate limits
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Map a variable mapping key to the actual contact field value
+function resolveVariable(contact: any, fieldKey: string): string {
+  switch (fieldKey) {
+    case "name": return contact.name || "";
+    case "phone": return contact.phone || "";
+    case "lawyer_name": return contact.lawyer_name || "";
+    case "process_number": return contact.process_number || "";
+    case "cpf": return contact.cpf || "";
+    case "valor_da_causa": return contact.valor_da_causa ? `R$ ${Number(contact.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "";
+    default: return fieldKey; // treat as literal text
+  }
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -19,7 +31,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { contactIds, templateName, templateLanguage, userId, selectedPhoneNumberId } = await req.json();
+    const { contactIds, templateName, templateLanguage, userId, selectedPhoneNumberId, variableMappings } = await req.json();
 
     if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
       return new Response(
@@ -39,7 +51,6 @@ serve(async (req) => {
     let config = null;
     
     if (userId) {
-      // First check if user can use shared API
       const { data: userProfile } = await supabase
         .from("profiles")
         .select("can_use_shared_api")
@@ -47,7 +58,6 @@ serve(async (req) => {
         .single();
       
       if (userProfile?.can_use_shared_api) {
-        // User has permission, use shared config
         const { data: sharedConfig } = await supabase
           .from("whatsapp_config")
           .select("*")
@@ -55,20 +65,15 @@ serve(async (req) => {
           .single();
         config = sharedConfig;
       } else {
-        // User doesn't have permission, check for personal config
         const { data: userConfig } = await supabase
           .from("user_whatsapp_config")
           .select("*")
           .eq("user_id", userId)
           .eq("is_validated", true)
           .single();
-        
-        if (userConfig) {
-          config = userConfig;
-        }
+        if (userConfig) config = userConfig;
       }
     } else {
-      // No userId provided, try shared config (for admin or legacy calls)
       const { data: sharedConfig } = await supabase
         .from("whatsapp_config")
         .select("*")
@@ -84,7 +89,6 @@ serve(async (req) => {
       );
     }
 
-    // Get contacts
     const { data: contacts, error: contactsError } = await supabase
       .from("contacts")
       .select("*")
@@ -97,18 +101,11 @@ serve(async (req) => {
       );
     }
 
-    const results = {
-      total: contacts.length,
-      sent: 0,
-      failed: 0,
-      errors: [] as string[],
-    };
+    const results = { total: contacts.length, sent: 0, failed: 0, errors: [] as string[] };
 
-    // Determine which phone_number_id to use
     let finalPhoneNumberId = config.phone_number_id;
 
     if (selectedPhoneNumberId) {
-      // Validate the selected phone number exists and is active
       const { data: phoneRecord } = await supabase
         .from("waba_phone_numbers")
         .select("id")
@@ -123,7 +120,6 @@ serve(async (req) => {
         );
       }
 
-      // Validate user permission (unless admin)
       if (userId) {
         const { data: isUserAdmin } = await supabase.rpc("is_admin", { _user_id: userId });
         if (!isUserAdmin) {
@@ -148,15 +144,17 @@ serve(async (req) => {
 
     const whatsappUrl = `https://graph.facebook.com/v18.0/${finalPhoneNumberId}/messages`;
 
+    // variableMappings is an object like { "1": "name", "2": "process_number" }
+    const hasVariables = variableMappings && Object.keys(variableMappings).length > 0;
+
     for (const contact of contacts) {
       try {
-        // Skip blocked contacts
         if (contact.status === "encerrado") {
           results.failed++;
           results.errors.push(`${contact.name}: Cliente bloqueado`);
           continue;
         }
-        // Check if this PHONE is already owned by another user (even if different contact record)
+
         if (userId) {
           const { data: existingOwner } = await supabase
             .from("contacts")
@@ -174,20 +172,37 @@ serve(async (req) => {
           }
         }
 
-        // Use the contact's user_id if available, otherwise use the provided userId
         const effectiveUserId = contact.user_id || userId || null;
+
+        // Build template object with personalized variables
+        const templateObj: any = {
+          name: templateName,
+          language: { code: templateLanguage || "pt_BR" },
+        };
+
+        if (hasVariables) {
+          const sortedKeys = Object.keys(variableMappings).sort((a, b) => parseInt(a) - parseInt(b));
+          const parameters = sortedKeys.map((key) => ({
+            type: "text",
+            text: resolveVariable(contact, variableMappings[key]),
+          }));
+
+          templateObj.components = [
+            {
+              type: "body",
+              parameters,
+            },
+          ];
+        }
 
         const requestBody = {
           messaging_product: "whatsapp",
           to: contact.phone,
           type: "template",
-          template: {
-            name: templateName,
-            language: { code: templateLanguage || "pt_BR" },
-          },
+          template: templateObj,
         };
 
-        console.log(`Sending template to ${contact.name} (${contact.phone})`);
+        console.log(`Sending template to ${contact.name} (${contact.phone})`, JSON.stringify(requestBody));
 
         const response = await fetch(whatsappUrl, {
           method: "POST",
@@ -207,7 +222,15 @@ serve(async (req) => {
           continue;
         }
 
-        // Get or create conversation - IMPORTANT: include user_id
+        // Build personalized content for the saved message
+        let savedContent = `[Template: ${templateName}]`;
+        if (hasVariables) {
+          const varDetails = Object.entries(variableMappings)
+            .map(([k, v]) => `{{${k}}}=${resolveVariable(contact, v as string)}`)
+            .join(", ");
+          savedContent = `[Template: ${templateName}] (${varDetails})`;
+        }
+
         let { data: conversation } = await supabase
           .from("conversations")
           .select("*")
@@ -228,43 +251,34 @@ serve(async (req) => {
             .single();
           conversation = newConversation;
         } else if (!conversation.user_id && effectiveUserId) {
-          // Update existing conversation with user_id if missing
           await supabase
             .from("conversations")
             .update({ user_id: effectiveUserId })
             .eq("id", conversation.id);
         }
 
-        // Save message - IMPORTANT: include user_id
         await supabase.from("messages").insert({
           conversation_id: conversation!.id,
           contact_id: contact.id,
           user_id: effectiveUserId,
           direction: "outgoing",
           message_type: "template",
-          content: `[Template: ${templateName}]`,
+          content: savedContent,
           template_name: templateName,
           whatsapp_message_id: result.messages?.[0]?.id,
           status: "sent",
         });
 
-        // Update contact
         await supabase
           .from("contacts")
-          .update({
-            status: "aguardando",
-            last_message_at: new Date().toISOString(),
-          })
+          .update({ status: "aguardando", last_message_at: new Date().toISOString() })
           .eq("id", contact.id);
 
-        // Update user stats - increment templates_sent
         if (effectiveUserId) {
           await supabase.rpc("increment_templates_sent", { _user_id: effectiveUserId });
         }
 
         results.sent++;
-
-        // Rate limiting: wait 100ms between messages to avoid throttling
         await delay(100);
       } catch (err) {
         results.failed++;

@@ -33,6 +33,23 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+
+const CONTACT_FIELD_OPTIONS = [
+  { value: "name", label: "Nome do Cliente" },
+  { value: "phone", label: "Telefone" },
+  { value: "lawyer_name", label: "Nome do Advogado" },
+  { value: "process_number", label: "Número do Processo" },
+  { value: "cpf", label: "CPF" },
+  { value: "valor_da_causa", label: "Valor da Causa" },
+];
+
+function extractVariablesFromText(text: string): number[] {
+  const matches = text.match(/\{\{(\d+)\}\}/g);
+  if (!matches) return [];
+  return [...new Set(matches.map(m => parseInt(m.replace(/[{}]/g, ""))))].sort((a, b) => a - b);
+}
 
 export default function TemplatesPage() {
   const { templates, allTemplates, isLoading, error, refetch, sendBulk, isSendingBulk, createTemplate, isCreatingTemplate } = useMetaTemplates();
@@ -44,6 +61,7 @@ export default function TemplatesPage() {
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [variableMappings, setVariableMappings] = useState<Record<string, string>>({});
 
   // Auto-select phone if only one available
   useEffect(() => {
@@ -55,6 +73,16 @@ export default function TemplatesPage() {
   const handleOpenBulkDialog = (template: MetaTemplate) => {
     setSelectedTemplate(template);
     setSelectedContacts([]);
+    // Auto-detect variables and pre-populate mappings
+    const body = getTemplateBody(template);
+    const vars = extractVariablesFromText(body);
+    const defaultMappings: Record<string, string> = {};
+    vars.forEach((v, i) => {
+      // Auto-suggest: first var = name, second = process_number, etc.
+      const defaults = ["name", "process_number", "lawyer_name", "cpf", "valor_da_causa", "phone"];
+      defaultMappings[String(v)] = defaults[i] || "name";
+    });
+    setVariableMappings(defaultMappings);
     setShowBulkDialog(true);
   };
 
@@ -86,11 +114,13 @@ export default function TemplatesPage() {
       templateName: selectedTemplate.name,
       templateLanguage: selectedTemplate.language,
       selectedPhoneNumberId: selectedPhoneNumberId || undefined,
+      variableMappings: Object.keys(variableMappings).length > 0 ? variableMappings : undefined,
     }, {
       onSuccess: () => {
         setShowBulkDialog(false);
         setSelectedTemplate(null);
         setSelectedContacts([]);
+        setVariableMappings({});
       },
     });
   };
@@ -258,6 +288,41 @@ export default function TemplatesPage() {
                   selectedPhoneNumberId={selectedPhoneNumberId}
                   onSelect={setSelectedPhoneNumberId}
                 />
+              </div>
+            )}
+
+            {/* Variable mappings */}
+            {Object.keys(variableMappings).length > 0 && (
+              <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
+                <Label className="text-sm font-medium">Variáveis Personalizadas</Label>
+                <p className="text-xs text-muted-foreground">
+                  Cada variável será substituída pelo dado do contato na hora do envio.
+                </p>
+                <div className="grid gap-3">
+                  {Object.keys(variableMappings).sort((a, b) => parseInt(a) - parseInt(b)).map((varNum) => (
+                    <div key={varNum} className="flex items-center gap-3">
+                      <span className="text-sm font-mono bg-primary/10 text-primary px-2 py-1 rounded min-w-[50px] text-center">
+                        {`{{${varNum}}}`}
+                      </span>
+                      <span className="text-sm text-muted-foreground">→</span>
+                      <Select
+                        value={variableMappings[varNum]}
+                        onValueChange={(value) => setVariableMappings(prev => ({ ...prev, [varNum]: value }))}
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CONTACT_FIELD_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

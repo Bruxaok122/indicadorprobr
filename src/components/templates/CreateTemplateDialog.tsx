@@ -130,7 +130,10 @@ export function CreateTemplateDialog({ open, onOpenChange, onSubmit, isSubmittin
               maxLength={1024}
             />
             <p className="text-xs text-muted-foreground">
-              Use {"{{1}}"}, {"{{2}}"}, etc. para variáveis. Máx. 1024 caracteres.
+              Use {"{{1}}"} para nome do cliente, {"{{2}}"} para nº do processo, etc. Máx. 1024 caracteres.
+            </p>
+            <p className="text-xs text-muted-foreground/70">
+              Exemplo: "Olá {"{{1}}"}, entramos em contato sobre o processo {"{{2}}"}."
             </p>
           </div>
         </div>
