@@ -15,6 +15,7 @@ import { UsersTable } from "@/components/admin/UsersTable";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { PhoneNumbersSection } from "@/components/admin/PhoneNumbersSection";
 import { PhonePermissionsDialog } from "@/components/admin/PhonePermissionsDialog";
+import { AdminChatMonitor } from "@/components/admin/AdminChatMonitor";
 import { Profile } from "@/types/juriszap";
 
 export default function AdminPage() {
@@ -47,6 +48,7 @@ export default function AdminPage() {
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [phonePermUser, setPhonePermUser] = useState<Profile | null>(null);
+  const [monitorUser, setMonitorUser] = useState<Profile | null>(null);
 
   const handleLogout = async () => {
     await signOut();
@@ -105,6 +107,7 @@ export default function AdminPage() {
                     onSetPlan={setSubscriptionPlan}
                     onAuthorizeDevice={authorizeDevice}
                     onResetDevice={resetDevice}
+                    onMonitorChat={setMonitorUser}
                   />
                 ))}
               </div>
@@ -119,6 +122,7 @@ export default function AdminPage() {
                 onSetPlan={setSubscriptionPlan}
                 onAuthorizeDevice={authorizeDevice}
                 onResetDevice={resetDevice}
+                onMonitorChat={setMonitorUser}
               />
             )}
           </CardContent>
@@ -146,6 +150,12 @@ export default function AdminPage() {
         getUserPermissions={getUserPermissions}
         onSave={updatePermissions}
         isSaving={isUpdatingPermissions}
+      />
+
+      <AdminChatMonitor
+        open={!!monitorUser}
+        onOpenChange={(open) => !open && setMonitorUser(null)}
+        user={monitorUser}
       />
     </div>
   );

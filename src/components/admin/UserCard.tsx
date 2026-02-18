@@ -3,7 +3,7 @@
  import { Badge } from "@/components/ui/badge";
  import { Switch } from "@/components/ui/switch";
  import { Button } from "@/components/ui/button";
- import { Lock, Unlock, Trash2, Timer, Monitor, Phone, CalendarClock, Smartphone, SmartphoneNfc } from "lucide-react";
+ import { Lock, Unlock, Trash2, Timer, Monitor, Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye } from "lucide-react";
  import {
    Select,
    SelectContent,
@@ -35,9 +35,10 @@ interface UserCardProps {
   onSetPlan: (params: { userId: string; plan: string | null }) => void;
   onAuthorizeDevice: (userId: string) => void;
   onResetDevice: (userId: string) => void;
+  onMonitorChat: (user: Profile) => void;
 }
 
-export function UserCard({ user, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice }: UserCardProps) {
+export function UserCard({ user, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UserCardProps) {
    const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
  
    return (
@@ -242,6 +243,15 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onDelete,
              />
            </div>
            <div className="flex gap-1">
+             <Button
+               variant="ghost"
+               size="icon"
+               className="h-8 w-8"
+               onClick={() => onMonitorChat(user)}
+               title="Monitorar chat"
+             >
+               <Eye className="h-4 w-4 text-accent" />
+             </Button>
              <Button
                variant="ghost"
                size="icon"

@@ -1,6 +1,6 @@
  import { Profile } from "@/types/juriszap";
  import { Badge } from "@/components/ui/badge";
- import { Phone, CalendarClock, Smartphone, SmartphoneNfc } from "lucide-react";
+ import { Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye } from "lucide-react";
  import { Switch } from "@/components/ui/switch";
  import { Button } from "@/components/ui/button";
  import {
@@ -48,9 +48,10 @@ interface UsersTableProps {
   onSetPlan: (params: { userId: string; plan: string | null }) => void;
   onAuthorizeDevice: (userId: string) => void;
   onResetDevice: (userId: string) => void;
+  onMonitorChat: (user: Profile) => void;
 }
  
- export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice }: UsersTableProps) {
+ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UsersTableProps) {
    return (
      <Table>
        <TableHeader>
@@ -287,6 +288,19 @@ interface UsersTableProps {
                </TableCell>
                <TableCell className="text-right">
                  <div className="flex justify-end gap-1">
+                   <Tooltip>
+                     <TooltipTrigger asChild>
+                       <Button
+                         variant="ghost"
+                         size="icon"
+                         className="h-8 w-8"
+                         onClick={() => onMonitorChat(user)}
+                       >
+                         <Eye className="h-4 w-4 text-accent" />
+                       </Button>
+                     </TooltipTrigger>
+                     <TooltipContent>Monitorar chat em tempo real</TooltipContent>
+                   </Tooltip>
                    <Tooltip>
                      <TooltipTrigger asChild>
                        <Button
