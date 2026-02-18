@@ -4,14 +4,14 @@ import { cn } from "@/lib/utils";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
-  LayoutDashboard,
-  MessageSquare,
-  Users,
-  FileText,
-  Settings,
-  Upload,
-  Webhook,
-  Smartphone,
+  BarChart3,
+  MessagesSquare,
+  ContactRound,
+  FileStack,
+  Cog,
+  FileUp,
+  Radio,
+  Phone,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -29,54 +29,14 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const navItems = [
-  {
-    title: "Painel",
-    href: "/",
-    icon: LayoutDashboard,
-    description: "Visão geral do sistema",
-  },
-  {
-    title: "Conversas",
-    href: "/conversas",
-    icon: MessageSquare,
-    description: "Chat com clientes",
-  },
-  {
-    title: "Contatos",
-    href: "/contatos",
-    icon: Users,
-    description: "Gerenciar clientes",
-  },
-  {
-    title: "Importar",
-    href: "/importar",
-    icon: Upload,
-    description: "Importar lista jurídica",
-  },
-  {
-    title: "Templates",
-    href: "/templates",
-    icon: FileText,
-    description: "Modelos de mensagem",
-  },
-  {
-    title: "Configuração",
-    href: "/configuracao",
-    icon: Settings,
-    description: "WhatsApp API",
-  },
-  {
-    title: "Números",
-    href: "/whatsapp-api",
-    icon: Smartphone,
-    description: "Gerenciar números e perfil",
-  },
-  {
-    title: "Webhook",
-    href: "/webhook",
-    icon: Webhook,
-    description: "Informações do webhook",
-  },
+  { title: "Painel", href: "/", icon: BarChart3, description: "Visão geral do sistema" },
+  { title: "Conversas", href: "/conversas", icon: MessagesSquare, description: "Chat com clientes" },
+  { title: "Contatos", href: "/contatos", icon: ContactRound, description: "Gerenciar clientes" },
+  { title: "Importar", href: "/importar", icon: FileUp, description: "Importar lista jurídica" },
+  { title: "Templates", href: "/templates", icon: FileStack, description: "Modelos de mensagem" },
+  { title: "Configuração", href: "/configuracao", icon: Cog, description: "WhatsApp API" },
+  { title: "Números", href: "/whatsapp-api", icon: Phone, description: "Gerenciar números e perfil" },
+  { title: "Webhook", href: "/webhook", icon: Radio, description: "Informações do webhook" },
 ];
 
 export function Sidebar() {
