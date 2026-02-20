@@ -35,6 +35,8 @@ export default function AdminContatosPage() {
   const [newListName, setNewListName] = useState("");
   const [showNewList, setShowNewList] = useState(false);
   const [listToDelete, setListToDelete] = useState<string | null>(null);
+  // Local lists: lists created but not yet saved (no contacts yet)
+  const [localLists, setLocalLists] = useState<string[]>([]);
 
   // Import state
   const [rawText, setRawText] = useState("");
@@ -66,12 +68,14 @@ export default function AdminContatosPage() {
     },
   });
 
-  // Derive lists from contacts
+  // Derive lists from contacts, merged with local empty lists
   const lists: ContactList[] = (() => {
     const map: Record<string, number> = {};
+    // Seed with local lists at count 0
+    localLists.forEach((name) => { map[name] = 0; });
     (allContacts as any[]).forEach((c) => {
       const listName = c.contact_list;
-      if (!listName) return; // ignore contacts without a list
+      if (!listName) return;
       map[listName] = (map[listName] || 0) + 1;
     });
     return Object.entries(map).map(([name, count]) => ({ name, count }));
@@ -152,13 +156,16 @@ export default function AdminContatosPage() {
       const ids = (allContacts as any[])
         .filter((c) => c.contact_list === listName)
         .map((c) => c.id);
-      if (ids.length === 0) return;
-      const { error } = await supabase.from("contacts").delete().in("id", ids);
-      if (error) throw error;
+      if (ids.length > 0) {
+        const { error } = await supabase.from("contacts").delete().in("id", ids);
+        if (error) throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_, listName) => {
       toast.success("Lista excluída com sucesso");
       queryClient.invalidateQueries({ queryKey: ["admin-contacts"] });
+      // Remove from local lists too
+      setLocalLists((prev) => prev.filter((l) => l !== listName));
       setSelectedList(null);
       setListToDelete(null);
     },
@@ -209,6 +216,8 @@ export default function AdminContatosPage() {
   const handleCreateList = () => {
     const name = newListName.trim();
     if (!name) return;
+    // Add to local lists so it persists in sidebar even before first contact is added
+    setLocalLists((prev) => (prev.includes(name) ? prev : [...prev, name]));
     setSelectedList(name);
     setNewListName("");
     setShowNewList(false);
