@@ -100,16 +100,15 @@ serve(async (req) => {
       finalPhoneNumberId = selectedPhoneNumberId;
     }
 
-    // Step 1: Upload audio to WhatsApp Media API first
+    // Step 1: Upload audio to WhatsApp Media API
     const audioBuffer = await audioFile.arrayBuffer();
     const audioBytes = new Uint8Array(audioBuffer);
 
-    // For PTT (voice note) to work on iOS WhatsApp, the file MUST be audio/ogg with opus codec.
-    // We force ogg/opus MIME type for the WhatsApp API upload regardless of original format.
-    const originalMime = audioFile.type || "audio/ogg; codecs=opus";
-    const isOgg = originalMime.includes("ogg") || originalMime.includes("opus");
-    // Use ogg/opus for PTT appearance; fallback to original for other formats
-    const whatsappMime = isOgg ? "audio/ogg; codecs=opus" : originalMime;
+    // Use the actual MIME type of the file — do NOT lie to Meta API.
+    // Android is lenient about mismatched MIME vs content, but iOS validates strictly.
+    // Supported by Meta: audio/aac, audio/mp4, audio/mpeg, audio/amr, audio/ogg (opus only)
+    const originalMime = audioFile.type || "audio/mpeg";
+    const whatsappMime = originalMime; // keep original — no spoofing
 
     const mediaFormData = new FormData();
     mediaFormData.append("messaging_product", "whatsapp");
@@ -117,7 +116,7 @@ serve(async (req) => {
     mediaFormData.append(
       "file",
       new Blob([audioBytes], { type: whatsappMime }),
-      audioFile.name || "audio.ogg"
+      audioFile.name || "audio.mp3"
     );
 
     const uploadResponse = await fetch(
