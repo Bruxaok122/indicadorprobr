@@ -11,8 +11,10 @@ import {
   FileText,
   ZoomIn,
   Mic,
+  User,
 } from "lucide-react";
 import { ImageLightbox } from "./ImageLightbox";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface ChatBubbleProps {
   message: Message;
@@ -64,15 +66,25 @@ export function ChatBubble({ message }: ChatBubbleProps) {
     }
 
     if (message.message_type === "audio") {
+      const isOutgoing = message.direction === "outgoing";
       return (
-        <div className="flex items-center gap-2 py-0.5">
+        <div className="flex items-center gap-2 py-0.5 min-w-[200px]">
+          {/* Avatar — shown for outgoing audio (operator sending) */}
+          {isOutgoing && (
+            <Avatar className="h-9 w-9 shrink-0">
+              <AvatarFallback className="bg-primary/20 text-primary">
+                <User className="h-5 w-5" />
+              </AvatarFallback>
+            </Avatar>
+          )}
+          {/* Waveform icon */}
           <Mic className="h-4 w-4 shrink-0 opacity-70" />
           {message.document_url ? (
             <audio
               src={message.document_url}
               controls
-              className="h-8"
-              style={{ minWidth: 180, maxWidth: 240 }}
+              className="h-8 flex-1"
+              style={{ minWidth: 160, maxWidth: 220 }}
             />
           ) : (
             <span className="text-sm opacity-70">Áudio</span>

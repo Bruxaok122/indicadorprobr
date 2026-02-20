@@ -138,7 +138,7 @@ export function useMessages(contactId: string | null) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["messages", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["messages", contactId, user?.id] });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
     },
     onError: (error: any) => {
