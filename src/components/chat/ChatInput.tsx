@@ -144,7 +144,6 @@ export function ChatInput({
         {/* Audio recorder — shown only when text field is empty AND user can send */}
         {!messageText.trim() && onSendAudio && canSendFreeText && (
           <AudioRecorder
-            disabled={false}
             onSendAudio={onSendAudio}
             isSending={isSending}
           />

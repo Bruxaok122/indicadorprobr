@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audio_config: {
+        Row: {
+          audio_name: string
+          audio_url: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          audio_name: string
+          audio_url: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          audio_name?: string
+          audio_url?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           contact_list: string | null
