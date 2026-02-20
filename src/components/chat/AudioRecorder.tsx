@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback } from "react";
-import { Mic, Square, Send, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Mic, Trash2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface AudioRecorderProps {
   disabled?: boolean;
@@ -10,169 +10,107 @@ interface AudioRecorderProps {
   isSending?: boolean;
 }
 
-type RecorderState = "idle" | "recording" | "preview";
+const ALLOWED_AUDIO_TYPES = [
+  "audio/ogg",
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/mp4",
+  "audio/aac",
+  "audio/wav",
+  "audio/webm",
+  "audio/3gpp",
+  "audio/amr",
+];
 
 export function AudioRecorder({ disabled, onSendAudio, isSending }: AudioRecorderProps) {
-  const [state, setState] = useState<RecorderState>("idle");
-  const [duration, setDuration] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const audioBlobRef = useRef<Blob | null>(null);
-  const audioUrlRef = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const startRecording = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      // Prefer ogg/opus for WhatsApp PTT compatibility
-      const mimeType = MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")
-        ? "audio/ogg;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "audio/webm";
-
-      const recorder = new MediaRecorder(stream, { mimeType });
-      mediaRecorderRef.current = recorder;
-      chunksRef.current = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      recorder.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        audioBlobRef.current = blob;
-        if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
-        audioUrlRef.current = URL.createObjectURL(blob);
-        setState("preview");
-      };
-
-      recorder.start(250);
-      setState("recording");
-      setDuration(0);
-      timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
-    } catch (err) {
-      toast.error("Não foi possível acessar o microfone");
+    const isAudio = ALLOWED_AUDIO_TYPES.some((t) => file.type.startsWith(t.split("/")[0]) && file.type.includes("audio"));
+    if (!isAudio && !file.type.startsWith("audio/")) {
+      toast.error("Selecione um arquivo de áudio válido (MP3, OGG, WAV, M4A, etc.)");
+      return;
     }
-  }, []);
-
-  const stopRecording = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    mediaRecorderRef.current?.stop();
-  }, []);
-
-  const cancelRecording = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (mediaRecorderRef.current?.state === "recording") {
-      // Prevent onstop from setting preview state
-      const recorder = mediaRecorderRef.current;
-      recorder.onstop = () => {
-        recorder.stream?.getTracks().forEach((t) => t.stop());
-      };
-      recorder.stop();
+    if (file.size > 16 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 16MB.");
+      return;
     }
-    if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
-    audioUrlRef.current = null;
-    audioBlobRef.current = null;
-    setState("idle");
-    setDuration(0);
-  }, []);
 
-  const sendAudio = useCallback(() => {
-    if (audioBlobRef.current) {
-      onSendAudio(audioBlobRef.current);
-      if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
-      audioUrlRef.current = null;
-      audioBlobRef.current = null;
-      setState("idle");
-      setDuration(0);
-    }
-  }, [onSendAudio]);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
-  const formatTime = (s: number) =>
-    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  const handleCancel = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+  };
 
-  if (state === "idle") {
+  const handleSend = () => {
+    if (!selectedFile) return;
+    onSendAudio(selectedFile);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+  };
+
+  // Preview mode
+  if (selectedFile && previewUrl) {
     return (
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={startRecording}
-        disabled={disabled}
-        className="shrink-0 h-10 w-10 rounded-full text-muted-foreground"
-        title="Gravar áudio"
-        type="button"
-      >
-        <Mic className="h-5 w-5" />
-      </Button>
-    );
-  }
-
-  if (state === "recording") {
-    return (
-      <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-destructive/10 border border-destructive/30">
-        <span className="relative flex h-2.5 w-2.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
-          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive" />
-        </span>
-        <span className="text-sm font-mono text-destructive min-w-[2.5rem]">{formatTime(duration)}</span>
+      <div className="flex items-center gap-2 flex-1 px-2 py-1 rounded-2xl border bg-muted/50">
+        <Mic className="h-4 w-4 shrink-0 text-primary" />
+        <audio src={previewUrl} controls className="h-8 flex-1 min-w-0" style={{ maxWidth: 220 }} />
         <Button
           size="icon"
           variant="ghost"
-          onClick={cancelRecording}
-          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-          title="Cancelar"
+          onClick={handleCancel}
+          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+          title="Descartar"
           type="button"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
         <Button
           size="icon"
-          onClick={stopRecording}
-          className="h-7 w-7 bg-destructive hover:bg-destructive/90 text-white rounded-full"
-          title="Parar gravação"
+          onClick={handleSend}
+          disabled={isSending}
+          className="h-7 w-7 shrink-0 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
+          title="Enviar como nota de voz"
           type="button"
         >
-          <Square className="h-3 w-3 fill-white" />
+          {isSending ? <LoadingSpinner size="sm" /> : <Send className="h-3.5 w-3.5" />}
         </Button>
       </div>
     );
   }
 
-  // Preview state
   return (
-    <div className="flex items-center gap-2 flex-1 px-2 py-1 rounded-full bg-muted/50 border">
-      <audio
-        src={audioUrlRef.current || ""}
-        controls
-        className="h-8 flex-1 min-w-0"
-        style={{ maxWidth: "100%" }}
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="audio/*"
+        className="hidden"
+        onChange={handleFileChange}
       />
       <Button
-        size="icon"
         variant="ghost"
-        onClick={cancelRecording}
-        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-        title="Descartar"
-        type="button"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-      <Button
         size="icon"
-        onClick={sendAudio}
-        disabled={isSending}
-        className={cn(
-          "h-7 w-7 shrink-0 rounded-full",
-          "bg-primary hover:bg-primary/90 text-primary-foreground"
-        )}
-        title="Enviar áudio"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={disabled}
+        className="shrink-0 h-10 w-10 rounded-full text-muted-foreground"
+        title="Enviar áudio como nota de voz"
         type="button"
       >
-        <Send className="h-3.5 w-3.5" />
+        <Mic className="h-5 w-5" />
       </Button>
-    </div>
+    </>
   );
 }
