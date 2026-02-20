@@ -239,8 +239,8 @@ serve(async (req) => {
       );
     }
 
-    // Save message
-    const { error: msgError } = await supabase.from("messages").insert({
+    // Save message — use service role client to bypass RLS
+    const msgPayload = {
       conversation_id: conversation.id,
       contact_id: contactId,
       user_id: effectiveUserId,
@@ -251,12 +251,14 @@ serve(async (req) => {
       document_name: audioFile.name || "Áudio",
       whatsapp_message_id: sendResult.messages?.[0]?.id,
       status: "sent",
-    });
+    };
+    console.log("Inserting message payload:", JSON.stringify(msgPayload));
+    const { data: savedMsg, error: msgError } = await supabase.from("messages").insert(msgPayload).select().single();
 
     if (msgError) {
-      console.error("Message insert error:", msgError.message);
+      console.error("Message insert error:", msgError.message, msgError.code, msgError.details);
     } else {
-      console.log("Message saved successfully for conversation:", conversation.id);
+      console.log("Message saved successfully:", savedMsg?.id, "conversation:", conversation.id);
     }
 
     // Update contact

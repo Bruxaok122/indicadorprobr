@@ -67,7 +67,9 @@ export function ChatBubble({ message }: ChatBubbleProps) {
       return (
         <div className="flex items-center gap-1.5 py-0.5">
           <Mic className="h-4 w-4 shrink-0 opacity-70" />
-          <span className="text-sm">Áudio enviado!</span>
+          <span className="text-sm">
+            {message.direction === "outgoing" ? "Áudio enviado!" : "🎵 Áudio recebido"}
+          </span>
         </div>
       );
     }
