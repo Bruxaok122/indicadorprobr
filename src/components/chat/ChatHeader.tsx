@@ -8,6 +8,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ChatHeaderProps {
   contact: Contact;
@@ -55,6 +56,7 @@ Conta: `;
 
 export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglingBlock, onOpenProfile, onTransferDone }: ChatHeaderProps) {
   const { user, isAdmin } = useAuthContext();
+  const queryClient = useQueryClient();
   const isBlocked = contact.status === "encerrado";
   const [isTransferring, setIsTransferring] = useState(false);
 
@@ -100,6 +102,9 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
       }
 
       toast.success("Conversa transferida com sucesso!");
+      // Invalidate contacts cache immediately — remove from operator's sidebar
+      await queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      await queryClient.refetchQueries({ queryKey: ["contacts"] });
       onTransferDone?.();
     } catch (err: any) {
       toast.error("Erro ao transferir", { description: err.message });
