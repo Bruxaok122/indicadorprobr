@@ -2,20 +2,16 @@ import { useState, useEffect } from "react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
-import { useContacts } from "@/hooks/useContacts";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuthContext } from "@/contexts/AuthContext";
-import { Profile } from "@/types/juriszap";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
-import { Radio, Users, FileText, Send, ChevronRight } from "lucide-react";
+import { Radio, Users, Send, List } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -46,14 +42,18 @@ export default function AdminDisparosPage() {
   const { users } = useAdmin();
   const { allTemplates, sendBulk, isSendingBulk } = useMetaTemplates();
   const { phones } = useWabaPhones();
-  const { user } = useAuthContext();
 
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
   const [variableMappings, setVariableMappings] = useState<Record<string, string>>({});
-  const [userContacts, setUserContacts] = useState<any[]>([]);
+
+  // Contact source: "list" = admin pool lists, "user" = contacts already assigned to a user
+  const [contactSource, setContactSource] = useState<"list" | "user">("list");
+  const [selectedList, setSelectedList] = useState<string>("");
+  const [availableLists, setAvailableLists] = useState<{ id: string; label: string; count: number }[]>([]);
+  const [poolContacts, setPoolContacts] = useState<any[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
 
   // Auto-select phone
@@ -63,21 +63,65 @@ export default function AdminDisparosPage() {
     }
   }, [phones, selectedPhoneNumberId]);
 
-  // Load contacts when user is selected
+  // Load available lists from admin pool
   useEffect(() => {
-    if (!selectedUserId) { setUserContacts([]); return; }
-    setLoadingContacts(true);
     supabase
       .from("contacts")
       .select("*")
-      .eq("user_id", selectedUserId)
-      .order("name")
+      .is("user_id", null)
       .then(({ data }) => {
-        setUserContacts(data || []);
-        setSelectedContacts([]);
-        setLoadingContacts(false);
+        if (!data) return;
+        const map: Record<string, number> = {};
+        (data as any[]).forEach((c) => {
+          const key = c.contact_list || "__sem_lista__";
+          map[key] = (map[key] || 0) + 1;
+        });
+        const lists = Object.entries(map).map(([id, count]) => ({
+          id,
+          label: id === "__sem_lista__" ? "Sem lista" : id,
+          count,
+        }));
+        setAvailableLists(lists);
+        if (lists.length > 0 && !selectedList) {
+          setSelectedList(lists[0].id);
+        }
       });
-  }, [selectedUserId]);
+  }, []);
+
+  // Load contacts when source/list/user changes
+  useEffect(() => {
+    setSelectedContacts([]);
+    if (contactSource === "list") {
+      if (!selectedList) { setPoolContacts([]); return; }
+      setLoadingContacts(true);
+      // Fetch all admin pool contacts then filter by list client-side to avoid TS type issues
+      supabase
+        .from("contacts")
+        .select("*")
+        .is("user_id", null)
+        .order("name")
+        .then(({ data }) => {
+          const filtered = (data || []).filter((c: any) => {
+            const cl = c.contact_list || "__sem_lista__";
+            return cl === selectedList;
+          });
+          setPoolContacts(filtered);
+          setLoadingContacts(false);
+        });
+    } else {
+      if (!selectedUserId) { setPoolContacts([]); return; }
+      setLoadingContacts(true);
+      supabase
+        .from("contacts")
+        .select("*")
+        .eq("user_id", selectedUserId)
+        .order("name")
+        .then(({ data }) => {
+          setPoolContacts(data || []);
+          setLoadingContacts(false);
+        });
+    }
+  }, [contactSource, selectedList, selectedUserId]);
 
   // Auto-detect variables when template changes
   useEffect(() => {
@@ -93,7 +137,6 @@ export default function AdminDisparosPage() {
   }, [selectedTemplate]);
 
   const approvedTemplates = allTemplates.filter((t) => t.status === "APPROVED");
-  const regularUsers = users.filter((u) => !(u as any).is_admin);
 
   const handleToggleContact = (id: string) => {
     setSelectedContacts((prev) =>
@@ -102,10 +145,10 @@ export default function AdminDisparosPage() {
   };
 
   const handleSelectAll = () => {
-    if (selectedContacts.length === userContacts.length) {
+    if (selectedContacts.length === poolContacts.length) {
       setSelectedContacts([]);
     } else {
-      setSelectedContacts(userContacts.map((c) => c.id));
+      setSelectedContacts(poolContacts.map((c) => c.id));
     }
   };
 
@@ -136,41 +179,16 @@ export default function AdminDisparosPage() {
           Disparos
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Selecione o usuário, os contatos e o template para disparar mensagens personalizadas.
+          Selecione o template, os contatos e dispare mensagens personalizadas.
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Step 1: User */}
+        {/* Step 1: Template */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">1</span>
-              Usuário responsável
-            </CardTitle>
-            <CardDescription>Quem responderá os clientes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o usuário..." />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((u) => (
-                  <SelectItem key={u.user_id} value={u.user_id}>
-                    {u.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        {/* Step 2: Template */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
               Template
             </CardTitle>
             <CardDescription>Template aprovado pela Meta</CardDescription>
@@ -240,37 +258,80 @@ export default function AdminDisparosPage() {
           </CardContent>
         </Card>
 
-        {/* Step 3: Contacts */}
+        {/* Step 2: Contacts */}
         <Card className="flex flex-col">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">3</span>
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
               Contatos
             </CardTitle>
             <CardDescription>
-              {selectedUserId
-                ? `${selectedContacts.length} de ${userContacts.length} selecionados`
-                : "Selecione o usuário primeiro"}
+              {selectedContacts.length > 0
+                ? `${selectedContacts.length} de ${poolContacts.length} selecionados`
+                : "Selecione a origem dos contatos"}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col min-h-0">
-            {!selectedUserId ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Users className="h-8 w-8 text-muted-foreground/40 mb-2" />
-                <p className="text-sm text-muted-foreground">Selecione o usuário acima</p>
-              </div>
-            ) : loadingContacts ? (
-              <div className="flex justify-center py-8"><LoadingSpinner size="sm" /></div>
-            ) : userContacts.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nenhum contato</p>
+          <CardContent className="flex-1 flex flex-col min-h-0 space-y-3">
+            {/* Source selector */}
+            <div className="flex gap-1 rounded-lg bg-muted p-1">
+              <button
+                onClick={() => setContactSource("list")}
+                className={cn("flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-md transition-colors", contactSource === "list" ? "bg-background shadow text-foreground font-medium" : "text-muted-foreground")}
+              >
+                <List className="h-3 w-3" /> Lista admin
+              </button>
+              <button
+                onClick={() => setContactSource("user")}
+                className={cn("flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-md transition-colors", contactSource === "user" ? "bg-background shadow text-foreground font-medium" : "text-muted-foreground")}
+              >
+                <Users className="h-3 w-3" /> Por usuário
+              </button>
+            </div>
+
+            {/* List or user selector */}
+            {contactSource === "list" ? (
+              <Select value={selectedList} onValueChange={setSelectedList}>
+                <SelectTrigger className="text-xs">
+                  <SelectValue placeholder="Selecione a lista..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableLists.map((l) => (
+                    <SelectItem key={l.id} value={l.id} className="text-xs">
+                      {l.label} <span className="text-muted-foreground">({l.count})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger className="text-xs">
+                  <SelectValue placeholder="Selecione o usuário..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((u) => (
+                    <SelectItem key={u.user_id} value={u.user_id} className="text-xs">
+                      {u.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Contacts list */}
+            {loadingContacts ? (
+              <div className="flex justify-center py-6"><LoadingSpinner size="sm" /></div>
+            ) : poolContacts.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                {contactSource === "list" ? "Selecione uma lista" : "Selecione o usuário"}
+              </p>
             ) : (
               <>
-                <Button variant="outline" size="sm" onClick={handleSelectAll} className="mb-2 w-full">
-                  {selectedContacts.length === userContacts.length ? "Desmarcar todos" : "Selecionar todos"}
+                <Button variant="outline" size="sm" onClick={handleSelectAll} className="w-full">
+                  {selectedContacts.length === poolContacts.length ? "Desmarcar todos" : `Selecionar todos (${poolContacts.length})`}
                 </Button>
-                <ScrollArea className="flex-1 max-h-64">
-                  <div className="space-y-1.5">
-                    {userContacts.map((contact) => (
+                <ScrollArea className="flex-1 max-h-52">
+                  <div className="space-y-1">
+                    {poolContacts.map((contact) => (
                       <div
                         key={contact.id}
                         className={cn(
@@ -295,27 +356,72 @@ export default function AdminDisparosPage() {
             )}
           </CardContent>
         </Card>
-      </div>
 
-      {/* Send button */}
-      <div className="flex justify-end">
-        <Button
-          size="lg"
-          onClick={handleSend}
-          disabled={
-            !selectedTemplate ||
-            selectedContacts.length === 0 ||
-            isSendingBulk ||
-            (phones.length > 0 && !selectedPhoneNumberId)
-          }
-          className="gap-2 min-w-48"
-        >
-          {isSendingBulk ? (
-            <><LoadingSpinner size="sm" /> Disparando...</>
-          ) : (
-            <><Send className="h-4 w-4" /> Disparar para {selectedContacts.length} contato{selectedContacts.length !== 1 ? "s" : ""}</>
-          )}
-        </Button>
+        {/* Step 3: User responsible (optional) */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">3</span>
+              Responsável pelas respostas
+            </CardTitle>
+            <CardDescription>Quem atenderá os clientes após o disparo</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o usuário..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__admin__">Administrador</SelectItem>
+                {users.map((u) => (
+                  <SelectItem key={u.user_id} value={u.user_id}>
+                    {u.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Se nenhum usuário for selecionado, o contato ficará sem responsável.
+            </p>
+
+            {/* Summary */}
+            <div className="rounded-lg bg-muted p-3 space-y-1.5 mt-2">
+              <p className="text-xs font-medium">Resumo do disparo</p>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Template:</span>
+                <span className="font-medium">{selectedTemplate?.name || "—"}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Contatos:</span>
+                <span className="font-medium">{selectedContacts.length}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Responsável:</span>
+                <span className="font-medium">
+                  {selectedUserId === "__admin__" ? "Administrador" : users.find(u => u.user_id === selectedUserId)?.full_name || "—"}
+                </span>
+              </div>
+            </div>
+
+            <Button
+              className="w-full gap-2"
+              size="lg"
+              onClick={handleSend}
+              disabled={
+                !selectedTemplate ||
+                selectedContacts.length === 0 ||
+                isSendingBulk ||
+                (phones.length > 0 && !selectedPhoneNumberId)
+              }
+            >
+              {isSendingBulk ? (
+                <><LoadingSpinner size="sm" /> Disparando...</>
+              ) : (
+                <><Send className="h-4 w-4" /> Disparar para {selectedContacts.length} contato{selectedContacts.length !== 1 ? "s" : ""}</>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

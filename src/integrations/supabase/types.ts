@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       contacts: {
         Row: {
+          contact_list: string | null
           cpf: string | null
           created_at: string
           id: string
@@ -30,6 +31,7 @@ export type Database = {
           valor_da_causa: number | null
         }
         Insert: {
+          contact_list?: string | null
           cpf?: string | null
           created_at?: string
           id?: string
@@ -44,6 +46,7 @@ export type Database = {
           valor_da_causa?: number | null
         }
         Update: {
+          contact_list?: string | null
           cpf?: string | null
           created_at?: string
           id?: string

@@ -30,7 +30,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 const userNavItems = [
   { title: "Painel", href: "/", icon: BarChart3, description: "Visão geral do sistema" },
   { title: "Conversas", href: "/conversas", icon: MessagesSquare, description: "Chat com clientes" },
-  { title: "Contatos", href: "/contatos", icon: ContactRound, description: "Gerenciar clientes" },
 ];
 
 const adminNavItems = [
