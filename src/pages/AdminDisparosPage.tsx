@@ -15,7 +15,7 @@ import { toast } from "sonner";
 const CONTACT_FIELD_OPTIONS = [
   { value: "name", label: "Nome do Cliente" },
   { value: "phone", label: "Telefone" },
-  { value: "lawyer_name", label: "Nome do Advogado" },
+  { value: "lawyer_name", label: "Parte Contrária" },
   { value: "process_number", label: "Número do Processo" },
   { value: "cpf", label: "CPF" },
   { value: "valor_da_causa", label: "Valor da Causa" },

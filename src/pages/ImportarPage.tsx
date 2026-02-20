@@ -368,7 +368,7 @@ Requerido (Polo Passivo):
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="singleLawyer">Advogado Responsável</Label>
+                        <Label htmlFor="singleLawyer">Parte Contrária</Label>
                         <div className="relative">
                           <Scale className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
@@ -444,7 +444,7 @@ Requerido (Polo Passivo):
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Telefone</TableHead>
-                  <TableHead>Advogado</TableHead>
+                  <TableHead>Parte Contrária</TableHead>
                   <TableHead>Processo</TableHead>
                 </TableRow>
               </TableHeader>
