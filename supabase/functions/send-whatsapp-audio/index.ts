@@ -149,8 +149,6 @@ serve(async (req) => {
       type: "audio",
       audio: {
         id: mediaId,
-        // ptt: true makes it appear as a recorded voice note (not a forwarded audio file)
-        ptt: true,
       },
     };
 
