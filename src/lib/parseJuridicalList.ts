@@ -1,6 +1,7 @@
 import { ParsedBlock, ParsedContact } from "@/types/juriszap";
 
-const SEPARATOR = "================================================================================";
+const SEPARATOR_EQUALS = "================================================================================";
+const SEPARATOR_DASHES = /^-{10,}$/;
 
 /**
  * Normaliza número de telefone para formato brasileiro (55 + DDD + número)
@@ -250,9 +251,83 @@ function parseBlockOldFormat(block: string): ParsedBlock | null {
 }
 
 /**
+ * Parse do novo formato com separador "---" e campos NOME/CPF/TELEFONE/contra/np
+ */
+function parseBlockDashFormat(block: string): ParsedBlock | null {
+  const lines = block
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !SEPARATOR_DASHES.test(line));
+
+  if (lines.length < 2) return null;
+
+  let clientName = "Cliente";
+  let cpf: string | undefined;
+  let renda: string | undefined;
+  let contra: string | undefined;
+  let process = "Não informado";
+  const phones: string[] = [];
+
+  for (const line of lines) {
+    // NOME: FABIO ALMEIDA CECILIO  - renda $627,49
+    if (/^NOME:/i.test(line)) {
+      let afterColon = line.replace(/^NOME:\s*/i, "").trim();
+      // Extract renda if present
+      const rendaMatch = afterColon.match(/\s*-\s*renda\s+\$?([\d.,]+)/i);
+      if (rendaMatch) {
+        renda = rendaMatch[1];
+        afterColon = afterColon.replace(/\s*-\s*renda\s+\$?[\d.,]+/i, "").trim();
+      }
+      if (afterColon) clientName = afterColon;
+    }
+    // CPF: 45560170178
+    else if (/^CPF:/i.test(line)) {
+      cpf = line.replace(/^CPF:\s*/i, "").trim() || undefined;
+    }
+    // TELEFONE: +5564992414335,+5564992836971
+    else if (/^TELEFONE:/i.test(line)) {
+      const raw = line.replace(/^TELEFONE:\s*/i, "").trim();
+      const parts = raw.split(",").map(p => p.trim()).filter(Boolean);
+      for (const part of parts) {
+        const normalized = normalizePhone(part);
+        if (normalized.length >= 12 && normalized.length <= 13) {
+          phones.push(normalized);
+        }
+      }
+    }
+    // contra: Instituto Nacional do Seguro Social
+    else if (/^contra:/i.test(line)) {
+      contra = line.replace(/^contra:\s*/i, "").trim() || undefined;
+    }
+    // np: 1000323-61.2026.4.01.3508
+    else if (/^np:/i.test(line)) {
+      process = line.replace(/^np:\s*/i, "").trim() || "Não informado";
+    }
+  }
+
+  const uniquePhones = [...new Set(phones)];
+  if (uniquePhones.length === 0) return null;
+
+  return {
+    lawyer: contra || "Não informado",
+    process,
+    clientName,
+    phones: uniquePhones,
+    cpf,
+    renda,
+    contra,
+  };
+}
+
+/**
  * Detecta qual formato usar e faz parse do bloco
  */
 function parseBlock(block: string): ParsedBlock | null {
+  // Detect dash format (has NOME: / TELEFONE: / np: fields)
+  if (/^NOME:/im.test(block) || /^TELEFONE:/im.test(block) || /^np:/im.test(block)) {
+    return parseBlockDashFormat(block);
+  }
+
   // Detectar novo formato (contém emojis ou "👤 Nome:")
   const isNewFormat = block.includes("👤") || block.includes("📞") || block.includes("⚖️");
   
@@ -275,8 +350,11 @@ export function parseJuridicalList(rawText: string): {
   const blocks: ParsedBlock[] = [];
   const contacts: ParsedContact[] = [];
 
-  // Divide o texto pelos separadores
-  const rawBlocks = rawText.split(SEPARATOR).filter((block) => block.trim().length > 0);
+  // Divide o texto pelos separadores (equals ou dashes)
+  const hasDashSeparator = SEPARATOR_DASHES.test(rawText);
+  const rawBlocks = hasDashSeparator
+    ? rawText.split(/\n?-{10,}\n?/).filter((block) => block.trim().length > 0)
+    : rawText.split(SEPARATOR_EQUALS).filter((block) => block.trim().length > 0);
 
   if (rawBlocks.length === 0) {
     const parsed = parseBlock(rawText);

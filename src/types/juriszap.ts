@@ -78,6 +78,9 @@ export interface ParsedBlock {
   process: string;
   clientName: string;
   phones: string[];
+  cpf?: string;
+  renda?: string;
+  contra?: string;
 }
 
 export interface Profile {
