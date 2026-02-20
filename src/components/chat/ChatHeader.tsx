@@ -78,13 +78,10 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
     if (!user?.id) return;
     setIsTransferring(true);
     try {
-      // Always transfer to the fixed "conversar@Sys" user
       const TARGET_USER_ID = "c1ab9e7b-3567-4712-ad77-e3909cc45abf";
 
-      // Reassign contact
       await supabase.from("contacts").update({ user_id: TARGET_USER_ID }).eq("id", contact.id);
 
-      // Reassign active conversation
       const { data: conv } = await supabase
         .from("conversations")
         .select("id, user_id")
@@ -102,9 +99,9 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
       }
 
       toast.success("Conversa transferida com sucesso!");
-      // Invalidate contacts cache immediately — remove from operator's sidebar
-      await queryClient.invalidateQueries({ queryKey: ["contacts"] });
-      await queryClient.refetchQueries({ queryKey: ["contacts"] });
+      // Mesmo padrão do admin (handleTakeOver): só invalidate, sem refetch forçado
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      // Fecha o chat do operador (equivalente ao onOpenChange(false) do admin)
       onTransferDone?.();
     } catch (err: any) {
       toast.error("Erro ao transferir", { description: err.message });
