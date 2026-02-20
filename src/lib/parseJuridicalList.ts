@@ -360,9 +360,13 @@ export function parseJuridicalList(rawText: string): {
     const parsed = parseBlock(rawText);
     if (parsed && parsed.phones.length > 0) {
       blocks.push(parsed);
-      parsed.phones.forEach((phone) => {
+      const totalPhones = parsed.phones.length;
+      parsed.phones.forEach((phone, phoneIndex) => {
+        const displayName = totalPhones > 1
+          ? `${parsed.clientName} (Tel ${phoneIndex + 1}/${totalPhones})`
+          : parsed.clientName;
         contacts.push({
-          name: parsed.clientName,
+          name: displayName,
           phone,
           lawyer_name: parsed.lawyer,
           process_number: parsed.process,
@@ -392,10 +396,14 @@ export function parseJuridicalList(rawText: string): {
 
     blocks.push(parsed);
 
-    // Cria um contato para cada telefone
-    parsed.phones.forEach((phone) => {
+    // Cria um contato para cada telefone, diferenciando quando há múltiplos
+    const totalPhones = parsed.phones.length;
+    parsed.phones.forEach((phone, phoneIndex) => {
+      const displayName = totalPhones > 1
+        ? `${parsed.clientName} (Tel ${phoneIndex + 1}/${totalPhones})`
+        : parsed.clientName;
       contacts.push({
-        name: parsed.clientName,
+        name: displayName,
         phone,
         lawyer_name: parsed.lawyer,
         process_number: parsed.process,
