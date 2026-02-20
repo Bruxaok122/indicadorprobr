@@ -227,6 +227,10 @@ export default function ConversasPage() {
                 onToggleBlock={(contactId, blocked) => toggleContactBlock({ contactId, blocked })}
                 isTogglingBlock={isTogglingBlock}
                 onOpenProfile={() => setShowProfileDrawer(true)}
+                onTransferDone={() => {
+                  setSelectedContactId(null);
+                  if (isMobile) setMobileShowChat(false);
+                }}
               />
               
               <ChatMessages

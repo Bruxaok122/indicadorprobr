@@ -16,6 +16,7 @@ interface ChatHeaderProps {
   onToggleBlock: (contactId: string, blocked: boolean) => void;
   isTogglingBlock?: boolean;
   onOpenProfile?: () => void;
+  onTransferDone?: () => void;
 }
 
 function formatCurrency(value?: number): string {
@@ -52,7 +53,7 @@ Agência:
 Conta: `;
 }
 
-export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglingBlock, onOpenProfile }: ChatHeaderProps) {
+export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglingBlock, onOpenProfile, onTransferDone }: ChatHeaderProps) {
   const { user, isAdmin } = useAuthContext();
   const isBlocked = contact.status === "encerrado";
   const [isTransferring, setIsTransferring] = useState(false);
@@ -75,25 +76,13 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
     if (!user?.id) return;
     setIsTransferring(true);
     try {
-      // Find admin user_id from user_roles
-      const { data: adminRoles } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "admin")
-        .limit(1)
-        .maybeSingle();
-
-      if (!adminRoles?.user_id) {
-        toast.error("Nenhum administrador encontrado");
-        return;
-      }
-
-      const adminId = adminRoles.user_id;
+      // Always transfer to the fixed "conversar@Sys" user
+      const TARGET_USER_ID = "c1ab9e7b-3567-4712-ad77-e3909cc45abf";
 
       // Reassign contact
-      await supabase.from("contacts").update({ user_id: adminId }).eq("id", contact.id);
+      await supabase.from("contacts").update({ user_id: TARGET_USER_ID }).eq("id", contact.id);
 
-      // Reassign conversation
+      // Reassign active conversation
       const { data: conv } = await supabase
         .from("conversations")
         .select("id, user_id")
@@ -103,14 +92,15 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
 
       if (conv) {
         await supabase.from("conversations").update({
-          user_id: adminId,
+          user_id: TARGET_USER_ID,
           transferred_at: new Date().toISOString(),
           transferred_by: user.id,
           original_user_id: conv.user_id,
         } as any).eq("id", conv.id);
       }
 
-      toast.success("Conversa transferida para o administrador!");
+      toast.success("Conversa transferida com sucesso!");
+      onTransferDone?.();
     } catch (err: any) {
       toast.error("Erro ao transferir", { description: err.message });
     } finally {
