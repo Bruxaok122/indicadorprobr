@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useContacts } from "@/hooks/useContacts";
@@ -41,7 +42,8 @@ import {
 
 export default function ConversasPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { contacts, isLoading: contactsLoading, toggleContactBlock, isTogglingBlock, refetchContacts } = useContacts();
+  const queryClient = useQueryClient();
+  const { contacts, isLoading: contactsLoading, toggleContactBlock, isTogglingBlock } = useContacts();
   const { templates } = useMetaTemplates();
   const { phones } = useWabaPhones();
   const isMobile = useIsMobile();
@@ -230,8 +232,9 @@ export default function ConversasPage() {
                 onTransferDone={() => {
                   setSelectedContactId(null);
                   if (isMobile) setMobileShowChat(false);
-                  // Force immediate removal from contact list
-                  refetchContacts();
+                  // Invalidate all contacts queries to force immediate removal
+                  queryClient.invalidateQueries({ queryKey: ["contacts"] });
+                  queryClient.refetchQueries({ queryKey: ["contacts"] });
                 }}
               />
               
