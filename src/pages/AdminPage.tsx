@@ -4,7 +4,7 @@ import { useWabaPhones } from "@/hooks/useWabaPhones";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Users, UserPlus, Radio } from "lucide-react";
+import { Users, UserPlus, Radio, Mic } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -20,6 +20,7 @@ import { Profile } from "@/types/juriszap";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminDisparosPage from "@/pages/AdminDisparosPage";
 import AdminContatosPage from "@/pages/AdminContatosPage";
+import AdminAudioPage from "@/pages/AdminAudioPage";
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -75,6 +76,9 @@ export default function AdminPage() {
             </TabsTrigger>
             <TabsTrigger value="contatos" className="gap-1.5">
               Contatos
+            </TabsTrigger>
+            <TabsTrigger value="audio" className="gap-1.5">
+              <Mic className="h-4 w-4" /> Áudio
             </TabsTrigger>
             <TabsTrigger value="disparos" className="gap-1.5">
               <Radio className="h-4 w-4" /> Disparos
@@ -149,6 +153,10 @@ export default function AdminPage() {
 
           <TabsContent value="contatos" className="mt-4">
             <AdminContatosPage />
+          </TabsContent>
+
+          <TabsContent value="audio" className="mt-4">
+            <AdminAudioPage />
           </TabsContent>
 
           <TabsContent value="disparos" className="mt-4">
