@@ -6,14 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
-import { Radio, Users, Send, List } from "lucide-react";
+import { Radio, Send, List } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 const CONTACT_FIELD_OPTIONS = [
   { value: "name", label: "Nome do Cliente" },
@@ -38,6 +35,11 @@ function getTemplateBody(template: MetaTemplate): string {
   return "";
 }
 
+interface ContactList {
+  name: string;
+  count: number;
+}
+
 export default function AdminDisparosPage() {
   const { users } = useAdmin();
   const { allTemplates, sendBulk, isSendingBulk } = useMetaTemplates();
@@ -45,16 +47,14 @@ export default function AdminDisparosPage() {
 
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
-  const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
   const [variableMappings, setVariableMappings] = useState<Record<string, string>>({});
 
-  // Contact source: "list" = admin pool lists, "user" = contacts already assigned to a user
-  const [contactSource, setContactSource] = useState<"list" | "user">("list");
+  // List-based selection
   const [selectedList, setSelectedList] = useState<string>("");
-  const [availableLists, setAvailableLists] = useState<{ id: string; label: string; count: number }[]>([]);
-  const [poolContacts, setPoolContacts] = useState<any[]>([]);
-  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [availableLists, setAvailableLists] = useState<ContactList[]>([]);
+  const [listContactCount, setListContactCount] = useState(0);
+  const [loadingLists, setLoadingLists] = useState(false);
 
   // Auto-select phone
   useEffect(() => {
@@ -63,65 +63,33 @@ export default function AdminDisparosPage() {
     }
   }, [phones, selectedPhoneNumberId]);
 
-  // Load available lists from admin pool
+  // Load available lists from admin pool contacts
   useEffect(() => {
+    setLoadingLists(true);
     supabase
       .from("contacts")
       .select("*")
       .is("user_id", null)
       .then(({ data }) => {
-        if (!data) return;
+        if (!data) { setLoadingLists(false); return; }
         const map: Record<string, number> = {};
         (data as any[]).forEach((c) => {
-          const key = c.contact_list || "__sem_lista__";
-          map[key] = (map[key] || 0) + 1;
+          const listName = c.contact_list;
+          if (!listName) return;
+          map[listName] = (map[listName] || 0) + 1;
         });
-        const lists = Object.entries(map).map(([id, count]) => ({
-          id,
-          label: id === "__sem_lista__" ? "Sem lista" : id,
-          count,
-        }));
+        const lists = Object.entries(map).map(([name, count]) => ({ name, count }));
         setAvailableLists(lists);
-        if (lists.length > 0 && !selectedList) {
-          setSelectedList(lists[0].id);
-        }
+        setLoadingLists(false);
       });
   }, []);
 
-  // Load contacts when source/list/user changes
+  // Update contact count when list changes
   useEffect(() => {
-    setSelectedContacts([]);
-    if (contactSource === "list") {
-      if (!selectedList) { setPoolContacts([]); return; }
-      setLoadingContacts(true);
-      // Fetch all admin pool contacts then filter by list client-side to avoid TS type issues
-      supabase
-        .from("contacts")
-        .select("*")
-        .is("user_id", null)
-        .order("name")
-        .then(({ data }) => {
-          const filtered = (data || []).filter((c: any) => {
-            const cl = c.contact_list || "__sem_lista__";
-            return cl === selectedList;
-          });
-          setPoolContacts(filtered);
-          setLoadingContacts(false);
-        });
-    } else {
-      if (!selectedUserId) { setPoolContacts([]); return; }
-      setLoadingContacts(true);
-      supabase
-        .from("contacts")
-        .select("*")
-        .eq("user_id", selectedUserId)
-        .order("name")
-        .then(({ data }) => {
-          setPoolContacts(data || []);
-          setLoadingContacts(false);
-        });
-    }
-  }, [contactSource, selectedList, selectedUserId]);
+    if (!selectedList) { setListContactCount(0); return; }
+    const found = availableLists.find((l) => l.name === selectedList);
+    setListContactCount(found?.count || 0);
+  }, [selectedList, availableLists]);
 
   // Auto-detect variables when template changes
   useEffect(() => {
@@ -138,28 +106,29 @@ export default function AdminDisparosPage() {
 
   const approvedTemplates = allTemplates.filter((t) => t.status === "APPROVED");
 
-  const handleToggleContact = (id: string) => {
-    setSelectedContacts((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-  };
-
-  const handleSelectAll = () => {
-    if (selectedContacts.length === poolContacts.length) {
-      setSelectedContacts([]);
-    } else {
-      setSelectedContacts(poolContacts.map((c) => c.id));
-    }
-  };
-
-  const handleSend = () => {
-    if (!selectedTemplate || selectedContacts.length === 0) return;
+  const handleSend = async () => {
+    if (!selectedTemplate || !selectedList) return;
     if (phones.length > 0 && !selectedPhoneNumberId) {
       toast.error("Selecione um número de disparo");
       return;
     }
+
+    // Fetch contact IDs for the selected list
+    const { data, error } = await (supabase as any)
+      .from("contacts")
+      .select("id")
+      .is("user_id", null)
+      .eq("contact_list", selectedList);
+
+    if (error || !data || data.length === 0) {
+      toast.error("Nenhum contato encontrado na lista selecionada");
+      return;
+    }
+
+    const contactIds = (data as any[]).map((c) => c.id);
+
     sendBulk({
-      contactIds: selectedContacts,
+      contactIds,
       templateName: selectedTemplate.name,
       templateLanguage: selectedTemplate.language,
       selectedPhoneNumberId: selectedPhoneNumberId || undefined,
@@ -179,7 +148,7 @@ export default function AdminDisparosPage() {
           Disparos
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Selecione o template, os contatos e dispare mensagens personalizadas.
+          Selecione o template, a lista de contatos e dispare mensagens personalizadas.
         </p>
       </div>
 
@@ -258,106 +227,52 @@ export default function AdminDisparosPage() {
           </CardContent>
         </Card>
 
-        {/* Step 2: Contacts */}
-        <Card className="flex flex-col">
+        {/* Step 2: List */}
+        <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">2</span>
-              Contatos
+              Lista de Contatos
             </CardTitle>
             <CardDescription>
-              {selectedContacts.length > 0
-                ? `${selectedContacts.length} de ${poolContacts.length} selecionados`
-                : "Selecione a origem dos contatos"}
+              {selectedList && listContactCount > 0
+                ? `${listContactCount} contato(s) serão disparados`
+                : "Selecione a lista de contatos"}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col min-h-0 space-y-3">
-            {/* Source selector */}
-            <div className="flex gap-1 rounded-lg bg-muted p-1">
-              <button
-                onClick={() => setContactSource("list")}
-                className={cn("flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-md transition-colors", contactSource === "list" ? "bg-background shadow text-foreground font-medium" : "text-muted-foreground")}
-              >
-                <List className="h-3 w-3" /> Lista admin
-              </button>
-              <button
-                onClick={() => setContactSource("user")}
-                className={cn("flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-md transition-colors", contactSource === "user" ? "bg-background shadow text-foreground font-medium" : "text-muted-foreground")}
-              >
-                <Users className="h-3 w-3" /> Por usuário
-              </button>
-            </div>
-
-            {/* List or user selector */}
-            {contactSource === "list" ? (
-              <Select value={selectedList} onValueChange={setSelectedList}>
-                <SelectTrigger className="text-xs">
-                  <SelectValue placeholder="Selecione a lista..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableLists.map((l) => (
-                    <SelectItem key={l.id} value={l.id} className="text-xs">
-                      {l.label} <span className="text-muted-foreground">({l.count})</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger className="text-xs">
-                  <SelectValue placeholder="Selecione o usuário..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((u) => (
-                    <SelectItem key={u.user_id} value={u.user_id} className="text-xs">
-                      {u.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {/* Contacts list */}
-            {loadingContacts ? (
+          <CardContent className="space-y-3">
+            {loadingLists ? (
               <div className="flex justify-center py-6"><LoadingSpinner size="sm" /></div>
-            ) : poolContacts.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                {contactSource === "list" ? "Selecione uma lista" : "Selecione o usuário"}
-              </p>
+            ) : availableLists.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-6 text-center">
+                <List className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Nenhuma lista disponível</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">Importe contatos na aba Contatos</p>
+              </div>
             ) : (
-              <>
-                <Button variant="outline" size="sm" onClick={handleSelectAll} className="w-full">
-                  {selectedContacts.length === poolContacts.length ? "Desmarcar todos" : `Selecionar todos (${poolContacts.length})`}
-                </Button>
-                <ScrollArea className="flex-1 max-h-52">
-                  <div className="space-y-1">
-                    {poolContacts.map((contact) => (
-                      <div
-                        key={contact.id}
-                        className={cn(
-                          "flex items-center gap-2 rounded-lg border px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors",
-                          selectedContacts.includes(contact.id) && "bg-primary/5 border-primary/30"
-                        )}
-                        onClick={() => handleToggleContact(contact.id)}
-                      >
-                        <Checkbox
-                          checked={selectedContacts.includes(contact.id)}
-                          onCheckedChange={() => handleToggleContact(contact.id)}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{contact.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{contact.phone}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </>
+              <div className="space-y-1.5">
+                {availableLists.map((list) => (
+                  <button
+                    key={list.name}
+                    onClick={() => setSelectedList(list.name)}
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors text-left ${
+                      selectedList === list.name
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border hover:bg-muted"
+                    }`}
+                  >
+                    <span className="font-medium">{list.name}</span>
+                    <Badge variant={selectedList === list.name ? "default" : "secondary"} className="text-xs">
+                      {list.count} contatos
+                    </Badge>
+                  </button>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Step 3: User responsible (optional) */}
+        {/* Step 3: Responsible + Summary */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -389,11 +304,15 @@ export default function AdminDisparosPage() {
               <p className="text-xs font-medium">Resumo do disparo</p>
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Template:</span>
-                <span className="font-medium">{selectedTemplate?.name || "—"}</span>
+                <span className="font-medium truncate max-w-[140px]">{selectedTemplate?.name || "—"}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Lista:</span>
+                <span className="font-medium truncate max-w-[140px]">{selectedList || "—"}</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Contatos:</span>
-                <span className="font-medium">{selectedContacts.length}</span>
+                <span className="font-medium">{listContactCount}</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Responsável:</span>
@@ -409,7 +328,8 @@ export default function AdminDisparosPage() {
               onClick={handleSend}
               disabled={
                 !selectedTemplate ||
-                selectedContacts.length === 0 ||
+                !selectedList ||
+                listContactCount === 0 ||
                 isSendingBulk ||
                 (phones.length > 0 && !selectedPhoneNumberId)
               }
@@ -417,7 +337,7 @@ export default function AdminDisparosPage() {
               {isSendingBulk ? (
                 <><LoadingSpinner size="sm" /> Disparando...</>
               ) : (
-                <><Send className="h-4 w-4" /> Disparar para {selectedContacts.length} contato{selectedContacts.length !== 1 ? "s" : ""}</>
+                <><Send className="h-4 w-4" /> Disparar para {listContactCount} contato{listContactCount !== 1 ? "s" : ""}</>
               )}
             </Button>
           </CardContent>

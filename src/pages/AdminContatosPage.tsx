@@ -15,18 +15,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertBanner } from "@/components/ui/alert-banner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Upload, UserPlus, File, Plus, User, Phone, Scale,
-  CheckCircle, FileText, Search, Trash2, ContactRound
+  CheckCircle, Search, Trash2, ContactRound, List, AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 
 interface ContactList {
-  id: string;
   name: string;
   count: number;
-  created_at: string;
 }
 
 export default function AdminContatosPage() {
@@ -34,9 +31,10 @@ export default function AdminContatosPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // List management
-  const [selectedList, setSelectedList] = useState<string>("sem-lista");
+  const [selectedList, setSelectedList] = useState<string | null>(null);
   const [newListName, setNewListName] = useState("");
   const [showNewList, setShowNewList] = useState(false);
+  const [listToDelete, setListToDelete] = useState<string | null>(null);
 
   // Import state
   const [rawText, setRawText] = useState("");
@@ -72,38 +70,32 @@ export default function AdminContatosPage() {
   const lists: ContactList[] = (() => {
     const map: Record<string, number> = {};
     (allContacts as any[]).forEach((c) => {
-      const listName = c.contact_list || "Sem lista";
+      const listName = c.contact_list;
+      if (!listName) return; // ignore contacts without a list
       map[listName] = (map[listName] || 0) + 1;
     });
-    return Object.entries(map).map(([name, count]) => ({
-      id: name,
-      name,
-      count,
-      created_at: "",
-    }));
+    return Object.entries(map).map(([name, count]) => ({ name, count }));
   })();
 
   // Filtered contacts for selected list
-  const displayedContacts = (allContacts as any[])
-    .filter((c) => {
-      const listName = c.contact_list || "Sem lista";
-      if (selectedList === "all") return true;
-      if (selectedList === "sem-lista") return listName === "Sem lista";
-      return listName === selectedList;
-    })
-    .filter((c) =>
-      !search ||
-      c.name?.toLowerCase().includes(search.toLowerCase()) ||
-      c.phone?.includes(search)
-    );
+  const displayedContacts = selectedList
+    ? (allContacts as any[]).filter((c) => {
+        if (!search) return c.contact_list === selectedList;
+        return (
+          c.contact_list === selectedList &&
+          (c.name?.toLowerCase().includes(search.toLowerCase()) || c.phone?.includes(search))
+        );
+      })
+    : [];
 
   const addContactMutation = useMutation({
-    mutationFn: async (contact: { name: string; phone: string; lawyer_name?: string; process_number?: string; contact_list?: string }) => {
+    mutationFn: async (contact: { name: string; phone: string; lawyer_name?: string; process_number?: string; contact_list: string }) => {
       const { error } = await supabase.from("contacts").insert({
         name: contact.name,
         phone: contact.phone,
         lawyer_name: contact.lawyer_name,
         process_number: contact.process_number,
+        contact_list: contact.contact_list,
         status: "novo",
         user_id: null,
       } as any);
@@ -126,6 +118,7 @@ export default function AdminContatosPage() {
           phone: c.phone,
           lawyer_name: c.lawyer_name,
           process_number: c.process_number,
+          contact_list: listName,
           status: "novo",
           user_id: null,
         } as any);
@@ -154,6 +147,24 @@ export default function AdminContatosPage() {
     onError: (e: any) => toast.error("Erro ao remover", { description: e.message }),
   });
 
+  const deleteListMutation = useMutation({
+    mutationFn: async (listName: string) => {
+      const ids = (allContacts as any[])
+        .filter((c) => c.contact_list === listName)
+        .map((c) => c.id);
+      if (ids.length === 0) return;
+      const { error } = await supabase.from("contacts").delete().in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Lista excluída com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["admin-contacts"] });
+      setSelectedList(null);
+      setListToDelete(null);
+    },
+    onError: (e: any) => toast.error("Erro ao excluir lista", { description: e.message }),
+  });
+
   const handleParse = () => {
     const { contacts, errors } = parseJuridicalList(rawText);
     setParsedContacts(contacts);
@@ -180,7 +191,7 @@ export default function AdminContatosPage() {
   };
 
   const handleAddSingle = () => {
-    if (!singleName.trim() || !singlePhone.trim()) return;
+    if (!singleName.trim() || !singlePhone.trim() || !selectedList) return;
     let phone = singlePhone.replace(/\D/g, "");
     if (phone.length === 11) phone = "55" + phone;
     else if (phone.length === 10) phone = "55" + phone.slice(0, 2) + "9" + phone.slice(2);
@@ -191,11 +202,17 @@ export default function AdminContatosPage() {
       phone,
       lawyer_name: singleLawyer.trim() || undefined,
       process_number: singleProcess.trim() || undefined,
-      contact_list: selectedList !== "all" && selectedList !== "sem-lista" ? selectedList : undefined,
+      contact_list: selectedList,
     });
   };
 
-  const activeListName = selectedList !== "all" && selectedList !== "sem-lista" ? selectedList : "";
+  const handleCreateList = () => {
+    const name = newListName.trim();
+    if (!name) return;
+    setSelectedList(name);
+    setNewListName("");
+    setShowNewList(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -205,7 +222,7 @@ export default function AdminContatosPage() {
           Contatos
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Gerencie os contatos do pool administrativo para disparo em massa.
+          Gerencie os contatos por lista para uso nos disparos.
         </p>
       </div>
 
@@ -213,26 +230,32 @@ export default function AdminContatosPage() {
         {/* Left: Lists sidebar */}
         <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Listas</CardTitle>
+            <CardTitle className="text-base flex items-center gap-1.5">
+              <List className="h-4 w-4" /> Listas
+            </CardTitle>
             <CardDescription>Grupos de contatos</CardDescription>
           </CardHeader>
           <CardContent className="space-y-1 p-2">
-            <button
-              onClick={() => setSelectedList("all")}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex justify-between items-center ${selectedList === "all" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-            >
-              <span>Todos</span>
-              <Badge variant="secondary" className="text-xs">{allContacts.length}</Badge>
-            </button>
+            {lists.length === 0 && !showNewList && (
+              <p className="text-xs text-muted-foreground text-center py-3">Nenhuma lista criada</p>
+            )}
             {lists.map((list) => (
-              <button
-                key={list.id}
-                onClick={() => setSelectedList(list.id)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex justify-between items-center gap-2 ${selectedList === list.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+              <div
+                key={list.name}
+                className={`group w-full flex justify-between items-center gap-2 px-3 py-2 rounded-lg text-sm cursor-pointer transition-colors ${selectedList === list.name ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                onClick={() => setSelectedList(list.name)}
               >
-                <span className="truncate">{list.name}</span>
-                <Badge variant="secondary" className="text-xs shrink-0">{list.count}</Badge>
-              </button>
+                <span className="truncate font-medium">{list.name}</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Badge variant="secondary" className="text-xs">{list.count}</Badge>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setListToDelete(list.name); }}
+                    className={`opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:text-destructive ${selectedList === list.name ? "text-primary-foreground" : "text-muted-foreground"}`}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
             ))}
 
             {showNewList ? (
@@ -242,19 +265,11 @@ export default function AdminContatosPage() {
                   value={newListName}
                   onChange={(e) => setNewListName(e.target.value)}
                   className="h-8 text-sm"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && newListName.trim()) {
-                      setSelectedList(newListName.trim());
-                      setNewListName("");
-                      setShowNewList(false);
-                    }
-                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleCreateList(); }}
                   autoFocus
                 />
                 <div className="flex gap-1">
-                  <Button size="sm" className="flex-1 h-7 text-xs" onClick={() => {
-                    if (newListName.trim()) { setSelectedList(newListName.trim()); setNewListName(""); setShowNewList(false); }
-                  }}>OK</Button>
+                  <Button size="sm" className="flex-1 h-7 text-xs" onClick={handleCreateList}>Criar</Button>
                   <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setShowNewList(false)}>✕</Button>
                 </div>
               </div>
@@ -268,161 +283,174 @@ export default function AdminContatosPage() {
 
         {/* Right: Contacts + Add */}
         <div className="lg:col-span-3 space-y-4">
-          {/* Add contacts tabs */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Adicionar Contatos</CardTitle>
-              {activeListName && (
-                <CardDescription>Adicionando à lista: <span className="font-medium text-foreground">{activeListName}</span></CardDescription>
-              )}
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="individual">
-                <TabsList className="w-full">
-                  <TabsTrigger value="individual" className="flex-1 gap-1.5">
-                    <UserPlus className="h-3.5 w-3.5" /> Individual
-                  </TabsTrigger>
-                  <TabsTrigger value="lista" className="flex-1 gap-1.5">
-                    <Upload className="h-3.5 w-3.5" /> Importar Lista
-                  </TabsTrigger>
-                </TabsList>
+          {!selectedList ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <List className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                <p className="font-medium text-muted-foreground">Selecione ou crie uma lista</p>
+                <p className="text-sm text-muted-foreground/70 mt-1">
+                  Escolha uma lista na barra lateral ou crie uma nova para começar.
+                </p>
+                <Button variant="outline" className="mt-4 gap-1.5" onClick={() => setShowNewList(true)}>
+                  <Plus className="h-4 w-4" /> Nova lista
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Add contacts */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Adicionar Contatos</CardTitle>
+                  <CardDescription>
+                    Adicionando à lista: <span className="font-semibold text-foreground">{selectedList}</span>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="individual">
+                    <TabsList className="w-full">
+                      <TabsTrigger value="individual" className="flex-1 gap-1.5">
+                        <UserPlus className="h-3.5 w-3.5" /> Individual
+                      </TabsTrigger>
+                      <TabsTrigger value="lista" className="flex-1 gap-1.5">
+                        <Upload className="h-3.5 w-3.5" /> Importar Lista
+                      </TabsTrigger>
+                    </TabsList>
 
-                <TabsContent value="individual" className="mt-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Nome <span className="text-destructive">*</span></Label>
-                      <div className="relative">
-                        <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                        <Input placeholder="Ex: Maria Santos" value={singleName} onChange={(e) => setSingleName(e.target.value)} className="pl-8 h-9 text-sm" />
+                    <TabsContent value="individual" className="mt-4">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Nome <span className="text-destructive">*</span></Label>
+                          <div className="relative">
+                            <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                            <Input placeholder="Ex: Maria Santos" value={singleName} onChange={(e) => setSingleName(e.target.value)} className="pl-8 h-9 text-sm" />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Telefone <span className="text-destructive">*</span></Label>
+                          <div className="relative">
+                            <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                            <Input placeholder="(11) 99999-8888" value={singlePhone} onChange={(e) => setSinglePhone(e.target.value)} className="pl-8 h-9 text-sm" />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Advogado</Label>
+                          <div className="relative">
+                            <Scale className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                            <Input placeholder="Dr. João Silva" value={singleLawyer} onChange={(e) => setSingleLawyer(e.target.value)} className="pl-8 h-9 text-sm" />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Processo</Label>
+                          <Input placeholder="1234567-89.2024.8.26.0100" value={singleProcess} onChange={(e) => setSingleProcess(e.target.value)} className="h-9 text-sm" />
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Telefone <span className="text-destructive">*</span></Label>
+                      <Button
+                        className="w-full mt-3"
+                        onClick={handleAddSingle}
+                        disabled={!singleName.trim() || !singlePhone.trim() || addContactMutation.isPending}
+                      >
+                        {addContactMutation.isPending ? <LoadingSpinner size="sm" /> : <><Plus className="h-4 w-4 mr-1.5" /> Adicionar Contato</>}
+                      </Button>
+                    </TabsContent>
+
+                    <TabsContent value="lista" className="mt-4 space-y-3">
+                      <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".txt" className="hidden" />
+                      <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()} disabled={isLoadingFile}>
+                        {isLoadingFile ? <LoadingSpinner size="sm" /> : <><File className="h-4 w-4 mr-1.5" /> Carregar Arquivo .txt</>}
+                      </Button>
                       <div className="relative">
-                        <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                        <Input placeholder="(11) 99999-8888" value={singlePhone} onChange={(e) => setSinglePhone(e.target.value)} className="pl-8 h-9 text-sm" />
+                        <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                          <span className="bg-card px-2 text-muted-foreground">ou cole o texto</span>
+                        </div>
                       </div>
+                      <Textarea
+                        placeholder="Cole aqui a lista no formato jurídico com separadores ================"
+                        value={rawText}
+                        onChange={(e) => setRawText(e.target.value)}
+                        className="min-h-[120px] font-mono text-xs"
+                      />
+                      <Button className="w-full" onClick={handleParse} disabled={!rawText.trim()}>
+                        <Upload className="h-4 w-4 mr-1.5" /> Processar Lista
+                      </Button>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+
+              {/* Contacts table */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-base">{selectedList}</CardTitle>
+                      <CardDescription>{displayedContacts.length} contato(s)</CardDescription>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Advogado</Label>
-                      <div className="relative">
-                        <Scale className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                        <Input placeholder="Dr. João Silva" value={singleLawyer} onChange={(e) => setSingleLawyer(e.target.value)} className="pl-8 h-9 text-sm" />
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Processo</Label>
-                      <Input placeholder="1234567-89.2024.8.26.0100" value={singleProcess} onChange={(e) => setSingleProcess(e.target.value)} className="h-9 text-sm" />
+                    <div className="relative w-48">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-8 text-sm" />
                     </div>
                   </div>
-                  <Button
-                    className="w-full mt-3"
-                    onClick={handleAddSingle}
-                    disabled={!singleName.trim() || !singlePhone.trim() || addContactMutation.isPending}
-                  >
-                    {addContactMutation.isPending ? <LoadingSpinner size="sm" /> : <><Plus className="h-4 w-4 mr-1.5" /> Adicionar Contato</>}
-                  </Button>
-                </TabsContent>
-
-                <TabsContent value="lista" className="mt-4 space-y-3">
-                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".txt" className="hidden" />
-                  <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()} disabled={isLoadingFile}>
-                    {isLoadingFile ? <LoadingSpinner size="sm" /> : <><File className="h-4 w-4 mr-1.5" /> Carregar Arquivo .txt</>}
-                  </Button>
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">ou cole o texto</span>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {loadingContacts ? (
+                    <div className="flex justify-center py-8"><LoadingSpinner /></div>
+                  ) : displayedContacts.length === 0 ? (
+                    <div className="flex flex-col items-center py-10 text-center text-muted-foreground">
+                      <ContactRound className="h-8 w-8 mb-2 opacity-30" />
+                      <p className="text-sm">Nenhum contato nesta lista</p>
                     </div>
-                  </div>
-                  <Textarea
-                    placeholder="Cole aqui a lista no formato jurídico com separadores ================"
-                    value={rawText}
-                    onChange={(e) => setRawText(e.target.value)}
-                    className="min-h-[120px] font-mono text-xs"
-                  />
-                  <Button className="w-full" onClick={handleParse} disabled={!rawText.trim()}>
-                    <Upload className="h-4 w-4 mr-1.5" /> Processar Lista
-                  </Button>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-
-          {/* Contacts table */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <CardTitle className="text-base">
-                    {selectedList === "all" ? "Todos os contatos" : selectedList === "sem-lista" ? "Sem lista" : selectedList}
-                  </CardTitle>
-                  <CardDescription>{displayedContacts.length} contato(s)</CardDescription>
-                </div>
-                <div className="relative w-48">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-8 text-sm" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {loadingContacts ? (
-                <div className="flex justify-center py-8"><LoadingSpinner /></div>
-              ) : displayedContacts.length === 0 ? (
-                <div className="flex flex-col items-center py-10 text-center text-muted-foreground">
-                  <ContactRound className="h-8 w-8 mb-2 opacity-30" />
-                  <p className="text-sm">Nenhum contato nesta lista</p>
-                </div>
-              ) : (
-                <ScrollArea className="max-h-72">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Telefone</TableHead>
-                        <TableHead className="hidden md:table-cell">Advogado</TableHead>
-                        <TableHead className="hidden lg:table-cell">Lista</TableHead>
-                        <TableHead className="w-10"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {displayedContacts.map((c: any) => (
-                        <TableRow key={c.id}>
-                          <TableCell className="font-medium text-sm">{c.name}</TableCell>
-                          <TableCell className="font-mono text-xs">{c.phone}</TableCell>
-                          <TableCell className="hidden md:table-cell text-xs text-muted-foreground">{c.lawyer_name || "-"}</TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            {c.contact_list && <Badge variant="outline" className="text-xs">{c.contact_list}</Badge>}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                              onClick={() => deleteContactMutation.mutate(c.id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-              )}
-            </CardContent>
-          </Card>
+                  ) : (
+                    <ScrollArea className="max-h-72">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Telefone</TableHead>
+                            <TableHead className="hidden md:table-cell">Advogado</TableHead>
+                            <TableHead className="hidden lg:table-cell">Processo</TableHead>
+                            <TableHead className="w-10"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {displayedContacts.map((c: any) => (
+                            <TableRow key={c.id}>
+                              <TableCell className="font-medium text-sm">{c.name}</TableCell>
+                              <TableCell className="font-mono text-xs">{c.phone}</TableCell>
+                              <TableCell className="hidden md:table-cell text-xs text-muted-foreground">{c.lawyer_name || "-"}</TableCell>
+                              <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">{c.process_number || "-"}</TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  onClick={() => deleteContactMutation.mutate(c.id)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Preview Dialog */}
+      {/* Import Preview Dialog */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Confirmar Importação</DialogTitle>
             <DialogDescription>
               {parsedContacts.length} contato(s) encontrado(s).
-              {activeListName && <> Serão adicionados à lista <strong>{activeListName}</strong>.</>}
+              {selectedList && <> Serão adicionados à lista <strong>{selectedList}</strong>.</>}
             </DialogDescription>
           </DialogHeader>
           {parseErrors.length > 0 && (
@@ -459,8 +487,40 @@ export default function AdminContatosPage() {
           </ScrollArea>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPreview(false)}>Cancelar</Button>
-            <Button onClick={() => importContactsMutation.mutate({ contacts: parsedContacts, listName: activeListName })} disabled={importContactsMutation.isPending}>
+            <Button
+              onClick={() => selectedList && importContactsMutation.mutate({ contacts: parsedContacts, listName: selectedList })}
+              disabled={importContactsMutation.isPending || !selectedList}
+            >
               {importContactsMutation.isPending ? <LoadingSpinner size="sm" /> : <><CheckCircle className="h-4 w-4 mr-1.5" /> Importar {parsedContacts.length} contatos</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete List Confirm Dialog */}
+      <Dialog open={!!listToDelete} onOpenChange={(open) => !open && setListToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Excluir lista "{listToDelete}"?
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação irá excluir permanentemente todos os contatos dentro desta lista.
+              {listToDelete && (() => {
+                const count = lists.find(l => l.name === listToDelete)?.count || 0;
+                return count > 0 ? <strong className="block mt-1"> {count} contato(s) serão removidos.</strong> : null;
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setListToDelete(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => listToDelete && deleteListMutation.mutate(listToDelete)}
+              disabled={deleteListMutation.isPending}
+            >
+              {deleteListMutation.isPending ? <LoadingSpinner size="sm" /> : <><Trash2 className="h-4 w-4 mr-1.5" /> Excluir lista</>}
             </Button>
           </DialogFooter>
         </DialogContent>
