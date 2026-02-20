@@ -343,7 +343,7 @@ export default function AdminContatosPage() {
                           </div>
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-xs">Advogado</Label>
+                          <Label className="text-xs">Parte Contrária</Label>
                           <div className="relative">
                             <Scale className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                             <Input placeholder="Dr. João Silva" value={singleLawyer} onChange={(e) => setSingleLawyer(e.target.value)} className="pl-8 h-9 text-sm" />
@@ -417,7 +417,7 @@ export default function AdminContatosPage() {
                           <TableRow>
                             <TableHead>Nome</TableHead>
                             <TableHead>Telefone</TableHead>
-                            <TableHead className="hidden md:table-cell">Advogado</TableHead>
+                            <TableHead className="hidden md:table-cell">Parte Contrária</TableHead>
                             <TableHead className="hidden lg:table-cell">Processo</TableHead>
                             <TableHead className="w-10"></TableHead>
                           </TableRow>
@@ -475,7 +475,7 @@ export default function AdminContatosPage() {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Telefone</TableHead>
-                  <TableHead>Advogado</TableHead>
+                  <TableHead>Parte Contrária</TableHead>
                   <TableHead>Processo</TableHead>
                 </TableRow>
               </TableHeader>
