@@ -54,8 +54,7 @@ export default function AdminContatosPage() {
   // Search
   const [search, setSearch] = useState("");
 
-  // Fetch contact lists (unique lawyer_name values or a special "list" field)
-  // We use lawyer_name as list grouping for now, plus a contacts_list_name field
+  // Fetch all admin pool contacts (user_id is null)
   const { data: allContacts = [], isLoading: loadingContacts } = useQuery({
     queryKey: ["admin-contacts"],
     queryFn: async () => {
@@ -65,16 +64,14 @@ export default function AdminContatosPage() {
         .is("user_id", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data || []) as any[];
     },
   });
 
-  // Derive lists from contacts (group by list_name metadata stored in process_number prefix or a special field)
-  // We'll use a simple approach: contacts without user_id belong to "admin pool"
-  // Lists are identified by the tag in lawyer_name field or we use a tag system via import
+  // Derive lists from contacts
   const lists: ContactList[] = (() => {
     const map: Record<string, number> = {};
-    allContacts.forEach((c: any) => {
+    (allContacts as any[]).forEach((c) => {
       const listName = c.contact_list || "Sem lista";
       map[listName] = (map[listName] || 0) + 1;
     });
@@ -87,14 +84,14 @@ export default function AdminContatosPage() {
   })();
 
   // Filtered contacts for selected list
-  const displayedContacts = allContacts
-    .filter((c: any) => {
+  const displayedContacts = (allContacts as any[])
+    .filter((c) => {
       const listName = c.contact_list || "Sem lista";
       if (selectedList === "all") return true;
       if (selectedList === "sem-lista") return listName === "Sem lista";
       return listName === selectedList;
     })
-    .filter((c: any) =>
+    .filter((c) =>
       !search ||
       c.name?.toLowerCase().includes(search.toLowerCase()) ||
       c.phone?.includes(search)
@@ -103,10 +100,13 @@ export default function AdminContatosPage() {
   const addContactMutation = useMutation({
     mutationFn: async (contact: { name: string; phone: string; lawyer_name?: string; process_number?: string; contact_list?: string }) => {
       const { error } = await supabase.from("contacts").insert({
-        ...contact,
+        name: contact.name,
+        phone: contact.phone,
+        lawyer_name: contact.lawyer_name,
+        process_number: contact.process_number,
         status: "novo",
         user_id: null,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -128,7 +128,6 @@ export default function AdminContatosPage() {
           process_number: c.process_number,
           status: "novo",
           user_id: null,
-          contact_list: listName || null,
         } as any);
         if (error) fail++; else ok++;
       }

@@ -19,6 +19,7 @@ import { AdminChatMonitor } from "@/components/admin/AdminChatMonitor";
 import { Profile } from "@/types/juriszap";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminDisparosPage from "@/pages/AdminDisparosPage";
+import AdminContatosPage from "@/pages/AdminContatosPage";
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -65,12 +66,15 @@ export default function AdminPage() {
         <StatsCards stats={stats} isLoading={isLoadingStats} />
 
         <Tabs defaultValue="usuarios">
-          <TabsList className="w-full sm:w-auto">
+          <TabsList className="w-full sm:w-auto flex-wrap">
             <TabsTrigger value="usuarios" className="gap-1.5">
               <Users className="h-4 w-4" /> Usuários
             </TabsTrigger>
             <TabsTrigger value="numeros" className="gap-1.5">
               Números
+            </TabsTrigger>
+            <TabsTrigger value="contatos" className="gap-1.5">
+              Contatos
             </TabsTrigger>
             <TabsTrigger value="disparos" className="gap-1.5">
               <Radio className="h-4 w-4" /> Disparos
@@ -141,6 +145,10 @@ export default function AdminPage() {
 
           <TabsContent value="numeros" className="mt-4">
             <PhoneNumbersSection />
+          </TabsContent>
+
+          <TabsContent value="contatos" className="mt-4">
+            <AdminContatosPage />
           </TabsContent>
 
           <TabsContent value="disparos" className="mt-4">
