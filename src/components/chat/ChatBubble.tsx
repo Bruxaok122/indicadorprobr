@@ -10,6 +10,7 @@ import {
   X,
   FileText,
   ZoomIn,
+  Mic,
 } from "lucide-react";
 import { ImageLightbox } from "./ImageLightbox";
 
@@ -57,6 +58,24 @@ export function ChatBubble({ message }: ChatBubbleProps) {
           </div>
           {message.content && message.content !== "[Imagem recebida]" && (
             <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+          )}
+        </div>
+      );
+    }
+
+    if (message.message_type === "audio") {
+      return (
+        <div className="flex items-center gap-2 py-0.5">
+          <Mic className="h-4 w-4 shrink-0 opacity-70" />
+          {message.document_url ? (
+            <audio
+              src={message.document_url}
+              controls
+              className="h-8"
+              style={{ minWidth: 180, maxWidth: 240 }}
+            />
+          ) : (
+            <span className="text-sm opacity-70">Áudio</span>
           )}
         </div>
       );

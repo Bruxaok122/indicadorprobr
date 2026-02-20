@@ -5,6 +5,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Send, Paperclip, FileText, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { AudioRecorder } from "./AudioRecorder";
 
 interface ChatInputProps {
   messageText: string;
@@ -18,6 +19,7 @@ interface ChatInputProps {
   onSendMessage: () => void;
   onOpenTemplateDialog: () => void;
   onFileSelected: (file: File) => void;
+  onSendAudio?: (blob: Blob) => void;
 }
 
 export function ChatInput({
@@ -32,6 +34,7 @@ export function ChatInput({
   onSendMessage,
   onOpenTemplateDialog,
   onFileSelected,
+  onSendAudio,
 }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -138,6 +141,15 @@ export function ChatInput({
           </>
         )}
 
+        {/* Audio recorder — shown when text field is empty */}
+        {!messageText.trim() && onSendAudio && (
+          <AudioRecorder
+            disabled={!canSendFreeText}
+            onSendAudio={onSendAudio}
+            isSending={isSending}
+          />
+        )}
+
         <div className="flex-1 relative">
           <textarea
             ref={textareaRef}
@@ -152,18 +164,20 @@ export function ChatInput({
           />
         </div>
 
-        <Button
-          onClick={onSendMessage}
-          disabled={!messageText.trim() || isSending || !canSendFreeText}
-          size="icon"
-          className="shrink-0 h-10 w-10 rounded-full bg-primary hover:bg-primary/90"
-        >
-          {isSending ? (
-            <LoadingSpinner size="sm" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-        </Button>
+        {messageText.trim() && (
+          <Button
+            onClick={onSendMessage}
+            disabled={!messageText.trim() || isSending || !canSendFreeText}
+            size="icon"
+            className="shrink-0 h-10 w-10 rounded-full bg-primary hover:bg-primary/90"
+          >
+            {isSending ? (
+              <LoadingSpinner size="sm" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
+        )}
       </div>
       {!isMobile && (
         <p className="mt-1.5 text-[11px] text-muted-foreground px-12">
