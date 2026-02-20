@@ -138,10 +138,9 @@ export function useMessages(contactId: string | null) {
       return data;
     },
     onSuccess: (_, params) => {
-      // Use the contactId from params (not from closure) to ensure correct key
-      queryClient.invalidateQueries({
+      // Force immediate refetch — don't rely on realtime latency
+      queryClient.refetchQueries({
         queryKey: ["messages", params.contactId, user?.id],
-        refetchType: "active",
       });
       queryClient.invalidateQueries({ queryKey: ["contacts"], refetchType: "active" });
     },

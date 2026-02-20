@@ -211,10 +211,10 @@ serve(async (req) => {
       .select("*")
       .eq("contact_id", contactId)
       .eq("is_active", true)
-      .single();
+      .maybeSingle();
 
     if (!conversation) {
-      const { data: newConversation } = await supabase
+      const { data: newConversation, error: convError } = await supabase
         .from("conversations")
         .insert({
           contact_id: contactId,
@@ -224,12 +224,24 @@ serve(async (req) => {
         })
         .select()
         .single();
-      conversation = newConversation;
+      if (convError) {
+        console.error("Conversation create error:", convError.message);
+      } else {
+        conversation = newConversation;
+      }
     }
 
-    // Save message — document_url stores the playable URL for the chat bubble
-    await supabase.from("messages").insert({
-      conversation_id: conversation!.id,
+    if (!conversation) {
+      console.error("No conversation found or created for contact:", contactId);
+      return new Response(
+        JSON.stringify({ error: "Não foi possível encontrar ou criar a conversa." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Save message
+    const { error: msgError } = await supabase.from("messages").insert({
+      conversation_id: conversation.id,
       contact_id: contactId,
       user_id: effectiveUserId,
       direction: "outgoing",
@@ -240,6 +252,12 @@ serve(async (req) => {
       whatsapp_message_id: sendResult.messages?.[0]?.id,
       status: "sent",
     });
+
+    if (msgError) {
+      console.error("Message insert error:", msgError.message);
+    } else {
+      console.log("Message saved successfully for conversation:", conversation.id);
+    }
 
     // Update contact
     await supabase
