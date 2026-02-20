@@ -271,7 +271,7 @@ serve(async (req) => {
 
         await supabase
           .from("contacts")
-          .update({ status: "aguardando", last_message_at: new Date().toISOString() })
+          .update({ status: "aguardando", last_message_at: new Date().toISOString(), user_id: effectiveUserId })
           .eq("id", contact.id);
 
         if (effectiveUserId) {

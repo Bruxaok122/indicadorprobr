@@ -83,18 +83,20 @@ export function ChatContactList({
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
                   {contact.name.charAt(0).toUpperCase()}
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 overflow-hidden">
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate text-sm font-medium">{contact.name}</p>
                     {contact.last_message_at && (
-                      <span className="shrink-0 text-[11px] text-muted-foreground">
+                      <span className="shrink-0 text-[11px] text-muted-foreground whitespace-nowrap">
                         {format(new Date(contact.last_message_at), "HH:mm", { locale: ptBR })}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <p className="truncate text-xs text-muted-foreground">{contact.phone}</p>
-                    <StatusBadge status={contact.status} className="scale-75" />
+                    <p className="truncate text-xs text-muted-foreground min-w-0">{contact.phone}</p>
+                    <div className="shrink-0">
+                      <StatusBadge status={contact.status} />
+                    </div>
                   </div>
                 </div>
               </button>

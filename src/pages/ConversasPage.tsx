@@ -169,7 +169,19 @@ export default function ConversasPage() {
 
   return (
     <AppLayout>
-      <div className={cn("flex overflow-hidden relative min-h-0", isMobile ? "h-[calc(100dvh-3.5rem)]" : "h-screen")}>
+      <div className={cn("flex flex-col overflow-hidden relative min-h-0", isMobile ? "h-[calc(100dvh-3.5rem)]" : "h-screen")}>
+        {/* Working context banner */}
+        {phones.length > 0 && (() => {
+          const activePhone = phones[0];
+          const lawyerName = (activePhone as any).lawyer_name;
+          return (
+            <div className="bg-primary/5 border-b px-4 py-1.5 text-xs text-muted-foreground flex items-center gap-2 shrink-0">
+              <span>Você está trabalhando com o número <strong className="text-foreground">{activePhone.display_phone_number}</strong></span>
+              {lawyerName && <span>· Advogado: <strong className="text-foreground">{lawyerName}</strong></span>}
+            </div>
+          );
+        })()}
+        <div className={cn("flex flex-1 overflow-hidden relative min-h-0")}>
         {/* Contact list */}
         <ChatContactList
           contacts={contacts}
@@ -242,11 +254,12 @@ export default function ConversasPage() {
             </div>
           )}
         </div>
+        </div>
       </div>
 
       {/* Document Upload Dialog */}
       <Dialog open={showDocDialog} onOpenChange={setShowDocDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Enviar Arquivo</DialogTitle>
             <DialogDescription>Confirme o envio do arquivo selecionado</DialogDescription>
@@ -255,9 +268,9 @@ export default function ConversasPage() {
             {selectedFile && (
               <div className="flex items-center gap-3 rounded-lg border p-4">
                 {selectedFile.type.startsWith("image/") ? (
-                  <FileImage className="h-8 w-8 text-info" />
+                  <FileImage className="h-8 w-8 text-info shrink-0" />
                 ) : (
-                  <FileText className="h-8 w-8 text-destructive" />
+                  <FileText className="h-8 w-8 text-destructive shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{selectedFile.name}</p>

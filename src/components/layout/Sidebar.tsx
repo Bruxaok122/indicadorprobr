@@ -8,7 +8,6 @@ import {
   MessagesSquare,
   ContactRound,
   FileStack,
-  Cog,
   FileUp,
   Radio,
   Phone,
@@ -28,13 +27,19 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-const navItems = [
+const userNavItems = [
+  { title: "Painel", href: "/", icon: BarChart3, description: "Visão geral do sistema" },
+  { title: "Conversas", href: "/conversas", icon: MessagesSquare, description: "Chat com clientes" },
+  { title: "Contatos", href: "/contatos", icon: ContactRound, description: "Gerenciar clientes" },
+  { title: "Webhook", href: "/webhook", icon: Radio, description: "Informações do webhook" },
+];
+
+const adminNavItems = [
   { title: "Painel", href: "/", icon: BarChart3, description: "Visão geral do sistema" },
   { title: "Conversas", href: "/conversas", icon: MessagesSquare, description: "Chat com clientes" },
   { title: "Contatos", href: "/contatos", icon: ContactRound, description: "Gerenciar clientes" },
   { title: "Importar", href: "/importar", icon: FileUp, description: "Importar lista jurídica" },
   { title: "Templates", href: "/templates", icon: FileStack, description: "Modelos de mensagem" },
-  { title: "Configuração", href: "/configuracao", icon: Cog, description: "WhatsApp API" },
   { title: "Números", href: "/whatsapp-api", icon: Phone, description: "Gerenciar números e perfil" },
   { title: "Webhook", href: "/webhook", icon: Radio, description: "Informações do webhook" },
 ];
@@ -42,10 +47,12 @@ const navItems = [
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, profile } = useAuthContext();
+  const { signOut, profile, isAdmin } = useAuthContext();
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const navItems = isAdmin ? adminNavItems : userNavItems;
 
   const handleLogout = async () => {
     await signOut();

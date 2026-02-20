@@ -2,8 +2,12 @@ import { Contact } from "@/types/juriszap";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, Phone, FileText, ClipboardCopy, Lock, LockOpen } from "lucide-react";
+import { ArrowLeft, Phone, FileText, ClipboardCopy, Lock, LockOpen, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface ChatHeaderProps {
   contact: Contact;
@@ -49,7 +53,9 @@ Conta: `;
 }
 
 export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglingBlock, onOpenProfile }: ChatHeaderProps) {
+  const { user, isAdmin } = useAuthContext();
   const isBlocked = contact.status === "encerrado";
+  const [isTransferring, setIsTransferring] = useState(false);
 
   const handleCopyTemplate = async () => {
     const text = buildContactTemplate(contact);
@@ -65,6 +71,53 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
     onToggleBlock(contact.id, !isBlocked);
   };
 
+  const handleTransferToAdmin = async () => {
+    if (!user?.id) return;
+    setIsTransferring(true);
+    try {
+      // Find admin user_id from user_roles
+      const { data: adminRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "admin")
+        .limit(1)
+        .maybeSingle();
+
+      if (!adminRoles?.user_id) {
+        toast.error("Nenhum administrador encontrado");
+        return;
+      }
+
+      const adminId = adminRoles.user_id;
+
+      // Reassign contact
+      await supabase.from("contacts").update({ user_id: adminId }).eq("id", contact.id);
+
+      // Reassign conversation
+      const { data: conv } = await supabase
+        .from("conversations")
+        .select("id, user_id")
+        .eq("contact_id", contact.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (conv) {
+        await supabase.from("conversations").update({
+          user_id: adminId,
+          transferred_at: new Date().toISOString(),
+          transferred_by: user.id,
+          original_user_id: conv.user_id,
+        } as any).eq("id", conv.id);
+      }
+
+      toast.success("Conversa transferida para o administrador!");
+    } catch (err: any) {
+      toast.error("Erro ao transferir", { description: err.message });
+    } finally {
+      setIsTransferring(false);
+    }
+  };
+
   const blockButton = (
     <Button
       variant="ghost"
@@ -77,16 +130,23 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
     </Button>
   );
 
+  const transferButton = !isAdmin && (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={handleTransferToAdmin}
+      disabled={isTransferring}
+      className="text-muted-foreground hover:text-foreground"
+    >
+      {isTransferring ? <LoadingSpinner size="sm" /> : <ArrowRightLeft className="h-5 w-5" />}
+    </Button>
+  );
+
   return (
     <div className="flex items-center justify-between border-b bg-card px-3 md:px-5 py-2.5 md:py-3">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         {isMobile && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            className="shrink-0 -ml-1"
-          >
+          <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0 -ml-1">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
@@ -115,35 +175,34 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
           </div>
         </button>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 shrink-0">
         {isMobile ? (
           <>
+            {transferButton}
             {blockButton}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleCopyTemplate}
-              className="text-muted-foreground"
-            >
+            <Button variant="ghost" size="icon" onClick={handleCopyTemplate} className="text-muted-foreground">
               <ClipboardCopy className="h-5 w-5" />
             </Button>
           </>
         ) : (
           <>
+            {!isAdmin && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={handleTransferToAdmin} disabled={isTransferring} className="text-muted-foreground hover:text-foreground">
+                    {isTransferring ? <LoadingSpinner size="sm" /> : <ArrowRightLeft className="h-5 w-5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Transferir para administrador</TooltipContent>
+              </Tooltip>
+            )}
             <Tooltip>
-              <TooltipTrigger asChild>
-                {blockButton}
-              </TooltipTrigger>
+              <TooltipTrigger asChild>{blockButton}</TooltipTrigger>
               <TooltipContent>{isBlocked ? "Desbloquear cliente" : "Bloquear cliente"}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleCopyTemplate}
-                  className="text-muted-foreground"
-                >
+                <Button variant="ghost" size="icon" onClick={handleCopyTemplate} className="text-muted-foreground">
                   <ClipboardCopy className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
