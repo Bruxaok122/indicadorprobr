@@ -116,6 +116,38 @@ export function useMessages(contactId: string | null) {
     },
   });
 
+  const sendAudioMutation = useMutation({
+    mutationFn: async (params: {
+      contactId: string;
+      audioBlob: Blob;
+      selectedPhoneNumberId?: string;
+    }) => {
+      const formData = new FormData();
+      const ext = params.audioBlob.type.includes("ogg") ? "ogg" : "webm";
+      formData.append("audio", params.audioBlob, `audio.${ext}`);
+      formData.append("contactId", params.contactId);
+      if (user?.id) formData.append("userId", user.id);
+      if (params.selectedPhoneNumberId) formData.append("selectedPhoneNumberId", params.selectedPhoneNumberId);
+
+      const { data, error } = await supabase.functions.invoke("send-whatsapp-audio", {
+        body: formData,
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["messages", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao enviar áudio", {
+        description: error.message,
+      });
+    },
+  });
+
   return {
     messages,
     isLoading,
@@ -125,5 +157,7 @@ export function useMessages(contactId: string | null) {
     isSending: sendMessageMutation.isPending,
     sendDocument: sendDocumentMutation.mutate,
     isSendingDocument: sendDocumentMutation.isPending,
+    sendAudio: sendAudioMutation.mutate,
+    isSendingAudio: sendAudioMutation.isPending,
   };
 }

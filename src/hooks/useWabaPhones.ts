@@ -95,13 +95,14 @@ export function useWabaPhones() {
     },
   });
 
-  // All phones for admin management
+  // All phones for admin management — only active ones (deleted from Meta are excluded)
   const { data: allPhones = [] } = useQuery({
     queryKey: ["waba-phones-all"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("waba_phone_numbers")
         .select("*")
+        .eq("is_active", true)
         .order("display_phone_number");
 
       if (error) throw error;

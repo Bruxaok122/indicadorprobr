@@ -31,7 +31,6 @@ const userNavItems = [
   { title: "Painel", href: "/", icon: BarChart3, description: "Visão geral do sistema" },
   { title: "Conversas", href: "/conversas", icon: MessagesSquare, description: "Chat com clientes" },
   { title: "Contatos", href: "/contatos", icon: ContactRound, description: "Gerenciar clientes" },
-  { title: "Webhook", href: "/webhook", icon: Radio, description: "Informações do webhook" },
 ];
 
 const adminNavItems = [

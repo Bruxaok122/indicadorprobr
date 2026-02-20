@@ -68,6 +68,8 @@ export default function ConversasPage() {
     isSending,
     canSendFreeText,
     hasMessages,
+    sendAudio,
+    isSendingAudio,
   } = useMessages(selectedContactId);
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
@@ -175,9 +177,20 @@ export default function ConversasPage() {
           const activePhone = phones[0];
           const lawyerName = (activePhone as any).lawyer_name;
           return (
-            <div className="bg-primary/5 border-b px-4 py-1.5 text-xs text-muted-foreground flex items-center gap-2 shrink-0">
-              <span>Você está trabalhando com o número <strong className="text-foreground">{activePhone.display_phone_number}</strong></span>
-              {lawyerName && <span>· Advogado: <strong className="text-foreground">{lawyerName}</strong></span>}
+            <div className="bg-primary/15 border-b border-primary/30 px-4 py-2.5 flex items-center gap-3 shrink-0">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20">
+                <span className="text-primary text-xs">📞</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                <span className="text-sm font-medium text-foreground">
+                  Número ativo: <span className="text-primary font-bold">{activePhone.display_phone_number}</span>
+                </span>
+                {lawyerName && (
+                  <span className="text-sm font-medium text-foreground">
+                    · Advogado: <span className="text-primary font-bold">{lawyerName}</span>
+                  </span>
+                )}
+              </div>
             </div>
           );
         })()}
@@ -228,13 +241,21 @@ export default function ConversasPage() {
                 setMessageText={setMessageText}
                 canSendFreeText={canSendFreeText}
                 hasMessages={hasMessages}
-                isSending={isSending}
+                isSending={isSending || isSendingAudio}
                 isMobile={isMobile}
                 templatesAvailable={templates.length > 0}
                 isContactBlocked={selectedContact.status === "encerrado"}
                 onSendMessage={handleSendMessage}
                 onOpenTemplateDialog={() => setShowTemplateDialog(true)}
                 onFileSelected={handleFileSelected}
+                onSendAudio={(blob) => {
+                  if (!selectedContactId) return;
+                  sendAudio({
+                    contactId: selectedContactId,
+                    audioBlob: blob,
+                    selectedPhoneNumberId: selectedPhoneNumberId || undefined,
+                  });
+                }}
               />
             </>
           ) : (
