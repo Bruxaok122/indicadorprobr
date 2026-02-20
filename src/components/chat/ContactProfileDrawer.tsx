@@ -52,7 +52,7 @@ export function ContactProfileDrawer({
     },
     {
       icon: Scale,
-      label: "Advogado",
+      label: "Parte Contrária",
       value: contact.lawyer_name || "—",
     },
     {

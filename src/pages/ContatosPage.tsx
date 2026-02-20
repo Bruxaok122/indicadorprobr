@@ -251,7 +251,7 @@ export default function ContatosPage() {
                         <TableHead>Cliente</TableHead>
                         <TableHead>Telefone</TableHead>
                         <TableHead>Processo</TableHead>
-                        <TableHead>Advogado</TableHead>
+                        <TableHead>Parte Contrária</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Última Mensagem</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
