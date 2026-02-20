@@ -6,6 +6,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 
 interface AudioRecorderProps {
   onSendAudio: (blob: Blob) => void;
@@ -14,14 +15,17 @@ interface AudioRecorderProps {
 
 export function AudioRecorder({ onSendAudio, isSending }: AudioRecorderProps) {
   const [isFetching, setIsFetching] = useState(false);
+  const { user } = useAuth();
 
-  // Fetch the configured audio from admin
+  // Fetch the audio configured for the current user
   const { data: audioConfig } = useQuery({
-    queryKey: ["admin-audio-config"],
+    queryKey: ["admin-audio-config", user?.id],
+    enabled: !!user?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("admin_audio_config" as any)
         .select("*")
+        .eq("user_id", user!.id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -79,3 +83,4 @@ export function AudioRecorder({ onSendAudio, isSending }: AudioRecorderProps) {
     </Tooltip>
   );
 }
+
