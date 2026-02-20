@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
@@ -9,8 +9,9 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
-import { Radio, Send, List } from "lucide-react";
+import { Radio, Send, List, Mic, Upload, Trash2, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const CONTACT_FIELD_OPTIONS = [
   { value: "name", label: "Nome do Cliente" },
@@ -44,17 +45,36 @@ export default function AdminDisparosPage() {
   const { users } = useAdmin();
   const { allTemplates, sendBulk, isSendingBulk } = useMetaTemplates();
   const { phones } = useWabaPhones();
+  const queryClient = useQueryClient();
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
   const [variableMappings, setVariableMappings] = useState<Record<string, string>>({});
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [isDeletingAudio, setIsDeletingAudio] = useState(false);
 
   // List-based selection
   const [selectedList, setSelectedList] = useState<string>("");
   const [availableLists, setAvailableLists] = useState<ContactList[]>([]);
   const [listContactCount, setListContactCount] = useState(0);
   const [loadingLists, setLoadingLists] = useState(false);
+
+  // Fetch configured audio
+  const { data: audioConfig, isLoading: loadingAudio } = useQuery({
+    queryKey: ["admin-audio-config"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("admin_audio_config" as any)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as unknown as { id: string; audio_url: string; audio_name: string } | null;
+    },
+  });
 
   // Auto-select phone
   useEffect(() => {
@@ -104,6 +124,63 @@ export default function AdminDisparosPage() {
     setVariableMappings(defaults);
   }, [selectedTemplate]);
 
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("audio/")) {
+      toast.error("Selecione um arquivo de áudio válido");
+      return;
+    }
+    if (file.size > 16 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 16MB.");
+      return;
+    }
+    setIsUploadingAudio(true);
+    try {
+      const filePath = `audio/admin-config/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("documents")
+        .upload(filePath, file, { contentType: file.type, upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("documents").getPublicUrl(filePath);
+      const audioUrl = urlData.publicUrl;
+
+      // Delete previous config if exists
+      if (audioConfig?.id) {
+        await supabase.from("admin_audio_config" as any).delete().eq("id", audioConfig.id);
+      }
+
+      const { error: insertError } = await supabase.from("admin_audio_config" as any).insert({
+        audio_url: audioUrl,
+        audio_name: file.name,
+      });
+      if (insertError) throw insertError;
+
+      toast.success("Áudio configurado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["admin-audio-config"] });
+    } catch (err: any) {
+      toast.error("Erro ao salvar áudio", { description: err.message });
+    } finally {
+      setIsUploadingAudio(false);
+      if (audioInputRef.current) audioInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteAudio = async () => {
+    if (!audioConfig?.id) return;
+    setIsDeletingAudio(true);
+    try {
+      await supabase.from("admin_audio_config" as any).delete().eq("id", audioConfig.id);
+      toast.success("Áudio removido");
+      queryClient.invalidateQueries({ queryKey: ["admin-audio-config"] });
+    } catch (err: any) {
+      toast.error("Erro ao remover áudio", { description: err.message });
+    } finally {
+      setIsDeletingAudio(false);
+    }
+  };
+
   const approvedTemplates = allTemplates.filter((t) => t.status === "APPROVED");
 
   const handleSend = async () => {
@@ -151,6 +228,80 @@ export default function AdminDisparosPage() {
           Selecione o template, a lista de contatos e dispare mensagens personalizadas.
         </p>
       </div>
+
+      {/* Audio config card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Mic className="h-4 w-4 text-primary" />
+            Áudio de Voz dos Operadores
+          </CardTitle>
+          <CardDescription>
+            Configure o arquivo de áudio que os operadores enviarão com um clique nas conversas.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <input
+            ref={audioInputRef}
+            type="file"
+            accept="audio/*"
+            className="hidden"
+            onChange={handleAudioUpload}
+          />
+          {loadingAudio ? (
+            <div className="flex justify-center py-4"><LoadingSpinner size="sm" /></div>
+          ) : audioConfig ? (
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/40 px-4 py-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <CheckCircle className="h-5 w-5 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{audioConfig.audio_name}</p>
+                  <p className="text-xs text-muted-foreground">Áudio configurado · clique para substituir</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5"
+                  onClick={() => audioInputRef.current?.click()}
+                  disabled={isUploadingAudio}
+                >
+                  {isUploadingAudio ? <LoadingSpinner size="sm" /> : <Upload className="h-3.5 w-3.5" />}
+                  Substituir
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  onClick={handleDeleteAudio}
+                  disabled={isDeletingAudio}
+                >
+                  {isDeletingAudio ? <LoadingSpinner size="sm" /> : <Trash2 className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-center">
+              <Mic className="h-8 w-8 text-muted-foreground/30" />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Nenhum áudio configurado</p>
+                <p className="text-xs text-muted-foreground/70 mt-0.5">Os operadores não terão o botão de áudio habilitado.</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => audioInputRef.current?.click()}
+                disabled={isUploadingAudio}
+              >
+                {isUploadingAudio ? <LoadingSpinner size="sm" /> : <Upload className="h-4 w-4" />}
+                Carregar Áudio
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Step 1: Template */}
