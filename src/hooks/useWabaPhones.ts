@@ -10,6 +10,7 @@ export interface WabaPhoneNumber {
   verified_name: string | null;
   quality_rating: string | null;
   is_active: boolean;
+  lawyer_name?: string | null;
 }
 
 export function useWabaPhones() {

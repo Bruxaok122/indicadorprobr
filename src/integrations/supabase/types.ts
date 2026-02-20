@@ -65,6 +65,9 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean | null
+          original_user_id: string | null
+          transferred_at: string | null
+          transferred_by: string | null
           updated_at: string
           user_id: string | null
           window_expires_at: string | null
@@ -74,6 +77,9 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          original_user_id?: string | null
+          transferred_at?: string | null
+          transferred_by?: string | null
           updated_at?: string
           user_id?: string | null
           window_expires_at?: string | null
@@ -83,6 +89,9 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean | null
+          original_user_id?: string | null
+          transferred_at?: string | null
+          transferred_by?: string | null
           updated_at?: string
           user_id?: string | null
           window_expires_at?: string | null
@@ -442,6 +451,7 @@ export type Database = {
           display_phone_number: string
           id: string
           is_active: boolean
+          lawyer_name: string | null
           phone_number_id: string
           quality_rating: string | null
           updated_at: string
@@ -453,6 +463,7 @@ export type Database = {
           display_phone_number: string
           id?: string
           is_active?: boolean
+          lawyer_name?: string | null
           phone_number_id: string
           quality_rating?: string | null
           updated_at?: string
@@ -464,6 +475,7 @@ export type Database = {
           display_phone_number?: string
           id?: string
           is_active?: boolean
+          lawyer_name?: string | null
           phone_number_id?: string
           quality_rating?: string | null
           updated_at?: string

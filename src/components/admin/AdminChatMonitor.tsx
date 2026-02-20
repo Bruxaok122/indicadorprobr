@@ -1,20 +1,34 @@
 import { useState, useEffect, useRef } from "react";
-import { Profile, Message } from "@/types/juriszap";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Contact, Profile } from "@/types/juriszap";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Badge } from "@/components/ui/badge";
 import { ChatBubble } from "@/components/chat/ChatBubble";
 import { ChatDateSeparator } from "@/components/chat/ChatDateSeparator";
-import { Eye, MessageSquare, Users } from "lucide-react";
-import { format, isSameDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Input } from "@/components/ui/input";
+import { isSameDay } from "date-fns";
+import { MessageSquare, Search, ArrowRightLeft } from "lucide-react";
+import { toast } from "sonner";
+
+interface Message {
+  id: string;
+  content: string | null;
+  direction: string;
+  message_type: string;
+  created_at: string;
+  status: string | null;
+  image_url?: string | null;
+  document_url?: string | null;
+  document_name?: string | null;
+  user_id?: string | null;
+  contact_id: string;
+  conversation_id: string;
+}
 
 interface AdminChatMonitorProps {
   open: boolean;
@@ -22,242 +36,161 @@ interface AdminChatMonitorProps {
   user: Profile | null;
 }
 
-interface ContactWithMessages {
-  id: string;
-  name: string;
-  phone: string;
-  lastMessage?: string;
-  lastMessageAt?: string;
-  unreadCount: number;
-}
-
 export function AdminChatMonitor({ open, onOpenChange, user }: AdminChatMonitorProps) {
-  const [contacts, setContacts] = useState<ContactWithMessages[]>([]);
+  const { user: adminUser } = useAuthContext();
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [search, setSearch] = useState("");
+  const [isTakingOver, setIsTakingOver] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
-  // Load user's contacts when dialog opens
+  const { data: contacts = [], isLoading: contactsLoading } = useQuery({
+    queryKey: ["admin-monitor-contacts", user?.user_id],
+    queryFn: async () => {
+      if (!user?.user_id) return [];
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("user_id", user.user_id)
+        .order("last_message_at", { ascending: false, nullsFirst: false });
+      if (error) throw error;
+      return data as Contact[];
+    },
+    enabled: !!user?.user_id && open,
+  });
+
   useEffect(() => {
-    if (!open || !user) {
-      setContacts([]);
-      setSelectedContactId(null);
-      setMessages([]);
-      return;
-    }
-
-    const fetchContacts = async () => {
-      setIsLoadingContacts(true);
-      try {
-        const { data, error } = await supabase
-          .from("contacts")
-          .select("id, name, phone, last_message_at")
-          .eq("user_id", user.user_id)
-          .order("last_message_at", { ascending: false, nullsFirst: false });
-
-        if (error) throw error;
-
-        setContacts(
-          (data || []).map((c) => ({
-            id: c.id,
-            name: c.name,
-            phone: c.phone,
-            lastMessageAt: c.last_message_at || undefined,
-            unreadCount: 0,
-          }))
-        );
-      } catch (err) {
-        console.error("Error fetching contacts:", err);
-      } finally {
-        setIsLoadingContacts(false);
-      }
-    };
-
-    fetchContacts();
-  }, [open, user]);
-
-  // Load messages for selected contact
-  useEffect(() => {
-    if (!selectedContactId || !user) {
-      setMessages([]);
-      return;
-    }
-
+    if (!selectedContactId) { setMessages([]); return; }
     const fetchMessages = async () => {
-      setIsLoadingMessages(true);
-      try {
-        const { data, error } = await supabase
-          .from("messages")
-          .select("*")
-          .eq("contact_id", selectedContactId)
-          .eq("user_id", user.user_id)
-          .order("created_at", { ascending: true });
-
-        if (error) throw error;
-        setMessages((data || []) as unknown as Message[]);
-      } catch (err) {
-        console.error("Error fetching messages:", err);
-      } finally {
-        setIsLoadingMessages(false);
-      }
+      const { data, error } = await supabase
+        .from("messages").select("*").eq("contact_id", selectedContactId)
+        .order("created_at", { ascending: true });
+      if (!error && data) setMessages(data as Message[]);
     };
-
     fetchMessages();
-
-    // Subscribe to realtime updates for this contact's messages
     const channel = supabase
       .channel(`admin-monitor-${selectedContactId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `contact_id=eq.${selectedContactId}`,
-        },
-        (payload) => {
-          const newMsg = payload.new as any;
-          if (newMsg.user_id === user.user_id) {
-            setMessages((prev) => [...prev, newMsg as unknown as Message]);
-          }
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "messages",
-          filter: `contact_id=eq.${selectedContactId}`,
-        },
-        (payload) => {
-          const updated = payload.new as unknown as Message;
-          setMessages((prev) =>
-            prev.map((m) => (m.id === updated.id ? updated : m))
-          );
-        }
-      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `contact_id=eq.${selectedContactId}` },
+        (payload) => setMessages((prev) => [...prev, payload.new as Message]))
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages", filter: `contact_id=eq.${selectedContactId}` },
+        (payload) => setMessages((prev) => prev.map((m) => m.id === payload.new.id ? payload.new as Message : m)))
       .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedContactId]);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [selectedContactId, user]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => { if (!open) { setSelectedContactId(null); setMessages([]); setSearch(""); } }, [open]);
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const renderMessages = () => {
-    const elements: React.ReactNode[] = [];
-    let lastDate: Date | null = null;
-
-    messages.forEach((message) => {
-      const msgDate = new Date(message.created_at);
-      if (!lastDate || !isSameDay(lastDate, msgDate)) {
-        elements.push(<ChatDateSeparator key={`date-${message.id}`} date={msgDate} />);
-        lastDate = msgDate;
+  const handleTakeOver = async () => {
+    if (!selectedContactId || !adminUser?.id) return;
+    setIsTakingOver(true);
+    try {
+      await supabase.from("contacts").update({ user_id: adminUser.id }).eq("id", selectedContactId);
+      const { data: conv } = await supabase.from("conversations").select("id, user_id")
+        .eq("contact_id", selectedContactId).eq("is_active", true).maybeSingle();
+      if (conv) {
+        await supabase.from("conversations").update({
+          user_id: adminUser.id,
+          transferred_at: new Date().toISOString(),
+          transferred_by: adminUser.id,
+          original_user_id: conv.user_id,
+        } as any).eq("id", conv.id);
       }
-      elements.push(<ChatBubble key={message.id} message={message} />);
-    });
-
-    return elements;
+      toast.success("Conversa assumida! O contato foi transferido para você.");
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-monitor-contacts"] });
+      onOpenChange(false);
+    } catch (err: any) {
+      toast.error("Erro ao assumir conversa", { description: err.message });
+    } finally { setIsTakingOver(false); }
   };
+
+  const filteredContacts = contacts.filter((c) => {
+    const q = search.toLowerCase();
+    return c.name.toLowerCase().includes(q) || c.phone.includes(q);
+  });
+  const selectedContact = contacts.find((c) => c.id === selectedContactId);
+
+  const groupedMessages: Array<{ type: "date"; date: Date } | { type: "message"; message: Message }> = [];
+  messages.forEach((msg, i) => {
+    const msgDate = new Date(msg.created_at);
+    if (i === 0 || !isSameDay(msgDate, new Date(messages[i - 1].created_at))) {
+      groupedMessages.push({ type: "date", date: msgDate });
+    }
+    groupedMessages.push({ type: "message", message: msg });
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-4 py-3 border-b shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5 text-primary" />
-            Monitorar Chat — {user?.full_name}
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <MessageSquare className="h-4 w-4 text-primary" />
+            Monitor de Chat — {user?.full_name}
+            <Badge variant="outline" className="text-xs ml-1">Tempo real</Badge>
           </DialogTitle>
         </DialogHeader>
-
         <div className="flex flex-1 min-h-0">
-          {/* Contact list sidebar */}
-          <div className="w-64 border-r flex flex-col shrink-0">
+          <div className="w-72 border-r flex flex-col shrink-0">
             <div className="p-2 border-b">
-              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                {contacts.length} contato{contacts.length !== 1 ? "s" : ""}
-              </span>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className="pl-8 h-8 text-sm" />
+              </div>
             </div>
             <ScrollArea className="flex-1">
-              {isLoadingContacts ? (
-                <div className="flex justify-center py-8">
-                  <LoadingSpinner size="sm" />
-                </div>
-              ) : contacts.length === 0 ? (
-                <div className="text-center py-8 text-sm text-muted-foreground">
-                  Nenhum contato
-                </div>
-              ) : (
-                contacts.map((contact) => (
-                  <button
-                    key={contact.id}
-                    onClick={() => setSelectedContactId(contact.id)}
-                    className={`w-full text-left px-3 py-2.5 border-b border-border/50 hover:bg-accent/50 transition-colors ${
-                      selectedContactId === contact.id ? "bg-accent" : ""
-                    }`}
-                  >
-                    <p className="font-medium text-sm truncate">{contact.name}</p>
+              {contactsLoading ? (
+                <div className="flex justify-center py-6"><LoadingSpinner size="sm" /></div>
+              ) : filteredContacts.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-6">Sem contatos</p>
+              ) : filteredContacts.map((contact) => (
+                <button key={contact.id} onClick={() => setSelectedContactId(contact.id)}
+                  className={`w-full flex items-center gap-2 px-3 py-2.5 text-left border-b border-border/50 hover:bg-muted/50 transition-colors ${selectedContactId === contact.id ? "bg-muted" : ""}`}>
+                  <div className="h-8 w-8 shrink-0 rounded-full bg-primary flex items-center justify-center text-xs font-medium text-primary-foreground">
+                    {contact.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{contact.name}</p>
                     <p className="text-xs text-muted-foreground truncate">{contact.phone}</p>
-                    {contact.lastMessageAt && (
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {format(new Date(contact.lastMessageAt), "dd/MM HH:mm", { locale: ptBR })}
-                      </p>
-                    )}
-                  </button>
-                ))
-              )}
+                  </div>
+                </button>
+              ))}
             </ScrollArea>
           </div>
-
-          {/* Messages area */}
-          <div className="flex-1 flex flex-col min-w-0">
-            {selectedContactId ? (
+          <div className="flex-1 flex flex-col min-h-0 min-w-0">
+            {selectedContact ? (
               <>
-                {/* Chat header */}
-                <div className="px-4 py-2 border-b bg-muted/30 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      <Eye className="h-3 w-3 mr-1" />
-                      Somente leitura
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      Monitoramento em tempo real
-                    </span>
+                <div className="px-4 py-2.5 border-b flex items-center justify-between shrink-0 bg-card">
+                  <div>
+                    <p className="font-semibold text-sm">{selectedContact.name}</p>
+                    <p className="text-xs text-muted-foreground">{selectedContact.phone}</p>
                   </div>
+                  <Button size="sm" variant="destructive" onClick={handleTakeOver} disabled={isTakingOver} className="gap-1.5">
+                    {isTakingOver ? <LoadingSpinner size="sm" /> : <ArrowRightLeft className="h-3.5 w-3.5" />}
+                    Assumir Conversa
+                  </Button>
                 </div>
-
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto chat-wallpaper scrollbar-thin py-2 min-h-0">
-                  {isLoadingMessages ? (
-                    <div className="flex items-center justify-center h-full">
-                      <LoadingSpinner size="lg" text="Carregando mensagens..." />
-                    </div>
-                  ) : messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                      <MessageSquare className="h-12 w-12 mb-2 opacity-30" />
-                      <p className="text-sm">Nenhuma mensagem nesta conversa</p>
-                    </div>
-                  ) : (
-                    <>
-                      {renderMessages()}
-                      <div ref={messagesEndRef} />
-                    </>
-                  )}
+                <ScrollArea className="flex-1 p-4 chat-wallpaper">
+                  <div className="space-y-1">
+                    {groupedMessages.map((item, idx) =>
+                      item.type === "date" ? (
+                        <ChatDateSeparator key={`date-${idx}`} date={item.date} />
+                      ) : (
+                        <ChatBubble key={item.message.id} message={item.message as any} />
+                      )
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </ScrollArea>
+                <div className="border-t bg-muted/30 px-4 py-2 text-center shrink-0">
+                  <p className="text-xs text-muted-foreground">Somente leitura · Monitoramento em tempo real</p>
                 </div>
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                <Eye className="h-16 w-16 mb-4 opacity-20" />
-                <p className="text-lg font-medium">Selecione um contato</p>
-                <p className="text-sm">para monitorar as mensagens em tempo real</p>
+              <div className="flex-1 flex flex-col items-center justify-center gap-2 text-muted-foreground chat-wallpaper">
+                <MessageSquare className="h-10 w-10 opacity-30" />
+                <p className="text-sm">Selecione um contato para monitorar</p>
               </div>
             )}
           </div>

@@ -4,7 +4,7 @@ import { useWabaPhones } from "@/hooks/useWabaPhones";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Users, UserPlus } from "lucide-react";
+import { Users, UserPlus, Radio } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -17,6 +17,8 @@ import { PhoneNumbersSection } from "@/components/admin/PhoneNumbersSection";
 import { PhonePermissionsDialog } from "@/components/admin/PhonePermissionsDialog";
 import { AdminChatMonitor } from "@/components/admin/AdminChatMonitor";
 import { Profile } from "@/types/juriszap";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AdminDisparosPage from "@/pages/AdminDisparosPage";
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -62,43 +64,66 @@ export default function AdminPage() {
       <main className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
         <StatsCards stats={stats} isLoading={isLoadingStats} />
 
-        <PhoneNumbersSection />
+        <Tabs defaultValue="usuarios">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="usuarios" className="gap-1.5">
+              <Users className="h-4 w-4" /> Usuários
+            </TabsTrigger>
+            <TabsTrigger value="numeros" className="gap-1.5">
+              Números
+            </TabsTrigger>
+            <TabsTrigger value="disparos" className="gap-1.5">
+              <Radio className="h-4 w-4" /> Disparos
+            </TabsTrigger>
+          </TabsList>
 
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="min-w-0">
-                <CardTitle>Gerenciar Usuários</CardTitle>
-                <CardDescription>
-                  Crie, bloqueie e gerencie permissões dos usuários
-                </CardDescription>
-              </div>
-              <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto">
-                <UserPlus className="mr-2 h-4 w-4" /> Novo Usuário
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoadingUsers ? (
-              <div className="flex items-center justify-center py-12">
-                <LoadingSpinner size="lg" text="Carregando usuários..." />
-              </div>
-            ) : users.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Users className="mb-4 h-10 w-10 md:h-12 md:w-12 text-muted-foreground/50" />
-                <p className="text-lg font-medium text-muted-foreground">
-                  Nenhum usuário cadastrado
-                </p>
-                <Button onClick={() => setShowCreateDialog(true)} className="mt-4 w-full sm:w-auto">
-                  <UserPlus className="mr-2 h-4 w-4" /> Criar primeiro usuário
-                </Button>
-              </div>
-            ) : isMobile ? (
-              <div className="grid gap-3">
-                {users.map((user) => (
-                  <UserCard
-                    key={user.id}
-                    user={user}
+          <TabsContent value="usuarios" className="mt-4">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <CardTitle>Gerenciar Usuários</CardTitle>
+                    <CardDescription>Crie, bloqueie e gerencie permissões dos usuários</CardDescription>
+                  </div>
+                  <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto">
+                    <UserPlus className="mr-2 h-4 w-4" /> Novo Usuário
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isLoadingUsers ? (
+                  <div className="flex items-center justify-center py-12">
+                    <LoadingSpinner size="lg" text="Carregando usuários..." />
+                  </div>
+                ) : users.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Users className="mb-4 h-10 w-10 md:h-12 md:w-12 text-muted-foreground/50" />
+                    <p className="text-lg font-medium text-muted-foreground">Nenhum usuário cadastrado</p>
+                    <Button onClick={() => setShowCreateDialog(true)} className="mt-4 w-full sm:w-auto">
+                      <UserPlus className="mr-2 h-4 w-4" /> Criar primeiro usuário
+                    </Button>
+                  </div>
+                ) : isMobile ? (
+                  <div className="grid gap-3">
+                    {users.map((user) => (
+                      <UserCard
+                        key={user.id}
+                        user={user}
+                        onToggleBlock={toggleBlock}
+                        onToggleApiPermission={toggleApiPermission}
+                        onDelete={deleteUser}
+                        onClearTempBan={clearTempBan}
+                        onManagePhones={setPhonePermUser}
+                        onSetPlan={setSubscriptionPlan}
+                        onAuthorizeDevice={authorizeDevice}
+                        onResetDevice={resetDevice}
+                        onMonitorChat={setMonitorUser}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <UsersTable
+                    users={users}
                     onToggleBlock={toggleBlock}
                     onToggleApiPermission={toggleApiPermission}
                     onDelete={deleteUser}
@@ -109,24 +134,19 @@ export default function AdminPage() {
                     onResetDevice={resetDevice}
                     onMonitorChat={setMonitorUser}
                   />
-                ))}
-              </div>
-            ) : (
-              <UsersTable
-                users={users}
-                onToggleBlock={toggleBlock}
-                onToggleApiPermission={toggleApiPermission}
-                onDelete={deleteUser}
-                onClearTempBan={clearTempBan}
-                onManagePhones={setPhonePermUser}
-                onSetPlan={setSubscriptionPlan}
-                onAuthorizeDevice={authorizeDevice}
-                onResetDevice={resetDevice}
-                onMonitorChat={setMonitorUser}
-              />
-            )}
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="numeros" className="mt-4">
+            <PhoneNumbersSection />
+          </TabsContent>
+
+          <TabsContent value="disparos" className="mt-4">
+            <AdminDisparosPage />
+          </TabsContent>
+        </Tabs>
 
         <div className="text-center py-4">
           <p className="text-sm text-muted-foreground">

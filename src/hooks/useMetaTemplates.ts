@@ -44,9 +44,11 @@ export function useMetaTemplates() {
       templateLanguage?: string;
       selectedPhoneNumberId?: string;
       variableMappings?: Record<string, string>;
+      targetUserId?: string;
     }) => {
+      const { targetUserId, ...rest } = params;
       const { data, error } = await supabase.functions.invoke("send-bulk-template", {
-        body: { ...params, userId: user?.id },
+        body: { ...rest, userId: targetUserId || user?.id },
       });
 
       if (error) throw error;
