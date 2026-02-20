@@ -104,15 +104,19 @@ serve(async (req) => {
     const audioBuffer = await audioFile.arrayBuffer();
     const audioBytes = new Uint8Array(audioBuffer);
 
-    // Determine mime type - prefer ogg/opus for voice messages
-    const mimeType = audioFile.type || "audio/ogg; codecs=opus";
+    // For PTT (voice note) to work on iOS WhatsApp, the file MUST be audio/ogg with opus codec.
+    // We force ogg/opus MIME type for the WhatsApp API upload regardless of original format.
+    const originalMime = audioFile.type || "audio/ogg; codecs=opus";
+    const isOgg = originalMime.includes("ogg") || originalMime.includes("opus");
+    // Use ogg/opus for PTT appearance; fallback to original for other formats
+    const whatsappMime = isOgg ? "audio/ogg; codecs=opus" : originalMime;
 
     const mediaFormData = new FormData();
     mediaFormData.append("messaging_product", "whatsapp");
-    mediaFormData.append("type", mimeType);
+    mediaFormData.append("type", whatsappMime);
     mediaFormData.append(
       "file",
-      new Blob([audioBytes], { type: mimeType }),
+      new Blob([audioBytes], { type: whatsappMime }),
       audioFile.name || "audio.ogg"
     );
 
@@ -140,15 +144,17 @@ serve(async (req) => {
 
     const mediaId = uploadResult.id;
 
-    // Step 2: Send as PTT (voice note) — this shows as a recorded voice message
+    // Step 2: Send as PTT (voice note) — this shows as a recorded voice message on iOS too
     const whatsappUrl = `https://graph.facebook.com/v18.0/${finalPhoneNumberId}/messages`;
 
+    // Using type "audio" with ptt field ensures iOS WhatsApp shows it as a live voice recording
     const requestBody = {
       messaging_product: "whatsapp",
       to: contact.phone,
       type: "audio",
       audio: {
         id: mediaId,
+        ptt: true,
       },
     };
 
@@ -172,20 +178,27 @@ serve(async (req) => {
       );
     }
 
-    // Store audio in Supabase Storage
+    // Store audio in Supabase Storage using original MIME type
     const fileExt = audioFile.name?.split(".").pop() || "ogg";
+    const storageMime = originalMime.startsWith("audio/") ? originalMime : "audio/ogg";
     const filePath = `audio/${contactId}/${Date.now()}.${fileExt}`;
 
-    await supabase.storage
+    const { error: storageError } = await supabase.storage
       .from("documents")
-      .upload(filePath, new Blob([audioBytes], { type: mimeType }), {
-        contentType: mimeType,
+      .upload(filePath, new Blob([audioBytes], { type: storageMime }), {
+        contentType: storageMime,
         upsert: false,
       });
 
-    const { data: publicUrlData } = supabase.storage
-      .from("documents")
-      .getPublicUrl(filePath);
+    let audioPublicUrl: string | null = null;
+    if (!storageError) {
+      const { data: publicUrlData } = supabase.storage
+        .from("documents")
+        .getPublicUrl(filePath);
+      audioPublicUrl = publicUrlData?.publicUrl || null;
+    } else {
+      console.error("Storage upload error:", storageError.message);
+    }
 
     // Get or create conversation
     let { data: conversation } = await supabase
@@ -209,7 +222,7 @@ serve(async (req) => {
       conversation = newConversation;
     }
 
-    // Save message
+    // Save message — document_url stores the playable URL for the chat bubble
     await supabase.from("messages").insert({
       conversation_id: conversation!.id,
       contact_id: contactId,
@@ -217,8 +230,8 @@ serve(async (req) => {
       direction: "outgoing",
       message_type: "audio",
       content: "[Áudio]",
-      document_url: publicUrlData?.publicUrl || null,
-      document_name: "Áudio",
+      document_url: audioPublicUrl,
+      document_name: audioFile.name || "Áudio",
       whatsapp_message_id: sendResult.messages?.[0]?.id,
       status: "sent",
     });
