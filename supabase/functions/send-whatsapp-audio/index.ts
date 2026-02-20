@@ -178,9 +178,15 @@ serve(async (req) => {
       );
     }
 
-    // Store audio in Supabase Storage using original MIME type
-    const fileExt = audioFile.name?.split(".").pop() || "ogg";
-    const storageMime = originalMime.startsWith("audio/") ? originalMime : "audio/ogg";
+    // Store audio in Supabase Storage
+    // Use only basic audio MIME types accepted by storage (no codec parameters)
+    const fileExt = audioFile.name?.split(".").pop() || "mp3";
+    let storageMime = "audio/mpeg"; // safe default
+    if (originalMime.includes("ogg")) storageMime = "audio/ogg";
+    else if (originalMime.includes("wav")) storageMime = "audio/wav";
+    else if (originalMime.includes("mp4") || originalMime.includes("m4a")) storageMime = "audio/mp4";
+    else if (originalMime.includes("webm")) storageMime = "audio/webm";
+    else if (originalMime.includes("mpeg") || originalMime.includes("mp3")) storageMime = "audio/mpeg";
     const filePath = `audio/${contactId}/${Date.now()}.${fileExt}`;
 
     const { error: storageError } = await supabase.storage
