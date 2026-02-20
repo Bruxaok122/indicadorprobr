@@ -137,9 +137,13 @@ export function useMessages(contactId: string | null) {
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["messages", contactId, user?.id] });
-      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    onSuccess: (_, params) => {
+      // Use the contactId from params (not from closure) to ensure correct key
+      queryClient.invalidateQueries({
+        queryKey: ["messages", params.contactId, user?.id],
+        refetchType: "active",
+      });
+      queryClient.invalidateQueries({ queryKey: ["contacts"], refetchType: "active" });
     },
     onError: (error: any) => {
       toast.error("Erro ao enviar áudio", {
