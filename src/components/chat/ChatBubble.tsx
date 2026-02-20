@@ -65,18 +65,9 @@ export function ChatBubble({ message }: ChatBubbleProps) {
 
     if (message.message_type === "audio") {
       return (
-        <div className="flex items-center gap-2 py-0.5 min-w-[200px]">
+        <div className="flex items-center gap-1.5 py-0.5">
           <Mic className="h-4 w-4 shrink-0 opacity-70" />
-          {message.document_url ? (
-            <audio
-              src={message.document_url}
-              controls
-              className="h-8 flex-1"
-              style={{ minWidth: 160, maxWidth: 220 }}
-            />
-          ) : (
-            <span className="text-sm opacity-70">Áudio</span>
-          )}
+          <span className="text-sm">Áudio enviado!</span>
         </div>
       );
     }
