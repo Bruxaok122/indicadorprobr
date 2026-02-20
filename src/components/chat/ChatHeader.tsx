@@ -78,30 +78,16 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
     if (!user?.id) return;
     setIsTransferring(true);
     try {
-      const TARGET_USER_ID = "c1ab9e7b-3567-4712-ad77-e3909cc45abf";
+      // Use edge function with service_role to bypass RLS
+      const { data, error } = await supabase.functions.invoke("transfer-conversation", {
+        body: { contactId: contact.id },
+      });
 
-      await supabase.from("contacts").update({ user_id: TARGET_USER_ID }).eq("id", contact.id);
-
-      const { data: conv } = await supabase
-        .from("conversations")
-        .select("id, user_id")
-        .eq("contact_id", contact.id)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (conv) {
-        await supabase.from("conversations").update({
-          user_id: TARGET_USER_ID,
-          transferred_at: new Date().toISOString(),
-          transferred_by: user.id,
-          original_user_id: conv.user_id,
-        } as any).eq("id", conv.id);
-      }
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       toast.success("Conversa transferida com sucesso!");
-      // Mesmo padrão do admin (handleTakeOver): só invalidate, sem refetch forçado
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
-      // Fecha o chat do operador (equivalente ao onOpenChange(false) do admin)
       onTransferDone?.();
     } catch (err: any) {
       toast.error("Erro ao transferir", { description: err.message });
