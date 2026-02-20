@@ -21,6 +21,7 @@ export type Database = {
           created_at: string
           id: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           audio_name: string
@@ -28,6 +29,7 @@ export type Database = {
           created_at?: string
           id?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           audio_name?: string
@@ -35,6 +37,7 @@ export type Database = {
           created_at?: string
           id?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
