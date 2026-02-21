@@ -48,7 +48,8 @@ export function ChatInput({
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessageText(e.target.value);
     const el = e.target;
-    el.style.height = "auto";
+    // Avoid collapsing to "auto" which resets parent scroll position
+    el.style.height = "0px";
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
   };
 
