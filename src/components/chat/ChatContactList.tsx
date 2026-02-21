@@ -96,10 +96,10 @@ export function ChatContactList({
   return (
     <div
       className={cn(
-        "flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800",
+        "flex flex-col bg-card dark:bg-card border-r border-border contact-list-panel h-full",
         isMobile
           ? cn("absolute inset-0 z-10 transition-transform duration-300 h-full", mobileShowChat && "-translate-x-full")
-          : "w-[340px] h-full"
+          : "w-full"
       )}
     >
       {/* Tabs */}
