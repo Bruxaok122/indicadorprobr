@@ -11,8 +11,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MessageSquare, Send, Upload, FileText, FileImage, Moon, Sun } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { MessageSquare, Send, Upload, FileText, FileImage } from "lucide-react";
 
 import { ChatContactList } from "@/components/chat/ChatContactList";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -32,7 +31,7 @@ import {
 } from "@/components/ui/select";
 
 export default function ConversasPage() {
-  const { isAdmin } = useAuthContext();
+  const { isAdmin, profile, signOut } = useAuthContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { contacts, isLoading: contactsLoading, toggleContactBlock, isTogglingBlock } = useContacts();
@@ -121,8 +120,17 @@ export default function ConversasPage() {
 
   const Wrapper = isAdmin ? AppLayout : ({ children }: { children: React.ReactNode }) => <>{children}</>;
 
-  // Theme toggle for operator (no sidebar)
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
+  // Theme toggle for operator (no sidebar) — dark is default
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "light") return false;
+    // Default to dark
+    if (!saved) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    }
+    return true;
+  });
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
@@ -137,33 +145,6 @@ export default function ConversasPage() {
         "bg-muted dark:bg-background",
         isMobile && !isAdmin ? "h-[100dvh]" : isMobile ? "h-[calc(100dvh-3.5rem)]" : "h-screen"
       )}>
-        {/* Operator theme toggle floating button */}
-        {!isAdmin && !isMobile && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
-            className="absolute top-3 right-3 z-30"
-          >
-            <button
-              onClick={toggleTheme}
-              className="flex items-center justify-center h-9 w-9 rounded-full bg-card dark:bg-card border border-border shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
-            >
-              <AnimatePresence mode="wait">
-                {isDark ? (
-                  <motion.div key="sun" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
-                    <Sun className="h-4 w-4 text-amber-400" />
-                  </motion.div>
-                ) : (
-                  <motion.div key="moon" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
-                    <Moon className="h-4 w-4 text-foreground/70" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </button>
-          </motion.div>
-        )}
-
         <div className={cn("flex flex-1 overflow-hidden relative min-h-0", !isMobile && "gap-3 p-2 pr-2")}>
           {/* Contact list with 3D effect */}
           <div
@@ -179,6 +160,10 @@ export default function ConversasPage() {
               isMobile={isMobile} mobileShowChat={mobileShowChat}
               operatorPhone={!isAdmin ? operatorPhone : undefined}
               operatorLawyer={!isAdmin ? operatorLawyer : undefined}
+              operatorName={!isAdmin ? profile?.full_name : undefined}
+              isDark={!isAdmin ? isDark : undefined}
+              onToggleTheme={!isAdmin ? toggleTheme : undefined}
+              onLogout={!isAdmin ? signOut : undefined}
             />
           </div>
 
@@ -222,18 +207,13 @@ export default function ConversasPage() {
               </>
             ) : (
               <div className={cn("flex flex-1 flex-col items-center justify-center chat-wallpaper", isMobile && "hidden")}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.3 }}
-                  className="flex flex-col items-center"
-                >
+                <div className="flex flex-col items-center animate-fade-in">
                   <div className="flex h-20 w-20 items-center justify-center rounded-full bg-card/80 shadow-lg mb-5">
                     <MessageSquare className="h-10 w-10 text-green-500/40" />
                   </div>
                   <h3 className="text-lg font-semibold text-foreground/60">Selecione uma conversa</h3>
                   <p className="text-sm text-muted-foreground mt-1">Escolha um contato ao lado para iniciar</p>
-                </motion.div>
+                </div>
               </div>
             )}
           </div>

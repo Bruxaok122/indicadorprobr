@@ -32,7 +32,8 @@ export function ThemeToggle() {
       setIsDark(true);
     } else if (savedTheme === "light") {
       setIsDark(false);
-    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    } else {
+      // Default to dark mode
       setIsDark(true);
     }
   }, []);
