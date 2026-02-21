@@ -13,6 +13,7 @@ import {
   Mic,
 } from "lucide-react";
 import { ImageLightbox } from "./ImageLightbox";
+import { motion } from "framer-motion";
 
 interface ChatBubbleProps {
   message: Message;
@@ -77,7 +78,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
     if (message.message_type === "document") {
       return (
         <>
-          <div className="mb-1.5 flex items-center gap-2 rounded-md bg-black/5 dark:bg-white/5 p-2">
+          <div className="mb-1.5 flex items-center gap-2 rounded-lg bg-black/5 dark:bg-white/5 p-2.5">
             <FileText className="h-5 w-5 shrink-0" />
             <span className="text-sm font-medium truncate">
               {message.document_name || "Documento"}
@@ -93,7 +94,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
     if (message.message_type === "template") {
       return (
         <div>
-          <span className="mb-1 inline-block rounded bg-black/5 dark:bg-white/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide opacity-70">
+          <span className="mb-1 inline-block rounded-md bg-black/5 dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide opacity-70">
             Template
           </span>
           <p className="whitespace-pre-wrap text-sm">{message.content || message.template_name}</p>
@@ -106,7 +107,12 @@ export function ChatBubble({ message }: ChatBubbleProps) {
 
   return (
     <>
-      <div className={cn("flex mb-1 px-2 md:px-4", isOutgoing ? "justify-end" : "justify-start")}>
+      <motion.div
+        initial={{ opacity: 0, y: 8, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className={cn("flex mb-1 px-2 md:px-4", isOutgoing ? "justify-end" : "justify-start")}
+      >
         <div
           className={cn(
             "relative max-w-[85%] md:max-w-[65%] px-3 py-1.5 shadow-sm chat-selectable overflow-hidden break-words",
@@ -126,7 +132,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
             {isOutgoing && getStatusIcon(message.status)}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {message.message_type === "image" && message.image_url && (
         <ImageLightbox

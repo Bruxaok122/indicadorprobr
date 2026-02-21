@@ -7,6 +7,7 @@ import { ChatBubble } from "./ChatBubble";
 import { ChatDateSeparator } from "./ChatDateSeparator";
 import { TypingIndicator } from "./TypingIndicator";
 import { isSameDay } from "date-fns";
+import { motion } from "framer-motion";
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -40,21 +41,30 @@ export function ChatMessages({
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center text-center chat-wallpaper">
-        <MessageSquare className="mb-4 h-12 w-12 text-muted-foreground/50" />
-        <p className="text-lg font-medium text-muted-foreground">
-          Nenhuma mensagem ainda
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Use um template aprovado para iniciar a conversa
-        </p>
-        <Button
-          onClick={onOpenTemplateDialog}
-          className="mt-4"
-          disabled={!templatesAvailable}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="flex flex-col items-center"
         >
-          <Send className="mr-2 h-4 w-4" />
-          Enviar Template
-        </Button>
+          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10 mb-5">
+            <MessageSquare className="h-10 w-10 text-primary/50" />
+          </div>
+          <p className="text-lg font-semibold text-foreground/70">
+            Nenhuma mensagem ainda
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Use um template aprovado para iniciar a conversa
+          </p>
+          <Button
+            onClick={onOpenTemplateDialog}
+            className="mt-5 rounded-xl shadow-md hover:shadow-lg transition-shadow"
+            disabled={!templatesAvailable}
+          >
+            <Send className="mr-2 h-4 w-4" />
+            Enviar Template
+          </Button>
+        </motion.div>
       </div>
     );
   }
