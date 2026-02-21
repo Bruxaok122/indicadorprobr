@@ -3,12 +3,11 @@ import { Toaster as Sonner, toast } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
-const Toaster = ({ ...props }: ToasterProps) => {
+const Toaster = ({ closeButton: _ignored, ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
 
   return (
     <Sonner
-      closeButton={false}
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       toastOptions={{
@@ -21,6 +20,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         },
       }}
       {...props}
+      closeButton={false}
     />
   );
 };

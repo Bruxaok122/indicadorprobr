@@ -282,3 +282,11 @@ div[style*="Edit with Lovable"],
     display: none;
   }
 }
+
+/* Hide all toast/sonner dismiss buttons globally */
+[data-sonner-toast] [data-close-button],
+[data-sonner-toast] button[aria-label="Close"],
+.sonner-close-button,
+[data-dismiss] {
+  display: none !important;
+}
