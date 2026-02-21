@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { useContacts } from "@/hooks/useContacts";
 import { useMessages } from "@/hooks/useMessages";
 import { useMetaTemplates } from "@/hooks/useMetaTemplates";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
