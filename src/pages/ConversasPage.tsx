@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 
 export default function ConversasPage() {
+  const { isAdmin } = useAuthContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { contacts, isLoading: contactsLoading, toggleContactBlock, isTogglingBlock } = useContacts();
@@ -112,9 +113,11 @@ export default function ConversasPage() {
     } finally { setIsUploading(false); }
   };
 
+  const Wrapper = isAdmin ? AppLayout : ({ children }: { children: React.ReactNode }) => <>{children}</>;
+
   return (
-    <AppLayout>
-      <div className={cn("flex flex-col overflow-hidden relative min-h-0 bg-gray-100 dark:bg-gray-950", isMobile ? "h-[calc(100dvh-3.5rem)]" : "h-screen")}>
+    <Wrapper>
+       <div className={cn("flex flex-col overflow-hidden relative min-h-0 bg-gray-100 dark:bg-gray-950", isMobile && !isAdmin ? "h-[100dvh]" : isMobile ? "h-[calc(100dvh-3.5rem)]" : "h-screen")}>
         <div className={cn("flex flex-1 overflow-hidden relative min-h-0")}>
           {/* Contact list */}
           <ChatContactList
@@ -235,6 +238,6 @@ export default function ConversasPage() {
 
       {/* Contact Profile Drawer */}
       <ContactProfileDrawer contact={selectedContact ?? null} open={showProfileDrawer} onOpenChange={setShowProfileDrawer} />
-    </AppLayout>
+    </Wrapper>
   );
 }
