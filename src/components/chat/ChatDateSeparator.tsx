@@ -16,8 +16,8 @@ export function ChatDateSeparator({ date }: ChatDateSeparatorProps) {
   }
 
   return (
-    <div className="flex justify-center my-3">
-      <span className="rounded-lg bg-card px-3 py-1 text-xs text-muted-foreground shadow-sm">
+    <div className="flex justify-center my-2">
+      <span className="rounded-lg bg-white/90 dark:bg-gray-800/90 px-3 py-1 text-[11px] text-gray-600 dark:text-gray-400 shadow-sm font-medium">
         {label}
       </span>
     </div>

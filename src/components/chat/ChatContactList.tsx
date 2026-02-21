@@ -3,9 +3,8 @@ import { Contact } from "@/types/juriszap";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, MessageSquare, Inbox, Clock, CheckCheck, XCircle } from "lucide-react";
+import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Filter } from "lucide-react";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,9 +12,9 @@ import { motion, AnimatePresence } from "framer-motion";
 type TabFilter = "todos" | "aguardando" | "respondido" | "encerrado";
 
 const tabs: { id: TabFilter; label: string; icon: React.ElementType }[] = [
-  { id: "todos", label: "Todos", icon: Inbox },
-  { id: "aguardando", label: "Aguardando", icon: Clock },
-  { id: "respondido", label: "Respondidos", icon: CheckCheck },
+  { id: "todos", label: "Inbox", icon: Inbox },
+  { id: "aguardando", label: "Pendentes", icon: Clock },
+  { id: "respondido", label: "Respondidos", icon: CheckCircle2 },
   { id: "encerrado", label: "Encerrados", icon: XCircle },
 ];
 
@@ -37,23 +36,36 @@ function formatMessageTime(dateStr: string): string {
   return format(date, "dd/MM", { locale: ptBR });
 }
 
-// Generate a consistent color from a name
+const avatarColors = [
+  "bg-emerald-500", "bg-blue-500", "bg-violet-500", "bg-amber-500",
+  "bg-rose-500", "bg-cyan-500", "bg-indigo-500", "bg-teal-500",
+  "bg-pink-500", "bg-orange-500",
+];
+
 function getAvatarColor(name: string): string {
-  const colors = [
-    "from-blue-500 to-blue-600",
-    "from-emerald-500 to-emerald-600",
-    "from-violet-500 to-violet-600",
-    "from-amber-500 to-amber-600",
-    "from-rose-500 to-rose-600",
-    "from-cyan-500 to-cyan-600",
-    "from-indigo-500 to-indigo-600",
-    "from-teal-500 to-teal-600",
-  ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return colors[Math.abs(hash) % colors.length];
+  return avatarColors[Math.abs(hash) % avatarColors.length];
+}
+
+function getStatusDot(status: string) {
+  switch (status) {
+    case "aguardando": return "bg-yellow-400";
+    case "respondido": return "bg-green-400";
+    case "encerrado": return "bg-gray-400";
+    default: return "bg-blue-400";
+  }
+}
+
+function getStatusLabel(status: string) {
+  switch (status) {
+    case "aguardando": return "Aguardando";
+    case "respondido": return "Respondido";
+    case "encerrado": return "Encerrado";
+    default: return "Novo";
+  }
 }
 
 export function ChatContactList({
@@ -69,9 +81,7 @@ export function ChatContactList({
   const [activeTab, setActiveTab] = useState<TabFilter>("todos");
 
   const filteredContacts = contacts.filter((contact) => {
-    // Tab filter
     if (activeTab !== "todos" && contact.status !== activeTab) return false;
-    // Search filter
     const q = search.toLowerCase();
     return contact.name.toLowerCase().includes(q) || contact.phone.includes(search);
   });
@@ -86,66 +96,63 @@ export function ChatContactList({
   return (
     <div
       className={cn(
-        "flex flex-col border-r bg-card",
+        "flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800",
         isMobile
           ? cn("absolute inset-0 z-10 transition-transform duration-300 h-full", mobileShowChat && "-translate-x-full")
-          : "w-80 h-full"
+          : "w-[340px] h-full"
       )}
     >
-      {/* Header */}
-      <div className="border-b px-4 pt-3 pb-0">
-        <h2 className="mb-2.5 text-base font-bold tracking-tight">Conversas</h2>
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 dark:border-gray-800">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          const count = tabCounts[tab.id];
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-all relative",
+                isActive
+                  ? "text-green-600 dark:text-green-400"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+              )}
+            >
+              <div className="relative">
+                <Icon className="h-4.5 w-4.5" />
+                {count > 0 && (
+                  <span className={cn(
+                    "absolute -top-1.5 -right-2.5 inline-flex items-center justify-center h-3.5 min-w-[14px] px-0.5 rounded-full text-[9px] font-bold text-white",
+                    isActive ? "bg-green-500" : "bg-gray-400"
+                  )}>
+                    {count}
+                  </span>
+                )}
+              </div>
+              <span>{tab.label}</span>
+              {isActive && (
+                <motion.div
+                  layoutId="chatTab"
+                  className="absolute bottom-0 left-2 right-2 h-[2px] bg-green-500 rounded-full"
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search + Filter */}
+      <div className="px-3 py-2.5 flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
           <Input
             placeholder="Buscar contato..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 rounded-xl bg-muted border-0 text-sm focus-visible:ring-1 focus-visible:ring-primary/40"
+            className="pl-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 border-0 text-sm focus-visible:ring-1 focus-visible:ring-green-400/50"
           />
-        </div>
-
-        {/* Filter Tabs */}
-        <div className="flex gap-0.5 -mx-1 overflow-x-auto scrollbar-thin pb-0">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            const count = tabCounts[tab.id];
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "relative flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-t-lg transition-all whitespace-nowrap",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                )}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {tab.label}
-                {count > 0 && (
-                  <span
-                    className={cn(
-                      "inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full text-[10px] font-bold",
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted-foreground/15 text-muted-foreground"
-                    )}
-                  >
-                    {count}
-                  </span>
-                )}
-                {isActive && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  />
-                )}
-              </button>
-            );
-          })}
         </div>
       </div>
 
@@ -159,60 +166,82 @@ export function ChatContactList({
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center py-12 text-center px-6"
+            className="flex flex-col items-center justify-center py-16 text-center px-6"
           >
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted mb-3">
-              <MessageSquare className="h-7 w-7 text-muted-foreground/50" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 mb-3">
+              <MessageSquare className="h-5 w-5 text-gray-400" />
             </div>
-            <p className="text-sm font-medium text-muted-foreground">Nenhum contato encontrado</p>
-            <p className="text-xs text-muted-foreground/70 mt-1">Tente outro filtro ou termo de busca</p>
+            <p className="text-sm font-medium text-gray-500">Nenhum contato encontrado</p>
           </motion.div>
         ) : (
           <AnimatePresence mode="popLayout">
-            {filteredContacts.map((contact, index) => (
-              <motion.button
-                key={contact.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ delay: index * 0.03, duration: 0.2 }}
-                onClick={() => onSelectContact(contact.id)}
-                className={cn(
-                  "flex w-full items-center gap-3 px-3 py-3 text-left transition-all border-b border-border/30",
-                  "hover:bg-muted/60 active:scale-[0.98]",
-                  selectedContactId === contact.id && "bg-primary/5 border-l-2 border-l-primary"
-                )}
-              >
-                {/* Avatar */}
-                <div className={cn(
-                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white shadow-sm",
-                  getAvatarColor(contact.name)
-                )}>
-                  {contact.name.charAt(0).toUpperCase()}
-                </div>
-
-                {/* Info */}
-                <div className="min-w-0 flex-1 overflow-hidden">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-semibold">{contact.name}</p>
-                    {contact.last_message_at && (
-                      <span className={cn(
-                        "shrink-0 text-[11px] whitespace-nowrap",
-                        contact.status === "aguardando" ? "text-primary font-semibold" : "text-muted-foreground"
-                      )}>
-                        {formatMessageTime(contact.last_message_at)}
-                      </span>
-                    )}
+            {filteredContacts.map((contact, index) => {
+              const isSelected = selectedContactId === contact.id;
+              return (
+                <motion.button
+                  key={contact.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ delay: Math.min(index * 0.02, 0.3), duration: 0.15 }}
+                  onClick={() => onSelectContact(contact.id)}
+                  className={cn(
+                    "flex w-full items-center gap-3 px-3 py-3 text-left transition-all",
+                    "hover:bg-gray-50 dark:hover:bg-gray-800/50 active:scale-[0.99]",
+                    "border-b border-gray-100 dark:border-gray-800/50",
+                    isSelected && "bg-green-50 dark:bg-green-900/10 border-l-[3px] border-l-green-500"
+                  )}
+                >
+                  {/* Avatar */}
+                  <div className="relative">
+                    <div className={cn(
+                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white shadow-sm",
+                      getAvatarColor(contact.name)
+                    )}>
+                      {contact.name.charAt(0).toUpperCase()}
+                    </div>
+                    {/* Status dot */}
+                    <span className={cn(
+                      "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900",
+                      getStatusDot(contact.status)
+                    )} />
                   </div>
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <p className="truncate text-xs text-muted-foreground min-w-0">{contact.phone}</p>
-                    <div className="shrink-0">
-                      <StatusBadge status={contact.status} className="text-[10px] px-1.5 py-0" />
+
+                  {/* Info */}
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        {contact.name}
+                      </p>
+                      {contact.last_message_at && (
+                        <span className={cn(
+                          "shrink-0 text-[11px] whitespace-nowrap",
+                          contact.status === "aguardando"
+                            ? "text-green-600 dark:text-green-400 font-semibold"
+                            : "text-gray-400"
+                        )}>
+                          {formatMessageTime(contact.last_message_at)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between gap-2 mt-0.5">
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400 min-w-0">
+                        {contact.phone}
+                      </p>
+                      <span className={cn(
+                        "shrink-0 inline-flex items-center gap-1 rounded-full px-1.5 py-0 text-[10px] font-medium",
+                        contact.status === "aguardando" && "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+                        contact.status === "respondido" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                        contact.status === "encerrado" && "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500",
+                        contact.status === "novo" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                      )}>
+                        {getStatusLabel(contact.status)}
+                      </span>
                     </div>
                   </div>
-                </div>
-              </motion.button>
-            ))}
+                </motion.button>
+              );
+            })}
           </AnimatePresence>
         )}
       </ScrollArea>
