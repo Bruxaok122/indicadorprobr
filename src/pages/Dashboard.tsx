@@ -60,7 +60,7 @@ export default function Dashboard() {
   const recentContacts = contacts.slice(0, 5);
 
   const statCards = [
-    { label: "Contatos", value: stats.total, icon: Users, gradient: "from-blue-500 to-blue-600", glow: "shadow-blue-500/20", href: "/contatos" },
+    { label: "Contatos", value: stats.total, icon: Users, gradient: "from-blue-500 to-blue-600", glow: "shadow-blue-500/20", href: isAdmin ? "/contatos" : "/conversas" },
     { label: "Novos", value: stats.novos, icon: Zap, gradient: "from-cyan-500 to-teal-500", glow: "shadow-cyan-500/20" },
     { label: "Aguardando", value: stats.aguardando, icon: Clock, gradient: "from-amber-500 to-orange-500", glow: "shadow-amber-500/20" },
     { label: "Respondidos", value: stats.respondidos, icon: TrendingUp, gradient: "from-emerald-500 to-green-600", glow: "shadow-emerald-500/20" },
