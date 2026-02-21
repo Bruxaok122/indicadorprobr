@@ -283,10 +283,12 @@ div[style*="Edit with Lovable"],
   }
 }
 
-/* Hide all toast/sonner dismiss buttons globally */
-[data-sonner-toast] [data-close-button],
-[data-sonner-toast] button[aria-label="Close"],
-.sonner-close-button,
-[data-dismiss] {
+/* Hide all toast/sonner dismiss/close buttons globally */
+[data-close-button] {
+  display: none !important;
+}
+
+/* Hide radix toast close */
+[data-radix-toast-announce-exclude] {
   display: none !important;
 }
