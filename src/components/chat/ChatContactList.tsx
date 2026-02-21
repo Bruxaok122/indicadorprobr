@@ -226,7 +226,6 @@ export function ChatContactList({
           </div>
         ) : filteredContacts.length === 0 ? (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col items-center justify-center py-16 text-center px-6"
           >
@@ -242,10 +241,9 @@ export function ChatContactList({
               return (
                 <motion.button
                   key={contact.id}
-                  initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -8 }}
-                  transition={{ delay: Math.min(index * 0.02, 0.3), duration: 0.15 }}
+                  transition={{ duration: 0.15 }}
                   onClick={() => onSelectContact(contact.id)}
                   className={cn(
                     "flex w-full items-center gap-3 px-3 py-3 text-left transition-all",

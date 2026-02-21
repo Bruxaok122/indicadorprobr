@@ -35,7 +35,7 @@ export function ChatMessages({ messages, isLoading, isSending, templatesAvailabl
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center text-center chat-wallpaper">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} className="flex flex-col items-center">
+        <motion.div animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} className="flex flex-col items-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/80 dark:bg-gray-800/80 shadow-md mb-4">
             <MessageSquare className="h-8 w-8 text-green-500/60" />
           </div>
