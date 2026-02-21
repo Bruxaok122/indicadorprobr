@@ -16,7 +16,6 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify auth using getClaims
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "No authorization header" }), {
@@ -25,23 +24,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
+    // Verify requesting user using getUser with auth header
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    const { data: { user: requestingUser }, error: userError } = await userClient.auth.getUser();
     
-    if (claimsError || !claimsData?.claims) {
-      console.error("Claims error:", claimsError?.message);
+    if (userError || !requestingUser) {
+      console.error("Auth error:", userError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const requestingUserId = claimsData.claims.sub;
-    console.log("Requesting user:", requestingUserId);
+    console.log("Requesting user:", requestingUser.id);
 
     // Check admin role using service client (bypasses RLS)
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
@@ -49,7 +47,7 @@ Deno.serve(async (req) => {
     const { data: roles } = await adminClient
       .from("user_roles")
       .select("role")
-      .eq("user_id", requestingUserId);
+      .eq("user_id", requestingUser.id);
 
     const isAdmin = roles?.some((r: any) => r.role === "admin");
     if (!isAdmin) {
