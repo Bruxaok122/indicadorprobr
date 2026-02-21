@@ -46,8 +46,9 @@ export function useMessages(contactId: string | null) {
           table: "messages",
           filter: `contact_id=eq.${contactId}`,
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["messages", contactId] });
+        (payload) => {
+          // Use exact query key to avoid double invalidation
+          queryClient.invalidateQueries({ queryKey: ["messages", contactId, user?.id], exact: true });
         }
       )
       .subscribe();
@@ -55,7 +56,7 @@ export function useMessages(contactId: string | null) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [contactId, queryClient]);
+  }, [contactId, queryClient, user?.id]);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (params: {
@@ -74,7 +75,7 @@ export function useMessages(contactId: string | null) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["messages", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["messages", contactId, user?.id], exact: true });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
     },
     onError: (error: any) => {
@@ -106,7 +107,7 @@ export function useMessages(contactId: string | null) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["messages", contactId] });
+      queryClient.invalidateQueries({ queryKey: ["messages", contactId, user?.id], exact: true });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
     },
     onError: (error: any) => {
