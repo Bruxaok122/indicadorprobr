@@ -119,7 +119,7 @@ export default function ConversasPage() {
     } finally { setIsUploading(false); }
   };
 
-  const Wrapper = isAdmin ? AppLayout : ({ children }: { children: React.ReactNode }) => <>{children}</>;
+  // Wrapper defined conditionally — avoid inline component to prevent remount
 
   // Theme toggle for operator (no sidebar) — dark is default
   const [isDark, setIsDark] = useState(() => {
@@ -139,8 +139,8 @@ export default function ConversasPage() {
     localStorage.setItem("theme", next ? "dark" : "light");
   };
 
-  return (
-    <Wrapper>
+  const chatContent = (
+    <>
       <div className={cn(
         "flex flex-col overflow-hidden relative min-h-0 transition-colors duration-300",
         "bg-muted dark:bg-background",
@@ -285,6 +285,12 @@ export default function ConversasPage() {
 
       {/* Contact Profile Drawer */}
       <ContactProfileDrawer contact={selectedContact ?? null} open={showProfileDrawer} onOpenChange={setShowProfileDrawer} />
-    </Wrapper>
+    </>
   );
+
+  if (isAdmin) {
+    return <AppLayout>{chatContent}</AppLayout>;
+  }
+
+  return chatContent;
 }
