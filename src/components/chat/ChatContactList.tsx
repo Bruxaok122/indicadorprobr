@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale } from "lucide-react";
+import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User } from "lucide-react";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,6 +29,10 @@ interface ChatContactListProps {
   mobileShowChat: boolean;
   operatorPhone?: string;
   operatorLawyer?: string;
+  operatorName?: string;
+  isDark?: boolean;
+  onToggleTheme?: () => void;
+  onLogout?: () => void;
 }
 
 function formatMessageTime(dateStr: string): string {
@@ -81,6 +85,10 @@ export function ChatContactList({
   mobileShowChat,
   operatorPhone,
   operatorLawyer,
+  operatorName,
+  isDark,
+  onToggleTheme,
+  onLogout,
 }: ChatContactListProps) {
   const [activeTab, setActiveTab] = useState<TabFilter>("todos");
 
@@ -106,22 +114,52 @@ export function ChatContactList({
           : "w-full"
       )}
     >
-      {/* Operator info banner */}
-      {(operatorPhone || operatorLawyer) && (
-        <div className="px-3 py-2 border-b border-border bg-primary/5 dark:bg-primary/10">
-          <div className="flex items-center gap-2 text-xs">
-            {operatorPhone && (
-              <span className="flex items-center gap-1 text-foreground/70">
-                <Phone className="h-3 w-3" />
-                <span className="font-medium truncate">{operatorPhone}</span>
-              </span>
-            )}
-            {operatorLawyer && (
-              <span className="flex items-center gap-1 text-foreground/70">
-                <Scale className="h-3 w-3" />
-                <span className="font-medium truncate">{operatorLawyer}</span>
-              </span>
-            )}
+      {/* Operator header bar */}
+      {(operatorName || operatorPhone || operatorLawyer) && (
+        <div className="px-3 py-2.5 border-b border-border bg-primary/5 dark:bg-primary/10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 dark:bg-primary/30">
+                <User className="h-4 w-4 text-primary dark:text-primary-foreground" />
+              </div>
+              <div className="min-w-0 flex-1">
+                {operatorName && (
+                  <p className="text-sm font-semibold text-foreground truncate">{operatorName}</p>
+                )}
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  {operatorPhone && (
+                    <span className="flex items-center gap-0.5 truncate">
+                      <Phone className="h-3 w-3" />
+                      {operatorPhone}
+                    </span>
+                  )}
+                  {operatorLawyer && (
+                    <span className="flex items-center gap-0.5 truncate">
+                      <Scale className="h-3 w-3" />
+                      {operatorLawyer}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {onToggleTheme && (
+                <button
+                  onClick={onToggleTheme}
+                  className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+                >
+                  {isDark ? <Sun className="h-3.5 w-3.5 text-amber-400" /> : <Moon className="h-3.5 w-3.5 text-muted-foreground" />}
+                </button>
+              )}
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors"
+                >
+                  <LogOut className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
