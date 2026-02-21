@@ -75,7 +75,6 @@ export function ChatBubble({ message }: ChatBubbleProps) {
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 6, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
         className={cn("flex mb-0.5 px-3 md:px-4", isOutgoing ? "justify-end" : "justify-start")}
