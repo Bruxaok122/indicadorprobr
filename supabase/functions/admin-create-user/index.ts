@@ -26,8 +26,12 @@ Deno.serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
 
-    // Verify requesting user by explicitly passing the token
+    // Verify requesting user - disable session persistence for Deno environment
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
       global: { headers: { Authorization: authHeader } },
     });
 
@@ -44,7 +48,12 @@ Deno.serve(async (req) => {
     console.log("Requesting user:", requestingUser.id);
 
     // Check admin role using service client (bypasses RLS)
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
     const { data: roles } = await adminClient
       .from("user_roles")
