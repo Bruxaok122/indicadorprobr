@@ -164,16 +164,13 @@ export default function ConversasPage() {
           </motion.div>
         )}
 
-        <div className={cn("flex flex-1 overflow-hidden relative min-h-0", !isMobile && "gap-0")}>
-          {/* Contact list */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+        <div className={cn("flex flex-1 overflow-hidden relative min-h-0", !isMobile && "gap-3 p-2 pr-2")}>
+          {/* Contact list with 3D effect */}
+          <div
             className={cn(
               isMobile
                 ? cn("absolute inset-0 z-10 transition-transform duration-300 h-full", mobileShowChat && "-translate-x-full")
-                : "w-[340px] h-full flex-shrink-0"
+                : "w-[340px] h-full flex-shrink-0 rounded-2xl overflow-hidden contact-list-float"
             )}
           >
             <ChatContactList
@@ -183,16 +180,13 @@ export default function ConversasPage() {
               operatorPhone={!isAdmin ? operatorPhone : undefined}
               operatorLawyer={!isAdmin ? operatorLawyer : undefined}
             />
-          </motion.div>
+          </div>
 
           {/* Chat area with 3D floating effect */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut", delay: 0.1 }}
+          <div
             className={cn(
               "flex flex-1 flex-col min-h-0 min-w-0 relative",
-              !isMobile && "chat-panel-float rounded-l-2xl my-1 mr-1 overflow-hidden",
+              !isMobile && "chat-panel-float rounded-2xl overflow-hidden",
               isMobile && cn("absolute inset-0 z-20 transition-transform duration-300 h-full", !mobileShowChat && "translate-x-full")
             )}
           >
@@ -242,7 +236,7 @@ export default function ConversasPage() {
                 </motion.div>
               </div>
             )}
-          </motion.div>
+          </div>
         </div>
       </div>
 
