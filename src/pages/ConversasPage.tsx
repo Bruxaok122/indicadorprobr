@@ -59,6 +59,11 @@ export default function ConversasPage() {
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
 
+  // Get operator's active phone and lawyer
+  const activePhone = phones.find((p) => p.phone_number_id === selectedPhoneNumberId) || phones[0];
+  const operatorPhone = activePhone?.display_phone_number;
+  const operatorLawyer = activePhone?.lawyer_name;
+
   useEffect(() => {
     if (phones.length === 1 && !selectedPhoneNumberId) setSelectedPhoneNumberId(phones[0].phone_number_id);
   }, [phones, selectedPhoneNumberId]);
@@ -175,6 +180,8 @@ export default function ConversasPage() {
               contacts={contacts} isLoading={contactsLoading} search={search} setSearch={setSearch}
               selectedContactId={selectedContactId} onSelectContact={handleSelectContact}
               isMobile={isMobile} mobileShowChat={mobileShowChat}
+              operatorPhone={!isAdmin ? operatorPhone : undefined}
+              operatorLawyer={!isAdmin ? operatorLawyer : undefined}
             />
           </motion.div>
 
