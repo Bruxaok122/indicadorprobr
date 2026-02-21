@@ -11,7 +11,8 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MessageSquare, Send, Upload, FileText, FileImage } from "lucide-react";
+import { MessageSquare, Send, Upload, FileText, FileImage, Moon, Sun } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { ChatContactList } from "@/components/chat/ChatContactList";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -115,22 +116,79 @@ export default function ConversasPage() {
 
   const Wrapper = isAdmin ? AppLayout : ({ children }: { children: React.ReactNode }) => <>{children}</>;
 
+  // Theme toggle for operator (no sidebar)
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
+  const toggleTheme = () => {
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+  };
+
   return (
     <Wrapper>
-       <div className={cn("flex flex-col overflow-hidden relative min-h-0 bg-gray-100 dark:bg-gray-950", isMobile && !isAdmin ? "h-[100dvh]" : isMobile ? "h-[calc(100dvh-3.5rem)]" : "h-screen")}>
-        <div className={cn("flex flex-1 overflow-hidden relative min-h-0")}>
-          {/* Contact list */}
-          <ChatContactList
-            contacts={contacts} isLoading={contactsLoading} search={search} setSearch={setSearch}
-            selectedContactId={selectedContactId} onSelectContact={handleSelectContact}
-            isMobile={isMobile} mobileShowChat={mobileShowChat}
-          />
+      <div className={cn(
+        "flex flex-col overflow-hidden relative min-h-0 transition-colors duration-300",
+        "bg-muted dark:bg-background",
+        isMobile && !isAdmin ? "h-[100dvh]" : isMobile ? "h-[calc(100dvh-3.5rem)]" : "h-screen"
+      )}>
+        {/* Operator theme toggle floating button */}
+        {!isAdmin && !isMobile && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5, type: "spring", stiffness: 300 }}
+            className="absolute top-3 right-3 z-30"
+          >
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center h-9 w-9 rounded-full bg-card dark:bg-card border border-border shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
+            >
+              <AnimatePresence mode="wait">
+                {isDark ? (
+                  <motion.div key="sun" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                    <Sun className="h-4 w-4 text-amber-400" />
+                  </motion.div>
+                ) : (
+                  <motion.div key="moon" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
+                    <Moon className="h-4 w-4 text-foreground/70" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </button>
+          </motion.div>
+        )}
 
-          {/* Chat area */}
-          <div className={cn(
-            "flex flex-1 flex-col min-h-0 min-w-0",
-            isMobile && cn("absolute inset-0 z-20 transition-transform duration-300 bg-gray-100 dark:bg-gray-950 h-full", !mobileShowChat && "translate-x-full")
-          )}>
+        <div className={cn("flex flex-1 overflow-hidden relative min-h-0", !isMobile && "gap-0")}>
+          {/* Contact list */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className={cn(
+              isMobile
+                ? cn("absolute inset-0 z-10 transition-transform duration-300 h-full", mobileShowChat && "-translate-x-full")
+                : "w-[340px] h-full flex-shrink-0"
+            )}
+          >
+            <ChatContactList
+              contacts={contacts} isLoading={contactsLoading} search={search} setSearch={setSearch}
+              selectedContactId={selectedContactId} onSelectContact={handleSelectContact}
+              isMobile={isMobile} mobileShowChat={mobileShowChat}
+            />
+          </motion.div>
+
+          {/* Chat area with 3D floating effect */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut", delay: 0.1 }}
+            className={cn(
+              "flex flex-1 flex-col min-h-0 min-w-0 relative",
+              !isMobile && "chat-panel-float rounded-l-2xl my-1 mr-1 overflow-hidden",
+              isMobile && cn("absolute inset-0 z-20 transition-transform duration-300 h-full", !mobileShowChat && "translate-x-full")
+            )}
+          >
             {selectedContact ? (
               <>
                 <ChatHeader
@@ -163,14 +221,21 @@ export default function ConversasPage() {
               </>
             ) : (
               <div className={cn("flex flex-1 flex-col items-center justify-center chat-wallpaper", isMobile && "hidden")}>
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/80 dark:bg-gray-800/80 shadow-lg mb-5">
-                  <MessageSquare className="h-10 w-10 text-green-500/40" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-300">Selecione uma conversa</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Escolha um contato ao lado para iniciar</p>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.3 }}
+                  className="flex flex-col items-center"
+                >
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-card/80 shadow-lg mb-5">
+                    <MessageSquare className="h-10 w-10 text-green-500/40" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground/60">Selecione uma conversa</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Escolha um contato ao lado para iniciar</p>
+                </motion.div>
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
       </div>
 
