@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Filter } from "lucide-react";
+import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale } from "lucide-react";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,6 +27,8 @@ interface ChatContactListProps {
   onSelectContact: (id: string) => void;
   isMobile: boolean;
   mobileShowChat: boolean;
+  operatorPhone?: string;
+  operatorLawyer?: string;
 }
 
 function formatMessageTime(dateStr: string): string {
@@ -77,6 +79,8 @@ export function ChatContactList({
   onSelectContact,
   isMobile,
   mobileShowChat,
+  operatorPhone,
+  operatorLawyer,
 }: ChatContactListProps) {
   const [activeTab, setActiveTab] = useState<TabFilter>("todos");
 
@@ -102,6 +106,26 @@ export function ChatContactList({
           : "w-full"
       )}
     >
+      {/* Operator info banner */}
+      {(operatorPhone || operatorLawyer) && (
+        <div className="px-3 py-2 border-b border-border bg-primary/5 dark:bg-primary/10">
+          <div className="flex items-center gap-2 text-xs">
+            {operatorPhone && (
+              <span className="flex items-center gap-1 text-foreground/70">
+                <Phone className="h-3 w-3" />
+                <span className="font-medium truncate">{operatorPhone}</span>
+              </span>
+            )}
+            {operatorLawyer && (
+              <span className="flex items-center gap-1 text-foreground/70">
+                <Scale className="h-3 w-3" />
+                <span className="font-medium truncate">{operatorLawyer}</span>
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex border-b border-gray-200 dark:border-gray-800">
         {tabs.map((tab) => {
