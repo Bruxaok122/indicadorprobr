@@ -1,13 +1,10 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWhatsAppConfig } from "@/hooks/useWhatsAppConfig";
 import { useContacts } from "@/hooks/useContacts";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import {
   CheckCircle,
-  Circle,
   MessageSquare,
   Users,
   Settings,
@@ -16,20 +13,23 @@ import {
   AlertTriangle,
   ShieldCheck,
   CalendarClock,
+  Zap,
+  TrendingUp,
+  Clock,
+  Send,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/status-badge";
-
+import { motion } from "framer-motion";
 
 export default function Dashboard() {
   const { isConfigured, isLoading: configLoading } = useWhatsAppConfig();
   const { contacts, isLoading: contactsLoading } = useContacts();
   const { profile, isAdmin } = useAuthContext();
 
-  // Check if user can use shared API
   const canUseSharedApi = profile?.can_use_shared_api || isAdmin;
   const hasApiAccess = isConfigured || canUseSharedApi;
 
@@ -41,230 +41,211 @@ export default function Dashboard() {
   };
 
   const steps = [
-    {
-      title: "Configurar WhatsApp API",
-      description: "Conecte sua conta do WhatsApp Business",
-      completed: hasApiAccess,
-      href: "/configuracao",
-      icon: Settings,
-    },
-    {
-      title: "Importar Contatos",
-      description: "Importe sua lista jurídica de clientes",
-      completed: contacts.length > 0,
-      href: "/importar",
-      icon: Upload,
-    },
-    {
-      title: "Enviar Mensagens",
-      description: "Comece a se comunicar com seus clientes",
-      completed: false,
-      href: "/conversas",
-      icon: MessageSquare,
-    },
+    { title: "Configurar WhatsApp API", description: "Conecte sua conta Business", completed: hasApiAccess, href: "/configuracao", icon: Settings },
+    { title: "Importar Contatos", description: "Importe sua lista de clientes", completed: contacts.length > 0, href: "/importar", icon: Upload },
+    { title: "Enviar Mensagens", description: "Inicie as conversas", completed: false, href: "/conversas", icon: MessageSquare },
   ];
 
   const recentContacts = contacts.slice(0, 5);
 
+  const statCards = [
+    { label: "Contatos", value: stats.total, icon: Users, color: "text-blue-400", bg: "bg-blue-500/10", href: "/contatos" },
+    { label: "Novos", value: stats.novos, icon: Zap, color: "text-cyan-400", bg: "bg-cyan-500/10" },
+    { label: "Aguardando", value: stats.aguardando, icon: Clock, color: "text-amber-400", bg: "bg-amber-500/10" },
+    { label: "Respondidos", value: stats.respondidos, icon: TrendingUp, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+  ];
+
   return (
     <AppLayout>
-      <div className="flex h-screen flex-col overflow-hidden">
-        <PageHeader
-          title="Painel de Controle"
-          description={
-            profile ? `Bem-vindo(a), ${profile.full_name}` : "Gerencie suas comunicações jurídicas via WhatsApp"
-          }
-        />
+      <div className="flex h-screen flex-col overflow-hidden bg-muted dark:bg-background">
+        {/* Compact header */}
+        <div className="shrink-0 px-4 md:px-6 pt-5 pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-foreground tracking-tight">
+                {profile ? `Olá, ${profile.full_name.split(" ")[0]}` : "Painel"}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">Gerencie suas comunicações</p>
+            </div>
+            <Button asChild size="sm" className="rounded-full bg-emerald-500 hover:bg-emerald-600 text-white shadow-md gap-1.5">
+              <Link to="/conversas"><Send className="h-3.5 w-3.5" /> Conversas</Link>
+            </Button>
+          </div>
+        </div>
 
-        <div className="flex-1 overflow-auto p-6">
-          <div className="mx-auto max-w-6xl space-y-6">
-            {/* API Status */}
+        <div className="flex-1 overflow-auto px-3 md:px-5 pb-6 scrollbar-thin">
+          <div className="mx-auto max-w-5xl space-y-4 mt-3">
+
+            {/* Status banners */}
             {canUseSharedApi && (
-              <div className="flex items-center gap-3 rounded-lg border border-info/30 bg-info/10 p-4">
-                <ShieldCheck className="h-5 w-5 text-info" />
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">Conta Ativa</p>
-                  <p className="text-sm text-muted-foreground">Tudo ok! Você já pode começar a enviar mensagem.</p>
+              <motion.div animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
+                className="flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10 px-4 py-3 shadow-sm">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/15">
+                  <ShieldCheck className="h-4.5 w-4.5 text-emerald-400" />
                 </div>
-              </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-foreground">Conta Ativa</p>
+                  <p className="text-xs text-muted-foreground">Tudo pronto para enviar mensagens</p>
+                </div>
+              </motion.div>
             )}
 
-            {/* Subscription Plan Info */}
             {profile?.subscription_plan && (
-              <div
-                className={cn(
-                  "flex items-center gap-3 rounded-lg border p-4",
+              <div className={cn(
+                "flex items-center gap-3 rounded-2xl border px-4 py-3 shadow-sm",
+                profile.subscription_expires_at && new Date(profile.subscription_expires_at) > new Date()
+                  ? "border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10"
+                  : "border-red-500/20 bg-red-500/5 dark:bg-red-500/10"
+              )}>
+                <div className={cn("flex h-9 w-9 items-center justify-center rounded-full",
                   profile.subscription_expires_at && new Date(profile.subscription_expires_at) > new Date()
-                    ? "border-success/30 bg-success/10"
-                    : "border-destructive/30 bg-destructive/10",
-                )}
-              >
-                <CalendarClock
-                  className={cn(
-                    "h-5 w-5",
+                    ? "bg-emerald-500/15" : "bg-red-500/15"
+                )}>
+                  <CalendarClock className={cn("h-4.5 w-4.5",
                     profile.subscription_expires_at && new Date(profile.subscription_expires_at) > new Date()
-                      ? "text-success"
-                      : "text-destructive",
-                  )}
-                />
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">
+                      ? "text-emerald-400" : "text-red-400"
+                  )} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-foreground">
                     Plano {profile.subscription_plan === "semanal" ? "Semanal" : "Mensal"}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {profile.subscription_expires_at && new Date(profile.subscription_expires_at) > new Date()
                       ? `Válido até ${format(new Date(profile.subscription_expires_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`
-                      : "Plano expirado. Entre em contato com o administrador para renovar."}
+                      : "Plano expirado. Contate o administrador."}
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Status Alert */}
             {!hasApiAccess && !configLoading && (
-              <div className="flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4">
-                <AlertTriangle className="h-5 w-5 text-warning" />
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">Configuração Pendente</p>
-                  <p className="text-sm text-muted-foreground">
-                    Configure sua API do WhatsApp para começar a enviar mensagens.
-                  </p>
+              <div className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/10 px-4 py-3 shadow-sm">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/15">
+                  <AlertTriangle className="h-4.5 w-4.5 text-amber-400" />
                 </div>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/configuracao">Configurar Agora</Link>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-foreground">Configuração Pendente</p>
+                  <p className="text-xs text-muted-foreground">Configure a API do WhatsApp para começar</p>
+                </div>
+                <Button asChild variant="outline" size="sm" className="rounded-full text-xs shrink-0">
+                  <Link to="/configuracao">Configurar</Link>
                 </Button>
               </div>
             )}
 
-            {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Total de Contatos</CardDescription>
-                  <CardTitle className="text-3xl">{stats.total}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Link to="/contatos" className="text-sm text-primary hover:underline">
-                    Ver todos →
-                  </Link>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Novos</CardDescription>
-                  <CardTitle className="text-3xl text-info">{stats.novos}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">Aguardando primeiro contato</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Aguardando Resposta</CardDescription>
-                  <CardTitle className="text-3xl text-warning">{stats.aguardando}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">Mensagem enviada</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Respondidos</CardDescription>
-                  <CardTitle className="text-3xl text-success">{stats.respondidos}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">Cliente respondeu</p>
-                </CardContent>
-              </Card>
+            {/* Stats grid — floating cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+              {statCards.map((s) => {
+                const Icon = s.icon;
+                const inner = (
+                  <div key={s.label} className="group relative rounded-2xl bg-card dark:bg-card border border-border/50 p-4 shadow-sm hover:shadow-md transition-all hover:border-border cursor-pointer">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl", s.bg)}>
+                        <Icon className={cn("h-4.5 w-4.5", s.color)} />
+                      </div>
+                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+                    </div>
+                    <p className="text-2xl font-bold text-foreground tracking-tight">{s.value}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+                  </div>
+                );
+                return s.href ? <Link key={s.label} to={s.href}>{inner}</Link> : <div key={s.label}>{inner}</div>;
+              })}
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Setup Checklist */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-accent" />
-                    Passos para Começar
-                  </CardTitle>
-                  <CardDescription>Siga estes passos para configurar seu sistema</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {steps.map((step, index) => (
-                    <Link
-                      key={step.href}
-                      to={step.href}
-                      className={cn(
-                        "flex items-center gap-4 rounded-lg border p-4 transition-colors",
-                        step.completed
-                          ? "border-success/30 bg-success/5"
-                          : "border-border hover:border-primary/30 hover:bg-muted/50",
-                      )}
-                    >
-                      <div
+            <div className="grid gap-3 lg:grid-cols-2">
+              {/* Setup checklist — floating panel */}
+              <div className="rounded-2xl bg-card dark:bg-card border border-border/50 shadow-sm overflow-hidden">
+                <div className="px-4 pt-4 pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10">
+                      <CheckCircle className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-sm text-foreground">Primeiros Passos</h3>
+                      <p className="text-xs text-muted-foreground">Configure seu sistema</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-3 pb-3 space-y-1.5">
+                  {steps.map((step, index) => {
+                    const Icon = step.icon;
+                    return (
+                      <Link key={step.href} to={step.href}
                         className={cn(
-                          "flex h-8 w-8 items-center justify-center rounded-full",
-                          step.completed ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground",
+                          "flex items-center gap-3 rounded-xl px-3 py-3 transition-all",
+                          step.completed
+                            ? "bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/15"
+                            : "hover:bg-muted/80 border border-transparent hover:border-border/50"
                         )}
                       >
-                        {step.completed ? (
-                          <CheckCircle className="h-4 w-4" />
-                        ) : (
-                          <span className="text-sm font-medium">{index + 1}</span>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">{step.title}</p>
-                        <p className="text-sm text-muted-foreground">{step.description}</p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    </Link>
-                  ))}
-                </CardContent>
-              </Card>
+                        <div className={cn(
+                          "flex h-8 w-8 items-center justify-center rounded-full shrink-0 text-xs font-bold",
+                          step.completed ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground"
+                        )}>
+                          {step.completed ? <CheckCircle className="h-4 w-4" /> : index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn("text-sm font-medium", step.completed && "text-emerald-600 dark:text-emerald-400")}>{step.title}</p>
+                          <p className="text-xs text-muted-foreground truncate">{step.description}</p>
+                        </div>
+                        <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
 
-              {/* Recent Contacts */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-accent" />
-                    Contatos Recentes
-                  </CardTitle>
-                  <CardDescription>Últimos contatos adicionados ou atualizados</CardDescription>
-                </CardHeader>
-                <CardContent>
+              {/* Recent contacts — floating panel */}
+              <div className="rounded-2xl bg-card dark:bg-card border border-border/50 shadow-sm overflow-hidden">
+                <div className="px-4 pt-4 pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10">
+                      <Users className="h-4 w-4 text-blue-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-sm text-foreground">Contatos Recentes</h3>
+                      <p className="text-xs text-muted-foreground">Últimas atualizações</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-3 pb-3">
                   {recentContacts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <Users className="mb-2 h-10 w-10 text-muted-foreground/50" />
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-3">
+                        <Users className="h-5 w-5 text-muted-foreground/50" />
+                      </div>
                       <p className="text-sm text-muted-foreground">Nenhum contato ainda</p>
-                      <Button asChild variant="link" size="sm" className="mt-2">
-                        <Link to="/importar">Importar lista jurídica</Link>
+                      <Button asChild variant="link" size="sm" className="mt-1 text-xs">
+                        <Link to="/importar">Importar lista</Link>
                       </Button>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-1">
                       {recentContacts.map((contact) => (
-                        <Link
-                          key={contact.id}
-                          to={`/conversas?contact=${contact.id}`}
-                          className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                        <Link key={contact.id} to={`/conversas?contact=${contact.id}`}
+                          className="flex items-center justify-between rounded-xl px-3 py-2.5 transition-all hover:bg-muted/80 border border-transparent hover:border-border/50"
                         >
-                          <div>
-                            <p className="font-medium text-foreground">{contact.name}</p>
-                            <p className="text-xs text-muted-foreground">{contact.process_number || "Sem processo"}</p>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400/20 to-blue-400/20 shrink-0">
+                              <span className="text-xs font-bold text-foreground/70">{contact.name.charAt(0).toUpperCase()}</span>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">{contact.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{contact.process_number || contact.phone}</p>
+                            </div>
                           </div>
                           <StatusBadge status={contact.status} />
                         </Link>
                       ))}
-                      <Button asChild variant="outline" className="w-full">
-                        <Link to="/contatos">Ver todos os contatos</Link>
+                      <Button asChild variant="ghost" size="sm" className="w-full mt-1 rounded-xl text-xs text-muted-foreground hover:text-foreground">
+                        <Link to="/contatos">Ver todos →</Link>
                       </Button>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           </div>
         </div>
