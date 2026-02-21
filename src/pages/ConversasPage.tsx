@@ -179,16 +179,16 @@ export default function ConversasPage() {
           const activePhone = phones[0];
           const lawyerName = (activePhone as any).lawyer_name;
           return (
-            <div className="bg-primary/15 border-b border-primary/30 px-4 py-2.5 flex items-center gap-3 shrink-0">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20">
-                <span className="text-primary text-xs">📞</span>
+            <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center gap-3 shrink-0 backdrop-blur-sm">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/20">
+                <span className="text-primary text-[10px]">📞</span>
               </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                <span className="text-sm font-medium text-foreground">
+                <span className="text-xs font-medium text-foreground">
                   Número ativo: <span className="text-primary font-bold">{activePhone.display_phone_number}</span>
                 </span>
                 {lawyerName && (
-                  <span className="text-sm font-medium text-foreground">
+                  <span className="text-xs font-medium text-foreground">
                     · Advogado: <span className="text-primary font-bold">{lawyerName}</span>
                   </span>
                 )}
@@ -274,11 +274,13 @@ export default function ConversasPage() {
                 isMobile && "hidden"
               )}
             >
-              <MessageSquare className="mb-4 h-16 w-16 text-muted-foreground/30" />
-              <h3 className="text-xl font-medium text-muted-foreground">
+              <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-primary/5 mb-5">
+                <MessageSquare className="h-12 w-12 text-primary/20" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground/60">
                 Selecione uma conversa
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mt-1">
                 Escolha um contato ao lado para iniciar
               </p>
             </div>
