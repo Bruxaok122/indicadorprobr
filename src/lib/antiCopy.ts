@@ -102,8 +102,11 @@ export function initAntiCopyProtections() {
   // Mobile browsers have large differences between outer/inner dimensions
   // due to address bar, navigation bar, notch, etc. — skip detection on mobile.
   const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile|webOS/i.test(navigator.userAgent);
+  const isDevEnvironment = window.location.hostname.includes("lovableproject.com") || 
+                           window.location.hostname.includes("lovable.app") ||
+                           window.location.hostname === "localhost";
   
-  if (!isMobileDevice) {
+  if (!isMobileDevice && !isDevEnvironment) {
     const threshold = 160;
     const detectDevTools = () => {
       const widthThreshold = window.outerWidth - window.innerWidth > threshold;
