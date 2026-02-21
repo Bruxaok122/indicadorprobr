@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useLayoutEffect } from "react";
 import { Message } from "@/types/juriszap";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/ui/button";
@@ -19,9 +19,21 @@ interface ChatMessagesProps {
 
 export function ChatMessages({ messages, isLoading, isSending, templatesAvailable, onOpenTemplateDialog }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessageCount = useRef(0);
 
+  // Instant scroll when conversation first loads (messages go from 0 to N)
+  useLayoutEffect(() => {
+    if (messages.length > 0 && prevMessageCount.current === 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+    }
+    prevMessageCount.current = messages.length;
+  }, [messages]);
+
+  // Smooth scroll for new messages / sending indicator
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (prevMessageCount.current > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages, isSending]);
 
   if (isLoading) {
