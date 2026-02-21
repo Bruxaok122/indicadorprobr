@@ -1,8 +1,7 @@
 import { Contact } from "@/types/juriszap";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, Phone, FileText, ClipboardCopy, Lock, LockOpen, ArrowRightLeft, Info } from "lucide-react";
+import { ArrowLeft, Phone, Lock, LockOpen, ArrowRightLeft, ClipboardCopy, Info } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,49 +29,38 @@ function formatCurrency(value?: number): string {
 function buildContactTemplate(contact: Contact): string {
   const cpf = contact.cpf || "";
   const valor = formatCurrency(contact.valor_da_causa);
-
-  return `PARTE CONTRÁRIA: ${contact.lawyer_name || "—"}
-
-PROCESSO: ${contact.process_number || "—"}
-
-👤 Nome: ${contact.name}
-
-💳 Doc.: CPF: ${cpf}
-
-📞 Telefones: ${contact.phone}
-
-💰 Valor da Causa: R$ ${valor}
-
-DATA AGENDADA: 
-
-Dados bancários:
-
-CPF: ${cpf}
-
-Caixa Econômica
-
-Agência: 
-
-Conta: `;
+  return `PARTE CONTRÁRIA: ${contact.lawyer_name || "—"}\n\nPROCESSO: ${contact.process_number || "—"}\n\n👤 Nome: ${contact.name}\n\n💳 Doc.: CPF: ${cpf}\n\n📞 Telefones: ${contact.phone}\n\n💰 Valor da Causa: R$ ${valor}\n\nDATA AGENDADA: \n\nDados bancários:\n\nCPF: ${cpf}\n\nCaixa Econômica\n\nAgência: \n\nConta: `;
 }
 
-// Generate a consistent color from a name
+const avatarColors = [
+  "bg-emerald-500", "bg-blue-500", "bg-violet-500", "bg-amber-500",
+  "bg-rose-500", "bg-cyan-500", "bg-indigo-500", "bg-teal-500",
+];
+
 function getAvatarColor(name: string): string {
-  const colors = [
-    "from-blue-500 to-blue-600",
-    "from-emerald-500 to-emerald-600",
-    "from-violet-500 to-violet-600",
-    "from-amber-500 to-amber-600",
-    "from-rose-500 to-rose-600",
-    "from-cyan-500 to-cyan-600",
-    "from-indigo-500 to-indigo-600",
-    "from-teal-500 to-teal-600",
-  ];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
-  return colors[Math.abs(hash) % colors.length];
+  return avatarColors[Math.abs(hash) % avatarColors.length];
+}
+
+function getStatusColor(status: string) {
+  switch (status) {
+    case "aguardando": return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400";
+    case "respondido": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+    case "encerrado": return "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500";
+    default: return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
+  }
+}
+
+function getStatusLabel(status: string) {
+  switch (status) {
+    case "aguardando": return "Aguardando";
+    case "respondido": return "Respondido";
+    case "encerrado": return "Encerrado";
+    default: return "Novo";
+  }
 }
 
 export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglingBlock, onOpenProfile, onTransferDone }: ChatHeaderProps) {
@@ -91,9 +79,7 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
     }
   };
 
-  const handleToggleBlock = () => {
-    onToggleBlock(contact.id, !isBlocked);
-  };
+  const handleToggleBlock = () => onToggleBlock(contact.id, !isBlocked);
 
   const handleTransferToAdmin = async () => {
     if (!user?.id) return;
@@ -114,19 +100,14 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
     }
   };
 
-  const ActionButton = ({ icon: Icon, label, onClick, disabled, className: btnClass }: {
+  const ActionBtn = ({ icon: Icon, label, onClick, disabled, className: c }: {
     icon: React.ElementType; label: string; onClick: () => void; disabled?: boolean; className?: string;
   }) => (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClick}
-          disabled={disabled}
-          className={cn("h-9 w-9 rounded-xl transition-all hover:scale-105", btnClass)}
-        >
-          <Icon className="h-4.5 w-4.5" />
+        <Button variant="ghost" size="icon" onClick={onClick} disabled={disabled}
+          className={cn("h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-800 transition-all", c)}>
+          <Icon className="h-4 w-4" />
         </Button>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="text-xs">{label}</TooltipContent>
@@ -135,77 +116,57 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -5 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="flex items-center justify-between border-b bg-card/80 backdrop-blur-sm px-3 md:px-5 py-2.5 md:py-3 shrink-0"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex items-center justify-between bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-3 md:px-4 py-2 shrink-0"
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
         {isMobile && (
-          <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0 -ml-1 h-9 w-9 rounded-xl">
+          <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0 -ml-1 h-8 w-8 rounded-lg text-gray-500">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
-        <button
-          type="button"
-          onClick={onOpenProfile}
-          className="flex items-center gap-3 min-w-0 flex-1 rounded-xl hover:bg-muted/50 transition-all -m-1 p-1.5 cursor-pointer active:scale-[0.98]"
+        <button type="button" onClick={onOpenProfile}
+          className="flex items-center gap-3 min-w-0 flex-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors -m-1 p-1.5 cursor-pointer active:scale-[0.99]"
         >
           <div className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white shadow-sm",
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white",
             getAvatarColor(contact.name)
           )}>
             {contact.name.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1 text-left">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-sm truncate">{contact.name}</h3>
-              <StatusBadge status={contact.status} className="text-[10px] px-1.5 py-0 hidden md:inline-flex" />
+              <h3 className="font-semibold text-sm truncate text-gray-900 dark:text-gray-100">{contact.name}</h3>
+              <span className={cn("hidden md:inline-flex rounded-full px-2 py-0 text-[10px] font-medium", getStatusColor(contact.status))}>
+                {getStatusLabel(contact.status)}
+              </span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
               <span className="flex items-center gap-1">
                 <Phone className="h-3 w-3" />
                 {contact.phone}
               </span>
-              {contact.process_number && !isMobile && (
-                <span className="flex items-center gap-1">
-                  <FileText className="h-3 w-3" />
-                  <span className="truncate max-w-[120px]">{contact.process_number}</span>
-                </span>
-              )}
             </div>
           </div>
         </button>
       </div>
+
       <div className="flex items-center gap-0.5 shrink-0">
         {!isAdmin && (
-          <ActionButton
+          <ActionBtn
             icon={isTransferring ? LoadingSpinner : ArrowRightLeft}
-            label="Transferir para administrador"
-            onClick={handleTransferToAdmin}
-            disabled={isTransferring}
-            className="text-muted-foreground hover:text-foreground"
+            label="Transferir" onClick={handleTransferToAdmin} disabled={isTransferring}
           />
         )}
-        <ActionButton
+        <ActionBtn
           icon={isBlocked ? LockOpen : Lock}
-          label={isBlocked ? "Desbloquear cliente" : "Bloquear cliente"}
-          onClick={handleToggleBlock}
-          disabled={isTogglingBlock}
-          className={isBlocked ? "text-emerald-500 hover:text-emerald-600" : "text-destructive hover:text-destructive/80"}
+          label={isBlocked ? "Desbloquear" : "Bloquear"}
+          onClick={handleToggleBlock} disabled={isTogglingBlock}
+          className={isBlocked ? "text-green-500 hover:text-green-600" : "text-red-500 hover:text-red-600"}
         />
-        <ActionButton
-          icon={ClipboardCopy}
-          label="Copiar modelo de mensagem"
-          onClick={handleCopyTemplate}
-          className="text-muted-foreground hover:text-foreground"
-        />
-        <ActionButton
-          icon={Info}
-          label="Ver perfil do contato"
-          onClick={() => onOpenProfile?.()}
-          className="text-muted-foreground hover:text-foreground"
-        />
+        <ActionBtn icon={ClipboardCopy} label="Copiar modelo" onClick={handleCopyTemplate} />
+        <ActionBtn icon={Info} label="Perfil" onClick={() => onOpenProfile?.()} />
       </div>
     </motion.div>
   );
