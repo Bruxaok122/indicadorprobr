@@ -75,9 +75,10 @@ export default function ConversasPage() {
   const handleBackToList = () => setMobileShowChat(false);
 
   useEffect(() => {
-    if (selectedContactId) setSearchParams({ contact: selectedContactId });
-    else setSearchParams({});
-  }, [selectedContactId, setSearchParams]);
+    if (selectedContactId) setSearchParams({ contact: selectedContactId }, { replace: true });
+    else setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedContactId]);
 
   const handleSendMessage = () => {
     if (!messageText.trim() || !selectedContactId) return;
