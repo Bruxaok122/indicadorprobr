@@ -190,23 +190,30 @@ export function useAuth() {
   );
 
   useEffect(() => {
+    let isMounted = true;
+    let initialDone = false;
+
     // Set up auth state listener FIRST
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+
       setState((prev) => ({
         ...prev,
         user: session?.user ?? null,
         session,
       }));
 
+      // Skip duplicate processing during initial load — getSession handles it
+      if (!initialDone) return;
+
       if (session?.user) {
-        // Use setTimeout to avoid potential deadlock
         setTimeout(async () => {
+          if (!isMounted) return;
           const { isBlocked, isTempBanned, banReason, banUntil } =
             await fetchUserData(session.user.id);
 
-          // Check for temp ban first
           if (isTempBanned && banUntil) {
             const hoursLeft = Math.ceil(
               (banUntil.getTime() - Date.now()) / (1000 * 60 * 60)
@@ -219,7 +226,6 @@ export function useAuth() {
             return;
           }
 
-          // Check subscription expiration
           const profileData = await supabase
             .from("profiles")
             .select("subscription_plan, subscription_expires_at")
@@ -229,7 +235,6 @@ export function useAuth() {
           if (profileData.data?.subscription_plan && 
               profileData.data?.subscription_expires_at &&
               new Date(profileData.data.subscription_expires_at) < new Date()) {
-            // Auto-block expired subscription
             await supabase
               .from("profiles")
               .update({ is_blocked: true })
@@ -251,7 +256,6 @@ export function useAuth() {
             return;
           }
 
-          // Validate device after login
           if (event === "SIGNED_IN") {
             await validateDevice(session.user.id);
           }
@@ -270,22 +274,34 @@ export function useAuth() {
       }
     });
 
-    // THEN get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setState((prev) => ({
-        ...prev,
-        user: session?.user ?? null,
-        session,
-      }));
+    // THEN get initial session (single source of truth for first load)
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
 
-      if (session?.user) {
-        fetchUserData(session.user.id);
-      } else {
-        setState((prev) => ({ ...prev, isLoading: false }));
+        setState((prev) => ({
+          ...prev,
+          user: session?.user ?? null,
+          session,
+        }));
+
+        if (session?.user) {
+          await fetchUserData(session.user.id);
+        } else {
+          setState((prev) => ({ ...prev, isLoading: false }));
+        }
+      } catch {
+        if (isMounted) setState((prev) => ({ ...prev, isLoading: false }));
+      } finally {
+        initialDone = true;
       }
-    });
+    };
+
+    initializeAuth();
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, [fetchUserData, validateDevice]);
