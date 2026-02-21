@@ -24,12 +24,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verify requesting user using getUser with auth header
+    const token = authHeader.replace("Bearer ", "");
+
+    // Verify requesting user by explicitly passing the token
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user: requestingUser }, error: userError } = await userClient.auth.getUser();
+    const { data: { user: requestingUser }, error: userError } = await userClient.auth.getUser(token);
     
     if (userError || !requestingUser) {
       console.error("Auth error:", userError?.message);
