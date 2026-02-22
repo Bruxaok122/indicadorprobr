@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { parseJuridicalList } from "@/lib/parseJuridicalList";
+import { getStateFromPhone } from "@/lib/dddToState";
 import { ParsedContact } from "@/types/juriszap";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertBanner } from "@/components/ui/alert-banner";
+import { Switch } from "@/components/ui/switch";
 import {
   Upload, UserPlus, File, Plus, User, Phone, Scale,
   CheckCircle, Search, Trash2, ContactRound, List, AlertTriangle
@@ -43,6 +45,7 @@ export default function AdminContatosPage() {
   const [parsedContacts, setParsedContacts] = useState<ParsedContact[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [splitByState, setSplitByState] = useState(false);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
 
   // Single contact state
@@ -114,27 +117,38 @@ export default function AdminContatosPage() {
   });
 
   const importContactsMutation = useMutation({
-    mutationFn: async ({ contacts, listName }: { contacts: ParsedContact[]; listName: string }) => {
+    mutationFn: async ({ contacts, listName, splitByState }: { contacts: ParsedContact[]; listName: string; splitByState: boolean }) => {
       let ok = 0; let fail = 0;
+      const createdLists = new Set<string>();
+
       for (const c of contacts) {
+        let targetList = listName;
+        if (splitByState) {
+          const state = getStateFromPhone(c.phone);
+          targetList = `${listName} - ${state}`;
+        }
+        createdLists.add(targetList);
+
         const { error } = await supabase.from("contacts").insert({
           name: c.name,
           phone: c.phone,
           lawyer_name: c.lawyer_name,
           process_number: c.process_number,
-          contact_list: listName,
+          contact_list: targetList,
           status: "novo",
           user_id: null,
         } as any);
         if (error) fail++; else ok++;
       }
       await supabase.from("import_logs").insert({ total_contacts: contacts.length, successful: ok, failed: fail });
-      return { ok, fail };
+      return { ok, fail, listsCreated: createdLists.size };
     },
-    onSuccess: ({ ok, fail }) => {
-      toast.success(`Importação concluída: ${ok} importados, ${fail} falhas`);
+    onSuccess: ({ ok, fail, listsCreated }) => {
+      const listMsg = listsCreated > 1 ? ` em ${listsCreated} listas por estado` : "";
+      toast.success(`Importação concluída: ${ok} importados${listMsg}, ${fail} falhas`);
       queryClient.invalidateQueries({ queryKey: ["admin-contacts"] });
       setRawText(""); setParsedContacts([]); setParseErrors([]); setShowPreview(false);
+      setSplitByState(false);
     },
     onError: (e: any) => toast.error("Erro na importação", { description: e.message }),
   });
@@ -469,12 +483,47 @@ export default function AdminContatosPage() {
               </ul>
             </AlertBanner>
           )}
+
+          {/* Split by state toggle */}
+          <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">Separar por estado (DDD)</p>
+              <p className="text-xs text-muted-foreground">
+                Cria listas automáticas por UF com base no DDD dos telefones
+              </p>
+            </div>
+            <Switch checked={splitByState} onCheckedChange={setSplitByState} />
+          </div>
+
+          {/* State distribution preview */}
+          {splitByState && parsedContacts.length > 0 && (() => {
+            const stateGroups: Record<string, number> = {};
+            parsedContacts.forEach(c => {
+              const state = getStateFromPhone(c.phone);
+              const listName = `${selectedList} - ${state}`;
+              stateGroups[listName] = (stateGroups[listName] || 0) + 1;
+            });
+            return (
+              <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Listas que serão criadas:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(stateGroups).sort((a, b) => b[1] - a[1]).map(([name, count]) => (
+                    <Badge key={name} variant="secondary" className="text-xs">
+                      {name} ({count})
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           <ScrollArea className="max-h-72">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Telefone</TableHead>
+                  {splitByState && <TableHead>Estado</TableHead>}
                   <TableHead>Parte Contrária</TableHead>
                   <TableHead>Processo</TableHead>
                 </TableRow>
@@ -484,12 +533,13 @@ export default function AdminContatosPage() {
                   <TableRow key={i}>
                     <TableCell className="text-sm font-medium">{c.name}</TableCell>
                     <TableCell className="font-mono text-xs">{c.phone}</TableCell>
+                    {splitByState && <TableCell><Badge variant="outline" className="text-[10px]">{getStateFromPhone(c.phone)}</Badge></TableCell>}
                     <TableCell className="text-xs">{c.lawyer_name || "-"}</TableCell>
                     <TableCell className="text-xs">{c.process_number || "-"}</TableCell>
                   </TableRow>
                 ))}
                 {parsedContacts.length > 50 && (
-                  <TableRow><TableCell colSpan={4} className="text-center text-xs text-muted-foreground">... e mais {parsedContacts.length - 50} contatos</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={splitByState ? 5 : 4} className="text-center text-xs text-muted-foreground">... e mais {parsedContacts.length - 50} contatos</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -497,7 +547,7 @@ export default function AdminContatosPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPreview(false)}>Cancelar</Button>
             <Button
-              onClick={() => selectedList && importContactsMutation.mutate({ contacts: parsedContacts, listName: selectedList })}
+              onClick={() => selectedList && importContactsMutation.mutate({ contacts: parsedContacts, listName: selectedList, splitByState })}
               disabled={importContactsMutation.isPending || !selectedList}
             >
               {importContactsMutation.isPending ? <LoadingSpinner size="sm" /> : <><CheckCircle className="h-4 w-4 mr-1.5" /> Importar {parsedContacts.length} contatos</>}
