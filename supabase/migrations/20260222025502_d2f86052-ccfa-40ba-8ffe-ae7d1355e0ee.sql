@@ -1,0 +1,1 @@
+ALTER TABLE public.contacts ADD COLUMN is_priority boolean NOT NULL DEFAULT false;

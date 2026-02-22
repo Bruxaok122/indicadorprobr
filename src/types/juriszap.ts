@@ -7,6 +7,7 @@ export interface Contact {
   cpf?: string;
   valor_da_causa?: number;
   status: 'novo' | 'aguardando' | 'respondido' | 'encerrado';
+  is_priority?: boolean;
   last_message_at?: string;
   created_at: string;
   updated_at: string;
