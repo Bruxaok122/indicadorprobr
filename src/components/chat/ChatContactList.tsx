@@ -300,8 +300,8 @@ export function ChatContactList({
                       )}
                     </div>
                     <div className="flex items-center justify-between gap-2 mt-0.5">
-                      <p className="truncate text-xs text-gray-500 dark:text-gray-400 min-w-0">
-                        {contact.phone}
+                      <p className="truncate text-xs text-muted-foreground min-w-0">
+                        {contact.last_message_preview || contact.phone}
                       </p>
                       <span className={cn(
                         "shrink-0 inline-flex items-center gap-1 rounded-full px-1.5 py-0 text-[10px] font-medium",
