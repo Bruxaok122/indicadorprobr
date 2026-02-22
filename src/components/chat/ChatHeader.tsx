@@ -1,7 +1,7 @@
 import { Contact } from "@/types/juriszap";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, Phone, Lock, LockOpen, ArrowRightLeft, ClipboardCopy, Info } from "lucide-react";
+import { ArrowLeft, Phone, Lock, LockOpen, ArrowRightLeft, ClipboardCopy, Info, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,8 @@ interface ChatHeaderProps {
   isTogglingBlock?: boolean;
   onOpenProfile?: () => void;
   onTransferDone?: () => void;
+  onTogglePriority?: (contactId: string, isPriority: boolean) => void;
+  isTogglingPriority?: boolean;
 }
 
 function formatCurrency(value?: number): string {
@@ -63,7 +65,7 @@ function getStatusLabel(status: string) {
   }
 }
 
-export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglingBlock, onOpenProfile, onTransferDone }: ChatHeaderProps) {
+export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglingBlock, onOpenProfile, onTransferDone, onTogglePriority, isTogglingPriority }: ChatHeaderProps) {
   const { user, isAdmin } = useAuthContext();
   const queryClient = useQueryClient();
   const isBlocked = contact.status === "encerrado";
@@ -153,6 +155,13 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
       </div>
 
       <div className="flex items-center gap-0.5 shrink-0">
+        <ActionBtn
+          icon={Star}
+          label={contact.is_priority ? "Remover prioridade" : "Prioridade"}
+          onClick={() => onTogglePriority?.(contact.id, !contact.is_priority)}
+          disabled={isTogglingPriority}
+          className={contact.is_priority ? "text-amber-500 hover:text-amber-600" : "text-gray-400 hover:text-amber-500"}
+        />
         {!isAdmin && (
           <ActionBtn
             icon={isTransferring ? LoadingSpinner : ArrowRightLeft}

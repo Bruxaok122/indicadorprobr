@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User } from "lucide-react";
+import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star } from "lucide-react";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -92,11 +92,18 @@ export function ChatContactList({
 }: ChatContactListProps) {
   const [activeTab, setActiveTab] = useState<TabFilter>("todos");
 
-  const filteredContacts = contacts.filter((contact) => {
-    if (activeTab !== "todos" && contact.status !== activeTab) return false;
-    const q = search.toLowerCase();
-    return contact.name.toLowerCase().includes(q) || contact.phone.includes(search);
-  });
+  const filteredContacts = contacts
+    .filter((contact) => {
+      if (activeTab !== "todos" && contact.status !== activeTab) return false;
+      const q = search.toLowerCase();
+      return contact.name.toLowerCase().includes(q) || contact.phone.includes(search);
+    })
+    .sort((a, b) => {
+      // Priority contacts always on top
+      if (a.is_priority && !b.is_priority) return -1;
+      if (!a.is_priority && b.is_priority) return 1;
+      return 0;
+    });
 
   const tabCounts = {
     todos: contacts.length,
@@ -252,16 +259,21 @@ export function ChatContactList({
                     "flex w-full items-center gap-3 px-3 py-3 text-left transition-all",
                     "hover:bg-gray-50 dark:hover:bg-gray-800/50 active:scale-[0.99]",
                     "border-b border-gray-100 dark:border-gray-800/50",
-                    isSelected && "bg-green-50 dark:bg-green-900/10 border-l-[3px] border-l-green-500"
+                    isSelected && "bg-green-50 dark:bg-green-900/10 border-l-[3px] border-l-green-500",
+                    contact.is_priority && !isSelected && "bg-amber-50/60 dark:bg-amber-900/10 border-l-[3px] border-l-amber-400"
                   )}
                 >
                   {/* Avatar */}
                   <div className="relative">
                     <div className={cn(
                       "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white shadow-sm",
-                      getAvatarColor(contact.name)
+                      contact.is_priority ? "bg-amber-500 ring-2 ring-amber-400 ring-offset-1 ring-offset-background" : getAvatarColor(contact.name)
                     )}>
-                      {contact.name.charAt(0).toUpperCase()}
+                      {contact.is_priority ? (
+                        <Star className="h-5 w-5 fill-white text-white" />
+                      ) : (
+                        contact.name.charAt(0).toUpperCase()
+                      )}
                     </div>
                     {/* Status dot */}
                     <span className={cn(

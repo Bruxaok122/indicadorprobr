@@ -34,7 +34,7 @@ export default function ConversasPage() {
   const { isAdmin, profile, signOut } = useAuthContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { contacts, isLoading: contactsLoading, toggleContactBlock, isTogglingBlock } = useContacts();
+  const { contacts, isLoading: contactsLoading, toggleContactBlock, isTogglingBlock, togglePriority, isTogglingPriority } = useContacts();
   const { templates } = useMetaTemplates();
   const { phones } = useWabaPhones();
   const isMobile = useIsMobile();
@@ -183,6 +183,8 @@ export default function ConversasPage() {
                   onToggleBlock={(contactId, blocked) => toggleContactBlock({ contactId, blocked })}
                   isTogglingBlock={isTogglingBlock}
                   onOpenProfile={() => setShowProfileDrawer(true)}
+                  onTogglePriority={(contactId, isPriority) => togglePriority({ contactId, isPriority })}
+                  isTogglingPriority={isTogglingPriority}
                   onTransferDone={() => {
                     setSelectedContactId(null);
                     if (isMobile) setMobileShowChat(false);

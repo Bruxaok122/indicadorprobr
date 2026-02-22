@@ -47,6 +47,7 @@ export type Database = {
           cpf: string | null
           created_at: string
           id: string
+          is_priority: boolean
           last_message_at: string | null
           lawyer_name: string | null
           name: string
@@ -62,6 +63,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           id?: string
+          is_priority?: boolean
           last_message_at?: string | null
           lawyer_name?: string | null
           name: string
@@ -77,6 +79,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           id?: string
+          is_priority?: boolean
           last_message_at?: string | null
           lawyer_name?: string | null
           name?: string

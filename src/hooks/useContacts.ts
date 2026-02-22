@@ -189,6 +189,24 @@ export function useContacts() {
     },
   });
 
+  const togglePriorityMutation = useMutation({
+    mutationFn: async ({ contactId, isPriority }: { contactId: string; isPriority: boolean }) => {
+      const { error } = await supabase
+        .from("contacts")
+        .update({ is_priority: isPriority } as any)
+        .eq("id", contactId);
+      if (error) throw error;
+      return { isPriority };
+    },
+    onSuccess: (result) => {
+      toast.success(result.isPriority ? "Prioridade ativada ⭐" : "Prioridade removida");
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao alterar prioridade", { description: error.message });
+    },
+  });
+
   return {
     contacts,
     isLoading,
@@ -202,6 +220,8 @@ export function useContacts() {
     isDeletingContacts: deleteContactsMutation.isPending,
     toggleContactBlock: toggleContactBlockMutation.mutate,
     isTogglingBlock: toggleContactBlockMutation.isPending,
+    togglePriority: togglePriorityMutation.mutate,
+    isTogglingPriority: togglePriorityMutation.isPending,
     refetchContacts,
   };
 }
