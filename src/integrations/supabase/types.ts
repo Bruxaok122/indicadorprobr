@@ -49,6 +49,7 @@ export type Database = {
           id: string
           is_priority: boolean
           last_message_at: string | null
+          last_message_preview: string | null
           lawyer_name: string | null
           name: string
           phone: string
@@ -65,6 +66,7 @@ export type Database = {
           id?: string
           is_priority?: boolean
           last_message_at?: string | null
+          last_message_preview?: string | null
           lawyer_name?: string | null
           name: string
           phone: string
@@ -81,6 +83,7 @@ export type Database = {
           id?: string
           is_priority?: boolean
           last_message_at?: string | null
+          last_message_preview?: string | null
           lawyer_name?: string | null
           name?: string
           phone?: string
