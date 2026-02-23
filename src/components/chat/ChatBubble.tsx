@@ -43,22 +43,6 @@ export function ChatBubble({ message }: ChatBubbleProps) {
       );
     }
     if (message.message_type === "audio") {
-      const audioSrc = message.document_url;
-      if (audioSrc) {
-        return (
-          <div className="flex flex-col gap-1 min-w-[200px]">
-            <div className="flex items-center gap-1.5">
-              <Mic className="h-4 w-4 shrink-0 opacity-70" />
-              <span className="text-[11px] font-medium opacity-60">
-                {isOutgoing ? "Áudio enviado" : "Áudio recebido"}
-              </span>
-            </div>
-            <audio controls preload="metadata" className="w-full max-w-[280px] h-8 [&::-webkit-media-controls-panel]:bg-transparent">
-              <source src={audioSrc} />
-            </audio>
-          </div>
-        );
-      }
       return (
         <div className="flex items-center gap-1.5 py-0.5">
           <Mic className="h-4 w-4 shrink-0 opacity-70" />

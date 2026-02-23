@@ -169,7 +169,6 @@ serve(async (req) => {
                 let content = "";
                 let messageType = "text";
                 let imageUrl: string | undefined;
-                let audioUrl: string | undefined;
 
                 if (message.type === "text") {
                   content = message.text?.body || "";
@@ -272,74 +271,6 @@ serve(async (req) => {
                   messageType = "document";
                 } else if (message.type === "audio") {
                   content = "[Áudio recebido]";
-                  messageType = "audio";
-
-                  // Download and store incoming audio
-                  try {
-                    const { data: audioConfig } = await supabase
-                      .from("whatsapp_config")
-                      .select("access_token")
-                      .limit(1)
-                      .single();
-
-                    if (audioConfig?.access_token && message.audio?.id) {
-                      const accessToken = audioConfig.access_token;
-                      const mediaId = message.audio.id;
-                      let mimeType = message.audio.mime_type || "audio/ogg";
-                      // Clean codec extensions for storage compatibility
-                      mimeType = mimeType.split(";")[0].trim();
-                      const ext = mimeType === "audio/ogg" ? "ogg" : mimeType.split("/")[1] || "ogg";
-                      const fileName = `${Date.now()}-${mediaId}.${ext}`;
-
-                      console.log(`Fetching audio media URL for ID: ${mediaId}`);
-                      const mediaResponse = await fetch(
-                        `https://graph.facebook.com/v21.0/${mediaId}`,
-                        { headers: { Authorization: `Bearer ${accessToken}` } }
-                      );
-
-                      let downloadUrl: string | null = null;
-                      if (mediaResponse.ok) {
-                        const mediaData = await mediaResponse.json();
-                        downloadUrl = mediaData.url;
-                        console.log("Got audio download URL from Graph API");
-                      } else {
-                        console.error("Audio media API error:", await mediaResponse.text());
-                      }
-
-                      if (downloadUrl) {
-                        const audioResponse = await fetch(downloadUrl, {
-                          headers: { Authorization: `Bearer ${accessToken}` },
-                        });
-
-                        if (audioResponse.ok) {
-                          const arrayBuffer = await audioResponse.arrayBuffer();
-                          const uint8Array = new Uint8Array(arrayBuffer);
-                          console.log(`Audio downloaded, size: ${uint8Array.length} bytes`);
-
-                          const { error: uploadError } = await supabase.storage
-                            .from("documents")
-                            .upload(`audio/${fileName}`, uint8Array, {
-                              contentType: mimeType,
-                              upsert: false,
-                            });
-
-                          if (uploadError) {
-                            console.error("Audio storage upload error:", uploadError);
-                          } else {
-                            const { data: urlData } = supabase.storage
-                              .from("documents")
-                              .getPublicUrl(`audio/${fileName}`);
-                            audioUrl = urlData.publicUrl;
-                            console.log("Audio uploaded successfully, URL:", audioUrl);
-                          }
-                        } else {
-                          console.error("Audio download failed:", await audioResponse.text());
-                        }
-                      }
-                    }
-                  } catch (audioError) {
-                    console.error("Error downloading audio:", audioError);
-                  }
                 } else if (message.type === "video") {
                   content = "[Vídeo recebido]";
                 } else {
@@ -360,9 +291,6 @@ serve(async (req) => {
                 
                 if (imageUrl) {
                   messageInsert.image_url = imageUrl;
-                }
-                if (audioUrl) {
-                  messageInsert.document_url = audioUrl;
                 }
 
                 const { error: messageError } = await supabase.from("messages").insert(messageInsert);

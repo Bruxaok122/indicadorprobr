@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MessageSquare, Send, Upload, FileText, FileImage, Scale } from "lucide-react";
+import { MessageSquare, Send, Upload, FileText, FileImage } from "lucide-react";
 
 import { ChatContactList } from "@/components/chat/ChatContactList";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -146,14 +146,6 @@ export default function ConversasPage() {
         "bg-muted dark:bg-background",
         isMobile && !isAdmin ? "h-[100dvh]" : isMobile ? "h-[calc(100dvh-3.5rem)]" : "h-screen"
       )}>
-        {/* Banner do advogado — apenas operadores */}
-        {!isAdmin && operatorLawyer && (
-          <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-primary/10 dark:bg-primary/20 border-b border-border text-xs text-primary font-medium">
-            <Scale className="h-3.5 w-3.5" />
-            <span>Você está falando em nome do advogado <strong>{operatorLawyer}</strong></span>
-            {operatorPhone && <span className="text-muted-foreground ml-1">• {operatorPhone}</span>}
-          </div>
-        )}
         <div className={cn("flex flex-1 overflow-hidden relative min-h-0", !isMobile && "gap-3 p-2 pr-2")}>
           {/* Contact list with 3D effect */}
           <div
@@ -167,9 +159,9 @@ export default function ConversasPage() {
               contacts={contacts} isLoading={contactsLoading} search={search} setSearch={setSearch}
               selectedContactId={selectedContactId} onSelectContact={handleSelectContact}
               isMobile={isMobile} mobileShowChat={mobileShowChat}
-              operatorPhone={!isAdmin ? operatorPhone : undefined}
-              operatorLawyer={!isAdmin ? operatorLawyer : undefined}
-              operatorName={!isAdmin ? profile?.full_name : undefined}
+              operatorPhone={operatorPhone}
+              operatorLawyer={operatorLawyer}
+              operatorName={profile?.full_name}
               isDark={!isAdmin ? isDark : undefined}
               onToggleTheme={!isAdmin ? toggleTheme : undefined}
               onLogout={!isAdmin ? signOut : undefined}
