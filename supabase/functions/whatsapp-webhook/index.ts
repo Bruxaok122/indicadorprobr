@@ -310,10 +310,26 @@ serve(async (req) => {
 
                 console.log(`Status update for message ${messageId}: ${statusValue}`);
 
+                // Build update payload
+                const updatePayload: Record<string, string | null> = { status: statusValue };
+
+                // Capture error details on failed messages
+                if (statusValue === "failed" && status.errors && status.errors.length > 0) {
+                  const err = status.errors[0];
+                  const errorCode = String(err.code || "");
+                  const errorTitle = err.title || "";
+                  const errorMessage = err.message || err.error_data?.details || "";
+                  
+                  updatePayload.error_code = errorCode;
+                  updatePayload.error_details = errorTitle + (errorMessage ? `: ${errorMessage}` : "");
+                  
+                  console.log(`Message ${messageId} failed - code: ${errorCode}, title: ${errorTitle}, message: ${errorMessage}`);
+                }
+
                 // Update message status
                 await supabase
                   .from("messages")
-                  .update({ status: statusValue })
+                  .update(updatePayload)
                   .eq("whatsapp_message_id", messageId);
               }
             }
