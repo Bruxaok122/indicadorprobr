@@ -10,6 +10,7 @@ export interface Contact {
   is_priority?: boolean;
   last_message_at?: string;
   last_message_preview?: string;
+  dispatched_phone_number_id?: string;
   created_at: string;
   updated_at: string;
 }
