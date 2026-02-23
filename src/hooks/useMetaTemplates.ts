@@ -46,23 +46,47 @@ export function useMetaTemplates() {
       variableMappings?: Record<string, string>;
       targetUserId?: string;
     }) => {
-      const { targetUserId, ...rest } = params;
-      const { data, error } = await supabase.functions.invoke("send-bulk-template", {
-        body: { ...rest, userId: targetUserId || user?.id },
-      });
+      const { targetUserId, contactIds, ...rest } = params;
+      const userId = targetUserId || user?.id;
+      const BATCH_SIZE = 50;
+      const totalResults = { total: contactIds.length, sent: 0, failed: 0, errors: [] as string[] };
 
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
-      return data;
+      for (let i = 0; i < contactIds.length; i += BATCH_SIZE) {
+        const batch = contactIds.slice(i, i + BATCH_SIZE);
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(contactIds.length / BATCH_SIZE);
+        
+        toast.info(`Enviando lote ${batchNum}/${totalBatches}...`, { id: "bulk-progress" });
+
+        const { data, error } = await supabase.functions.invoke("send-bulk-template", {
+          body: { ...rest, contactIds: batch, userId },
+        });
+
+        if (error) throw error;
+        if (data.error) throw new Error(data.error);
+
+        totalResults.sent += data.results?.sent || 0;
+        totalResults.failed += data.results?.failed || 0;
+        if (data.results?.errors) {
+          totalResults.errors.push(...data.results.errors);
+        }
+      }
+
+      return {
+        success: true,
+        results: totalResults,
+        message: `Disparo concluído: ${totalResults.sent} enviados, ${totalResults.failed} falhas`,
+      };
     },
     onSuccess: (data) => {
-      toast.success(data.message);
+      toast.success(data.message, { id: "bulk-progress" });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
       queryClient.invalidateQueries({ queryKey: ["messages"] });
     },
     onError: (error: any) => {
       toast.error("Erro no disparo em massa", {
         description: error.message,
+        id: "bulk-progress",
       });
     },
   });
