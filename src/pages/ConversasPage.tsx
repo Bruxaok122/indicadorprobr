@@ -64,7 +64,7 @@ export default function ConversasPage() {
   const operatorLawyer = activePhone?.lawyer_name;
 
   useEffect(() => {
-    if (phones.length === 1 && !selectedPhoneNumberId) setSelectedPhoneNumberId(phones[0].phone_number_id);
+    if (phones.length > 0 && !selectedPhoneNumberId) setSelectedPhoneNumberId(phones[0].phone_number_id);
   }, [phones, selectedPhoneNumberId]);
 
   const handleSelectContact = (contactId: string) => {
