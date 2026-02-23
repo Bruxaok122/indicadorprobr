@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Phone, UserCircle, Send, CheckCircle, RefreshCw, Wifi, WifiOff, AlertCircle, Upload, Image } from "lucide-react";
+import { Phone, UserCircle, Send, CheckCircle, RefreshCw, Wifi, WifiOff, AlertCircle, Upload, Image, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
@@ -80,6 +80,11 @@ export default function WhatsAppApiPage() {
   const availablePhones = allPhones.length > 0 ? allPhones : phones;
   const [phoneStatuses, setPhoneStatuses] = useState<Record<string, PhoneStatus>>({});
   const [checkingAllStatuses, setCheckingAllStatuses] = useState(false);
+  
+  // Set PIN for existing number
+  const [setPinPhoneId, setSetPinPhoneId] = useState("");
+  const [setPinValue, setSetPinValue] = useState("");
+  const [settingPin, setSettingPin] = useState(false);
 
   // Business Profile State
   const [selectedPhoneId, setSelectedPhoneId] = useState("");
@@ -212,6 +217,36 @@ export default function WhatsAppApiPage() {
       toast.error("Erro ao verificar código", { description: err.message });
     } finally {
       setVerifyingCode(false);
+    }
+  };
+
+  const handleSetPin = async () => {
+    if (!setPinPhoneId) {
+      toast.error("Selecione um número");
+      return;
+    }
+    if (setPinValue.length !== 6) {
+      toast.error("O PIN deve ter exatamente 6 dígitos");
+      return;
+    }
+    setSettingPin(true);
+    try {
+      const selectedForPin = availablePhones.find((p) => p.id === setPinPhoneId);
+      if (!selectedForPin) throw new Error("Número não encontrado");
+      
+      const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
+        body: { action: "set_pin", phone_number_id: selectedForPin.phone_number_id, pin: setPinValue },
+      });
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      toast.success("PIN definido com sucesso!", { description: "O número deve mudar de status em instantes." });
+      setSetPinValue("");
+      // Re-check status of this number
+      checkPhoneStatus(selectedForPin.phone_number_id);
+    } catch (err: any) {
+      toast.error("Erro ao definir PIN", { description: err.message });
+    } finally {
+      setSettingPin(false);
     }
   };
 
@@ -463,6 +498,57 @@ export default function WhatsAppApiPage() {
                     </Button>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Set PIN for Existing Number */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lock className="h-5 w-5" />
+                  Definir PIN para Número Existente
+                </CardTitle>
+                <CardDescription>
+                  Defina o PIN de verificação em duas etapas para um número que já está cadastrado
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Selecione o Número</Label>
+                  <Select value={setPinPhoneId} onValueChange={setSetPinPhoneId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolha um número..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availablePhones.map((p) => {
+                        const ps = phoneStatuses[p.phone_number_id];
+                        const statusInfo = getStatusInfo(ps?.status);
+                        return (
+                          <SelectItem key={p.id} value={p.id}>
+                            <span className="flex items-center gap-2">
+                              <span className={`inline-block h-2 w-2 rounded-full ${ps?.status === "CONNECTED" ? "bg-green-500" : ps?.status === "PENDING" ? "bg-yellow-500" : "bg-destructive"}`} />
+                              {p.display_phone_number} {p.verified_name ? `(${p.verified_name})` : ""}
+                              {ps?.status ? ` — ${statusInfo.label}` : ""}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>PIN de 2 Fatores (6 dígitos)</Label>
+                  <Input
+                    value={setPinValue}
+                    onChange={(e) => setSetPinValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="123456"
+                    maxLength={6}
+                  />
+                </div>
+                <Button onClick={handleSetPin} disabled={settingPin} className="w-full">
+                  {settingPin ? <LoadingSpinner size="sm" /> : <Lock className="mr-2 h-4 w-4" />}
+                  {settingPin ? "Definindo PIN..." : "Definir PIN"}
+                </Button>
               </CardContent>
             </Card>
 
