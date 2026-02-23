@@ -34,7 +34,7 @@ export default function ConversasPage() {
   const { isAdmin, profile, signOut } = useAuthContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { contacts, isLoading: contactsLoading, toggleContactBlock, isTogglingBlock, togglePriority, isTogglingPriority } = useContacts();
+  const { contacts, isLoading: contactsLoading, toggleContactBlock, isTogglingBlock, togglePriority, isTogglingPriority, clearAllContacts, isClearingAll } = useContacts();
   const { templates } = useMetaTemplates();
   const { phones } = useWabaPhones();
   const isMobile = useIsMobile();
@@ -173,6 +173,8 @@ export default function ConversasPage() {
               isDark={!isAdmin ? isDark : undefined}
               onToggleTheme={!isAdmin ? toggleTheme : undefined}
               onLogout={!isAdmin ? signOut : undefined}
+              onClearAll={() => { setSelectedContactId(null); clearAllContacts(); }}
+              isClearingAll={isClearingAll}
             />
           </div>
 

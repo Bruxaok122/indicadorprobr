@@ -4,7 +4,11 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star } from "lucide-react";
+import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -33,6 +37,8 @@ interface ChatContactListProps {
   isDark?: boolean;
   onToggleTheme?: () => void;
   onLogout?: () => void;
+  onClearAll?: () => void;
+  isClearingAll?: boolean;
 }
 
 function formatMessageTime(dateStr: string): string {
@@ -89,6 +95,8 @@ export function ChatContactList({
   isDark,
   onToggleTheme,
   onLogout,
+  onClearAll,
+  isClearingAll,
 }: ChatContactListProps) {
   const [activeTab, setActiveTab] = useState<TabFilter>("todos");
 
@@ -215,7 +223,7 @@ export function ChatContactList({
         })}
       </div>
 
-      {/* Search + Filter */}
+      {/* Search + Clear All */}
       <div className="px-3 py-2.5 flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
@@ -226,6 +234,36 @@ export function ChatContactList({
             className="pl-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 border-0 text-sm focus-visible:ring-1 focus-visible:ring-green-400/50"
           />
         </div>
+        {onClearAll && contacts.length > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg hover:bg-destructive/10 transition-colors"
+                title="Limpar toda a lista"
+                disabled={isClearingAll}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Limpar toda a lista?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Isso removerá <strong>todos os {contacts.length} contatos</strong> da sua lista de conversas, incluindo mensagens e conversas associadas. Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={onClearAll}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isClearingAll ? "Limpando..." : "Sim, limpar tudo"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       {/* Contact list */}
