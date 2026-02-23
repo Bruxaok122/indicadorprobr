@@ -207,6 +207,28 @@ export function useContacts() {
     },
   });
 
+  const clearAllContactsMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // Delete messages for user's contacts
+      const contactIds = contacts.map(c => c.id);
+      if (contactIds.length === 0) return;
+
+      await supabase.from("messages").delete().in("contact_id", contactIds);
+      await supabase.from("conversations").delete().in("contact_id", contactIds);
+      await supabase.from("contacts").delete().in("id", contactIds);
+    },
+    onSuccess: () => {
+      toast.success("Lista limpa com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao limpar lista", { description: error.message });
+    },
+  });
+
   return {
     contacts,
     isLoading,
@@ -222,6 +244,8 @@ export function useContacts() {
     isTogglingBlock: toggleContactBlockMutation.isPending,
     togglePriority: togglePriorityMutation.mutate,
     isTogglingPriority: togglePriorityMutation.isPending,
+    clearAllContacts: clearAllContactsMutation.mutate,
+    isClearingAll: clearAllContactsMutation.isPending,
     refetchContacts,
   };
 }
