@@ -5,7 +5,18 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Phone, RefreshCw, CheckCircle, XCircle, Pencil, Save, X } from "lucide-react";
+import { Phone, RefreshCw, CheckCircle, XCircle, Pencil, Save, X, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useWabaPhones, WabaPhoneNumber } from "@/hooks/useWabaPhones";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -69,6 +80,7 @@ function PhoneCard({ phone }: { phone: WabaPhoneNumber & { lawyer_name?: string 
   const [editing, setEditing] = useState(false);
   const [lawyerName, setLawyerName] = useState(phone.lawyer_name || "");
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
 
   const handleSave = async () => {
@@ -87,6 +99,24 @@ function PhoneCard({ phone }: { phone: WabaPhoneNumber & { lawyer_name?: string 
       toast.error("Erro ao salvar", { description: err.message });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("waba_phone_numbers")
+        .delete()
+        .eq("id", phone.id);
+      if (error) throw error;
+      toast.success("Número excluído com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["waba-phones"] });
+      queryClient.invalidateQueries({ queryKey: ["waba-phones-all"] });
+    } catch (err: any) {
+      toast.error("Erro ao excluir número", { description: err.message });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -113,6 +143,32 @@ function PhoneCard({ phone }: { phone: WabaPhoneNumber & { lawyer_name?: string 
           ) : (
             <XCircle className="h-4 w-4 text-destructive" />
           )}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir número</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir permanentemente o número <strong>{phone.display_phone_number}</strong>? Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
