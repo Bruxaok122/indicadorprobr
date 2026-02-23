@@ -271,6 +271,8 @@ export type Database = {
           direction: string
           document_name: string | null
           document_url: string | null
+          error_code: string | null
+          error_details: string | null
           id: string
           image_url: string | null
           message_type: string
@@ -287,6 +289,8 @@ export type Database = {
           direction: string
           document_name?: string | null
           document_url?: string | null
+          error_code?: string | null
+          error_details?: string | null
           id?: string
           image_url?: string | null
           message_type?: string
@@ -303,6 +307,8 @@ export type Database = {
           direction?: string
           document_name?: string | null
           document_url?: string | null
+          error_code?: string | null
+          error_details?: string | null
           id?: string
           image_url?: string | null
           message_type?: string

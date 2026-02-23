@@ -22,6 +22,24 @@ function getStatusIcon(status: Message["status"]) {
   }
 }
 
+function getErrorLabel(errorCode?: string | null): string | null {
+  if (!errorCode) return null;
+  switch (errorCode) {
+    case "131051": return "🚫 Cliente bloqueou você";
+    case "131026": return "📵 Número sem WhatsApp";
+    case "131049": return "⚠️ Limite de envio atingido";
+    case "131047": return "⏰ Janela de 24h expirada";
+    case "131021": return "⏰ Janela de 24h expirada";
+    case "131053": return "📵 Número inválido";
+    case "131031": return "❌ Conta desativada pelo cliente";
+    case "130472": return "⏰ Janela de 24h expirada";
+    case "131056": return "🔄 Mensagem não entregue (tente novamente)";
+    case "131048": return "⚠️ Spam detectado pela Meta";
+    case "368": return "⚠️ Conta temporariamente bloqueada pela Meta";
+    default: return `❌ Erro ${errorCode}`;
+  }
+}
+
 export function ChatBubble({ message }: ChatBubbleProps) {
   const isOutgoing = message.direction === "outgoing";
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -90,6 +108,11 @@ export function ChatBubble({ message }: ChatBubbleProps) {
             <span>{format(new Date(message.created_at), "HH:mm", { locale: ptBR })}</span>
             {isOutgoing && getStatusIcon(message.status)}
           </div>
+          {message.status === "failed" && isOutgoing && (
+            <div className="mt-1 rounded bg-red-50 dark:bg-red-900/20 px-2 py-1 text-[11px] text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40">
+              {getErrorLabel(message.error_code) || message.error_details || "Falha no envio"}
+            </div>
+          )}
         </div>
       </motion.div>
 

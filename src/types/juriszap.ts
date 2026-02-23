@@ -37,6 +37,8 @@ export interface Message {
   image_url?: string;
   whatsapp_message_id?: string;
   status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  error_code?: string | null;
+  error_details?: string | null;
   created_at: string;
 }
 
