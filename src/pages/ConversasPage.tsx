@@ -66,13 +66,14 @@ export default function ConversasPage() {
   // Auto-select the dispatched phone number for this contact, or fallback to first available
   useEffect(() => {
     if (phones.length === 0) return;
-    const contactDispatchedPhone = (selectedContact as any)?.dispatched_phone_number_id as string | null;
+    const contactDispatchedPhone = selectedContact?.dispatched_phone_number_id;
     if (contactDispatchedPhone && phones.some(p => p.phone_number_id === contactDispatchedPhone)) {
       setSelectedPhoneNumberId(contactDispatchedPhone);
-    } else if (!selectedPhoneNumberId) {
+    } else {
+      // Always fallback to first phone when contact has no dispatched phone
       setSelectedPhoneNumberId(phones[0].phone_number_id);
     }
-  }, [phones, selectedContact, selectedPhoneNumberId]);
+  }, [phones, selectedContact]);
 
   const handleSelectContact = (contactId: string) => {
     setSelectedContactId(contactId);
