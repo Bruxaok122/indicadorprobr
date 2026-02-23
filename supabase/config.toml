@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.send-bulk-template]
 verify_jwt = false
+
+[functions.optimize-api-health]
+verify_jwt = false

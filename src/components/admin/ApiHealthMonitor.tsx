@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useApiHealth } from "@/hooks/useApiHealth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Activity,
   TrendingUp,
@@ -134,6 +138,9 @@ function QualityBadge({ rating }: { rating: string | null }) {
 }
 
 export function ApiHealthMonitor() {
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizeResults, setOptimizeResults] = useState<Record<string, number> | null>(null);
+
   const {
     messageStats,
     dailyStats,
@@ -145,6 +152,21 @@ export function ApiHealthMonitor() {
     responseRate,
     isLoading,
   } = useApiHealth();
+
+  const handleOptimize = async () => {
+    setIsOptimizing(true);
+    setOptimizeResults(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("optimize-api-health");
+      if (error) throw error;
+      setOptimizeResults(data.results);
+      toast.success(data.message);
+    } catch (err: any) {
+      toast.error("Erro ao otimizar: " + (err.message || "Tente novamente"));
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -186,8 +208,52 @@ export function ApiHealthMonitor() {
             Monitoramento em tempo real · Atualiza a cada 30s
           </p>
         </div>
-        <HealthScoreBadge score={deliveryRate} />
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleOptimize}
+            disabled={isOptimizing}
+            className="gap-2"
+            variant="outline"
+          >
+            {isOptimizing ? (
+              <LoadingSpinner size="sm" />
+            ) : (
+              <ArrowUpRight className="h-4 w-4" />
+            )}
+            {isOptimizing ? "Otimizando..." : "Otimizar Score"}
+          </Button>
+          <HealthScoreBadge score={deliveryRate} />
+        </div>
       </div>
+
+      {/* Optimization Results */}
+      {optimizeResults && (
+        <Card className="border-green-500/30 bg-green-500/5">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-2 w-full">
+                <p className="text-sm font-medium text-green-400">Otimização concluída</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {[
+                    { label: "Pendentes limpos", value: optimizeResults.pending_cleaned },
+                    { label: "Conversas fechadas", value: optimizeResults.conversations_closed },
+                    { label: "Bloqueados encerrados", value: optimizeResults.blocked_contacts_closed },
+                    { label: "Inválidos encerrados", value: optimizeResults.invalid_contacts_closed },
+                    { label: "Inativos encerrados", value: optimizeResults.stale_contacts_closed },
+                    { label: "Total msgs com falha", value: optimizeResults.total_failed_messages },
+                  ].map((item) => (
+                    <div key={item.label} className="bg-muted/50 rounded-md p-2 text-center">
+                      <p className="text-xs text-muted-foreground">{item.label}</p>
+                      <p className="text-sm font-bold">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* KPI Row */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
