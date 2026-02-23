@@ -63,9 +63,16 @@ export default function ConversasPage() {
   const operatorPhone = activePhone?.display_phone_number;
   const operatorLawyer = activePhone?.lawyer_name;
 
+  // Auto-select the dispatched phone number for this contact, or fallback to first available
   useEffect(() => {
-    if (phones.length > 0 && !selectedPhoneNumberId) setSelectedPhoneNumberId(phones[0].phone_number_id);
-  }, [phones, selectedPhoneNumberId]);
+    if (phones.length === 0) return;
+    const contactDispatchedPhone = (selectedContact as any)?.dispatched_phone_number_id as string | null;
+    if (contactDispatchedPhone && phones.some(p => p.phone_number_id === contactDispatchedPhone)) {
+      setSelectedPhoneNumberId(contactDispatchedPhone);
+    } else if (!selectedPhoneNumberId) {
+      setSelectedPhoneNumberId(phones[0].phone_number_id);
+    }
+  }, [phones, selectedContact, selectedPhoneNumberId]);
 
   const handleSelectContact = (contactId: string) => {
     setSelectedContactId(contactId);

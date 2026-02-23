@@ -1,0 +1,1 @@
+ALTER TABLE public.contacts ADD COLUMN dispatched_phone_number_id text;

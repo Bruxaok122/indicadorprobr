@@ -264,6 +264,7 @@ serve(async (req) => {
       .update({
         status: "aguardando",
         last_message_at: new Date().toISOString(),
+        dispatched_phone_number_id: finalPhoneNumberId,
       })
       .eq("id", contactId);
 
