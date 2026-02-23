@@ -105,12 +105,16 @@ function PhoneCard({ phone }: { phone: WabaPhoneNumber & { lawyer_name?: string 
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const { error } = await supabase
-        .from("waba_phone_numbers")
-        .delete()
-        .eq("id", phone.id);
+      const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
+        body: {
+          action: "delete_phone",
+          phone_number_id: phone.phone_number_id,
+          db_id: phone.id,
+        },
+      });
       if (error) throw error;
-      toast.success("Número excluído com sucesso!");
+      if (data?.error) throw new Error(data.error);
+      toast.success("Número excluído da Meta e do sistema!");
       queryClient.invalidateQueries({ queryKey: ["waba-phones"] });
       queryClient.invalidateQueries({ queryKey: ["waba-phones-all"] });
     } catch (err: any) {

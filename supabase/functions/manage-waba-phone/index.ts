@@ -217,6 +217,68 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
 
+    } else if (action === "delete_phone") {
+      const { phone_number_id, db_id } = body;
+
+      if (!phone_number_id) {
+        return new Response(JSON.stringify({ error: "phone_number_id é obrigatório" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Try to deregister from Meta (ignore errors - force delete anyway)
+      try {
+        const deregRes = await fetch(
+          `https://graph.facebook.com/v21.0/${phone_number_id}/deregister`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ messaging_product: "whatsapp" }),
+          }
+        );
+        const deregData = await deregRes.json();
+        console.log("Deregister result:", JSON.stringify(deregData));
+      } catch (e) {
+        console.log("Deregister failed (continuing):", e);
+      }
+
+      // Try to delete from WABA (ignore errors - force delete anyway)
+      try {
+        const deleteRes = await fetch(
+          `https://graph.facebook.com/v21.0/${wabaId}/phone_numbers?phone_number_id=${phone_number_id}`,
+          {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        const deleteData = await deleteRes.json();
+        console.log("Meta delete result:", JSON.stringify(deleteData));
+      } catch (e) {
+        console.log("Meta delete failed (continuing):", e);
+      }
+
+      // Always delete from database
+      if (db_id) {
+        // Delete related permissions first
+        await serviceClient
+          .from("user_phone_permissions")
+          .delete()
+          .eq("phone_number_id", db_id);
+
+        await serviceClient
+          .from("waba_phone_numbers")
+          .delete()
+          .eq("id", db_id);
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
     } else {
       return new Response(JSON.stringify({ error: "Ação inválida" }), {
         status: 400,
