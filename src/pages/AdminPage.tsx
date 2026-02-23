@@ -4,7 +4,7 @@ import { useWabaPhones } from "@/hooks/useWabaPhones";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Users, UserPlus, Radio, Mic } from "lucide-react";
+import { Users, UserPlus, Radio, Mic, HeartPulse } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -16,6 +16,7 @@ import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { PhoneNumbersSection } from "@/components/admin/PhoneNumbersSection";
 import { PhonePermissionsDialog } from "@/components/admin/PhonePermissionsDialog";
 import { AdminChatMonitor } from "@/components/admin/AdminChatMonitor";
+import { ApiHealthMonitor } from "@/components/admin/ApiHealthMonitor";
 import { Profile } from "@/types/juriszap";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminDisparosPage from "@/pages/AdminDisparosPage";
@@ -66,8 +67,11 @@ export default function AdminPage() {
       <main className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
         <StatsCards stats={stats} isLoading={isLoadingStats} />
 
-        <Tabs defaultValue="usuarios">
+        <Tabs defaultValue="saude">
           <TabsList className="w-full sm:w-auto flex-wrap">
+            <TabsTrigger value="saude" className="gap-1.5">
+              <HeartPulse className="h-4 w-4" /> Saúde API
+            </TabsTrigger>
             <TabsTrigger value="usuarios" className="gap-1.5">
               <Users className="h-4 w-4" /> Usuários
             </TabsTrigger>
@@ -84,6 +88,11 @@ export default function AdminPage() {
               <Radio className="h-4 w-4" /> Disparos
             </TabsTrigger>
           </TabsList>
+
+
+          <TabsContent value="saude" className="mt-4">
+            <ApiHealthMonitor />
+          </TabsContent>
 
           <TabsContent value="usuarios" className="mt-4">
             <Card>
