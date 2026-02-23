@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.create-meta-template]
 verify_jwt = false
+
+[functions.send-bulk-template]
+verify_jwt = false
