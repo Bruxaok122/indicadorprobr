@@ -186,6 +186,37 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
 
+    } else if (action === "set_pin") {
+      const { phone_number_id, pin } = body;
+
+      if (!phone_number_id || !pin || pin.length !== 6) {
+        return new Response(JSON.stringify({ error: "Phone Number ID e PIN de 6 dígitos são obrigatórios" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const pinRes = await fetch(
+        `https://graph.facebook.com/v21.0/${phone_number_id}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ pin }),
+        }
+      );
+
+      const pinData = await pinRes.json();
+      if (!pinRes.ok) {
+        throw new Error(pinData.error?.message || "Erro ao definir PIN");
+      }
+
+      return new Response(JSON.stringify({ success: true, data: pinData }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
     } else {
       return new Response(JSON.stringify({ error: "Ação inválida" }), {
         status: 400,
