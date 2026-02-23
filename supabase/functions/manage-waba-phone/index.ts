@@ -197,14 +197,14 @@ serve(async (req) => {
       }
 
       const pinRes = await fetch(
-        `https://graph.facebook.com/v21.0/${phone_number_id}`,
+        `https://graph.facebook.com/v21.0/${phone_number_id}/register`,
         {
           method: "POST",
           headers: {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ pin }),
+          body: JSON.stringify({ messaging_product: "whatsapp", pin }),
         }
       );
 
