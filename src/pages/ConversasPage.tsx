@@ -61,7 +61,7 @@ export default function ConversasPage() {
   // Get operator's active phone and lawyer
   const activePhone = phones.find((p) => p.phone_number_id === selectedPhoneNumberId) || phones[0];
   const operatorPhone = activePhone?.display_phone_number;
-  const operatorLawyer = activePhone?.lawyer_name;
+  const operatorLawyer = activePhone?.verified_name || activePhone?.lawyer_name;
 
   // Auto-select the dispatched phone number for this contact, or fallback to first available
   useEffect(() => {
