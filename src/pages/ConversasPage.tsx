@@ -159,9 +159,9 @@ export default function ConversasPage() {
               contacts={contacts} isLoading={contactsLoading} search={search} setSearch={setSearch}
               selectedContactId={selectedContactId} onSelectContact={handleSelectContact}
               isMobile={isMobile} mobileShowChat={mobileShowChat}
-              operatorPhone={!isAdmin ? operatorPhone : undefined}
-              operatorLawyer={!isAdmin ? operatorLawyer : undefined}
-              operatorName={!isAdmin ? profile?.full_name : undefined}
+              operatorPhone={operatorPhone}
+              operatorLawyer={operatorLawyer}
+              operatorName={profile?.full_name}
               isDark={!isAdmin ? isDark : undefined}
               onToggleTheme={!isAdmin ? toggleTheme : undefined}
               onLogout={!isAdmin ? signOut : undefined}
