@@ -362,8 +362,8 @@ export function parseJuridicalList(rawText: string): {
       blocks.push(parsed);
       const totalPhones = parsed.phones.length;
       parsed.phones.forEach((phone, phoneIndex) => {
-        const displayName = totalPhones > 1
-          ? `${parsed.clientName} (Tel ${phoneIndex + 1}/${totalPhones})`
+      const displayName = totalPhones > 1
+          ? `${parsed.clientName} /${phoneIndex + 1}`
           : parsed.clientName;
         contacts.push({
           name: displayName,
@@ -400,7 +400,7 @@ export function parseJuridicalList(rawText: string): {
     const totalPhones = parsed.phones.length;
     parsed.phones.forEach((phone, phoneIndex) => {
       const displayName = totalPhones > 1
-        ? `${parsed.clientName} (Tel ${phoneIndex + 1}/${totalPhones})`
+        ? `${parsed.clientName} /${phoneIndex + 1}`
         : parsed.clientName;
       contacts.push({
         name: displayName,
