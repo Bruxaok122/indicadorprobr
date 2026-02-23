@@ -15,7 +15,20 @@ export function useContacts() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      // All users (including admin) see ONLY their own contacts in the normal app
+      // Admin sees own contacts + orphan contacts (user_id = null) so no response is lost
+      if (isAdmin) {
+        const { data, error } = await supabase
+          .from("contacts")
+          .select("*")
+          .or(`user_id.eq.${user.id},user_id.is.null`)
+          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        return data as Contact[];
+      }
+
+      // Regular users see ONLY their own contacts
       const { data, error } = await supabase
         .from("contacts")
         .select("*")
