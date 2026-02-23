@@ -351,7 +351,7 @@ export function parseJuridicalList(rawText: string): {
   const contacts: ParsedContact[] = [];
 
   // Divide o texto pelos separadores (equals ou dashes)
-  const hasDashSeparator = SEPARATOR_DASHES.test(rawText);
+  const hasDashSeparator = /^-{10,}$/m.test(rawText);
   const rawBlocks = hasDashSeparator
     ? rawText.split(/\n?-{10,}\n?/).filter((block) => block.trim().length > 0)
     : rawText.split(SEPARATOR_EQUALS).filter((block) => block.trim().length > 0);
