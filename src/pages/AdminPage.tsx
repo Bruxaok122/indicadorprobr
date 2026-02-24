@@ -4,7 +4,7 @@ import { useWabaPhones } from "@/hooks/useWabaPhones";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Users, UserPlus, Radio, Mic, HeartPulse, PhoneCall } from "lucide-react";
+import { Users, UserPlus, Radio, Mic, HeartPulse } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -22,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminDisparosPage from "@/pages/AdminDisparosPage";
 import AdminContatosPage from "@/pages/AdminContatosPage";
 import AdminAudioPage from "@/pages/AdminAudioPage";
-import { WhatsAppNumberValidator } from "@/components/admin/WhatsAppNumberValidator";
+
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -87,9 +87,6 @@ export default function AdminPage() {
             </TabsTrigger>
             <TabsTrigger value="disparos" className="gap-1.5">
               <Radio className="h-4 w-4" /> Disparos
-            </TabsTrigger>
-            <TabsTrigger value="validador" className="gap-1.5">
-              <PhoneCall className="h-4 w-4" /> Validador
             </TabsTrigger>
           </TabsList>
 
@@ -176,9 +173,6 @@ export default function AdminPage() {
             <AdminDisparosPage />
           </TabsContent>
 
-          <TabsContent value="validador" className="mt-4">
-            <WhatsAppNumberValidator />
-          </TabsContent>
         </Tabs>
 
         <div className="text-center py-4">
