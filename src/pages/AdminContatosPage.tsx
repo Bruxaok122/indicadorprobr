@@ -201,7 +201,7 @@ export default function AdminContatosPage() {
     },
     onSuccess: ({ ok, fail, listsCreated, totalOriginal, removed }) => {
       const listMsg = listsCreated > 1 ? ` em ${listsCreated} listas por estado` : "";
-      const removedMsg = removed > 0 ? ` | ${removed} cliente(s) removidos (WhatsApp inválido/filtro)` : "";
+      const removedMsg = removed > 0 ? ` | ${removed} contato(s) excluídos de ${totalOriginal} clientes` : "";
       toast.success(
         `✅ Importação concluída: ${ok} cliente(s) importados${listMsg}${removedMsg}`,
         {
@@ -434,7 +434,7 @@ export default function AdminContatosPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-contacts"] });
 
       toast.success(
-        `✅ Validação concluída! ${toRemoveIds.length} cliente(s) removidos. ${toMarkValidIds.length} cliente(s) confirmados com WhatsApp.`,
+        `✅ Validação concluída! ${toRemoveIds.length} contato(s) excluídos de ${contacts.length} clientes. ${toMarkValidIds.length} confirmados com WhatsApp.`,
         {
           style: { background: "#16a34a", color: "#fff", border: "1px solid #16a34a" },
           duration: 8000,
