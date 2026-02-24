@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -64,6 +65,7 @@ export default function AdminContatosPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [splitByState, setSplitByState] = useState(false);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
 
   // WhatsApp validation (inside preview, before import)
   const [whatsappEntries, setWhatsappEntries] = useState<WhatsAppValidationEntry[]>([]);
@@ -175,8 +177,11 @@ export default function AdminContatosPage() {
     mutationFn: async ({ contacts, listName, splitByState }: { contacts: ParsedContact[]; listName: string; splitByState: boolean }) => {
       let ok = 0; let fail = 0;
       const createdLists = new Set<string>();
+      const total = contacts.length;
+      setImportProgress(0);
 
-      for (const c of contacts) {
+      for (let i = 0; i < contacts.length; i++) {
+        const c = contacts[i];
         let targetList = listName;
         if (splitByState) {
           const state = getStateFromPhone(c.phone);
@@ -195,6 +200,7 @@ export default function AdminContatosPage() {
           has_whatsapp: whatsappEntries.length > 0 ? true : null,
         } as any);
         if (error) fail++; else ok++;
+        setImportProgress(Math.round(((i + 1) / total) * 100));
       }
       await supabase.from("import_logs").insert({ total_contacts: contacts.length, successful: ok, failed: fail });
       return { ok, fail, listsCreated: createdLists.size, totalOriginal: parsedContacts.length, removed: parsedContacts.length - contacts.length };
@@ -866,8 +872,18 @@ export default function AdminContatosPage() {
             </ScrollArea>
           </div>
 
+          {importContactsMutation.isPending && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Importando contatos...</span>
+                <span className="font-semibold text-primary">{importProgress}%</span>
+              </div>
+              <Progress value={importProgress} className="h-3" />
+            </div>
+          )}
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowPreview(false); setWhatsappEntries([]); setFilterRendaAbove2k(false); }}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setShowPreview(false); setWhatsappEntries([]); setFilterRendaAbove2k(false); }} disabled={importContactsMutation.isPending}>Cancelar</Button>
             <Button
               onClick={handleConfirmImport}
               disabled={importContactsMutation.isPending || !selectedList || validatedContacts.length === 0}
