@@ -47,6 +47,7 @@ export type Database = {
           cpf: string | null
           created_at: string
           dispatched_phone_number_id: string | null
+          has_whatsapp: boolean | null
           id: string
           is_priority: boolean
           last_message_at: string | null
@@ -65,6 +66,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           dispatched_phone_number_id?: string | null
+          has_whatsapp?: boolean | null
           id?: string
           is_priority?: boolean
           last_message_at?: string | null
@@ -83,6 +85,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           dispatched_phone_number_id?: string | null
+          has_whatsapp?: boolean | null
           id?: string
           is_priority?: boolean
           last_message_at?: string | null

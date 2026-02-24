@@ -115,12 +115,13 @@ serve(async (req) => {
                     continue;
                   }
                   
-                  // Update contact status and last message
+                  // Update contact status and last message + mark as has_whatsapp
                   await supabase
                     .from("contacts")
                     .update({
                       status: "respondido",
                       last_message_at: timestamp.toISOString(),
+                      has_whatsapp: true,
                     })
                     .eq("id", contactId);
                 }
@@ -324,6 +325,18 @@ serve(async (req) => {
                   updatePayload.error_details = errorTitle + (errorMessage ? `: ${errorMessage}` : "");
                   
                   console.log(`Message ${messageId} failed - code: ${errorCode}, title: ${errorTitle}, message: ${errorMessage}`);
+
+                  // Mark contact as no WhatsApp when error 131026 (unregistered number)
+                  if (errorCode === "131026") {
+                    const recipientPhone = status.recipient_id;
+                    if (recipientPhone) {
+                      console.log(`Marking ${recipientPhone} as no WhatsApp (error 131026)`);
+                      await supabase
+                        .from("contacts")
+                        .update({ has_whatsapp: false })
+                        .eq("phone", recipientPhone);
+                    }
+                  }
                 }
 
                 // Update message status
