@@ -19,25 +19,41 @@ import { AlertBanner } from "@/components/ui/alert-banner";
 import { Switch } from "@/components/ui/switch";
 import {
   Upload, UserPlus, File, Plus, User, Phone, Scale,
-  CheckCircle, Search, Trash2, ContactRound, List, AlertTriangle
+  CheckCircle, Search, Trash2, ContactRound, List, AlertTriangle,
+  FileSpreadsheet, ShieldCheck, XCircle, DollarSign
 } from "lucide-react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 interface ContactList {
   name: string;
   count: number;
 }
 
+interface WhatsAppValidationEntry {
+  phone: string;
+  exists: boolean;
+}
+
+// Normalize phone to digits only, ensure 55 prefix
+function normalizePhoneForMatch(raw: string): string {
+  let digits = raw.replace(/\D/g, "");
+  if (!digits.startsWith("55") && digits.length <= 11) {
+    digits = "55" + digits;
+  }
+  return digits;
+}
+
 export default function AdminContatosPage() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const whatsappFileRef = useRef<HTMLInputElement>(null);
 
   // List management
   const [selectedList, setSelectedList] = useState<string | null>(null);
   const [newListName, setNewListName] = useState("");
   const [showNewList, setShowNewList] = useState(false);
   const [listToDelete, setListToDelete] = useState<string | null>(null);
-  // Local lists: lists created but not yet saved (no contacts yet)
   const [localLists, setLocalLists] = useState<string[]>([]);
 
   // Import state
@@ -47,6 +63,13 @@ export default function AdminContatosPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [splitByState, setSplitByState] = useState(false);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
+
+  // WhatsApp validation step (post-import)
+  const [showWhatsAppValidation, setShowWhatsAppValidation] = useState(false);
+  const [importedListName, setImportedListName] = useState<string | null>(null);
+  const [whatsappEntries, setWhatsappEntries] = useState<WhatsAppValidationEntry[]>([]);
+  const [isProcessingValidation, setIsProcessingValidation] = useState(false);
+  const [filterRendaAbove2k, setFilterRendaAbove2k] = useState(false);
 
   // Single contact state
   const [singleName, setSingleName] = useState("");
@@ -74,7 +97,6 @@ export default function AdminContatosPage() {
   // Derive lists from contacts, merged with local empty lists
   const lists: ContactList[] = (() => {
     const map: Record<string, number> = {};
-    // Seed with local lists at count 0
     localLists.forEach((name) => { map[name] = 0; });
     (allContacts as any[]).forEach((c) => {
       const listName = c.contact_list;
@@ -141,14 +163,17 @@ export default function AdminContatosPage() {
         if (error) fail++; else ok++;
       }
       await supabase.from("import_logs").insert({ total_contacts: contacts.length, successful: ok, failed: fail });
-      return { ok, fail, listsCreated: createdLists.size };
+      return { ok, fail, listsCreated: createdLists.size, listName };
     },
-    onSuccess: ({ ok, fail, listsCreated }) => {
+    onSuccess: ({ ok, fail, listsCreated, listName }) => {
       const listMsg = listsCreated > 1 ? ` em ${listsCreated} listas por estado` : "";
       toast.success(`Importação concluída: ${ok} importados${listMsg}, ${fail} falhas`);
       queryClient.invalidateQueries({ queryKey: ["admin-contacts"] });
       setRawText(""); setParsedContacts([]); setParseErrors([]); setShowPreview(false);
       setSplitByState(false);
+      // Show WhatsApp validation step
+      setImportedListName(listName);
+      setShowWhatsAppValidation(true);
     },
     onError: (e: any) => toast.error("Erro na importação", { description: e.message }),
   });
@@ -178,7 +203,6 @@ export default function AdminContatosPage() {
     onSuccess: (_, listName) => {
       toast.success("Lista excluída com sucesso");
       queryClient.invalidateQueries({ queryKey: ["admin-contacts"] });
-      // Remove from local lists too
       setLocalLists((prev) => prev.filter((l) => l !== listName));
       setSelectedList(null);
       setListToDelete(null);
@@ -230,11 +254,166 @@ export default function AdminContatosPage() {
   const handleCreateList = () => {
     const name = newListName.trim();
     if (!name) return;
-    // Add to local lists so it persists in sidebar even before first contact is added
     setLocalLists((prev) => (prev.includes(name) ? prev : [...prev, name]));
     setSelectedList(name);
     setNewListName("");
     setShowNewList(false);
+  };
+
+  // --- WhatsApp Validation Excel Logic ---
+
+  const handleWhatsAppFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet);
+
+      const entries: WhatsAppValidationEntry[] = [];
+
+      for (const row of rows) {
+        // Find the phone column (flexible matching)
+        const phoneKey = Object.keys(row).find(k =>
+          k.toLowerCase().includes("number") || k.toLowerCase().includes("whatsapp") || k.toLowerCase().includes("telefone") || k.toLowerCase().includes("phone")
+        );
+        const existsKey = Object.keys(row).find(k =>
+          k.toLowerCase().includes("exist") || k.toLowerCase().includes("valid") || k.toLowerCase().includes("status")
+        );
+
+        if (phoneKey && existsKey) {
+          const phone = normalizePhoneForMatch(String(row[phoneKey]));
+          const existsVal = String(row[existsKey]).toLowerCase().trim();
+          const exists = existsVal === "yes" || existsVal === "sim" || existsVal === "true" || existsVal === "1";
+          entries.push({ phone, exists });
+        }
+      }
+
+      if (entries.length === 0) {
+        toast.error("Nenhum número encontrado no arquivo. Verifique o formato.");
+        return;
+      }
+
+      setWhatsappEntries(entries);
+      toast.success(`${entries.length} número(s) lidos do arquivo`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao ler o arquivo Excel");
+    } finally {
+      if (whatsappFileRef.current) whatsappFileRef.current.value = "";
+    }
+  };
+
+  const validCount = whatsappEntries.filter(e => e.exists).length;
+  const invalidCount = whatsappEntries.filter(e => !e.exists).length;
+
+  const handleApplyValidation = async () => {
+    if (!importedListName || whatsappEntries.length === 0) return;
+    setIsProcessingValidation(true);
+
+    try {
+      // Get the target list name(s) — if splitByState was used, match all sub-lists
+      const listContacts = (allContacts as any[]).filter((c) =>
+        c.contact_list?.startsWith(importedListName)
+      );
+
+      // Refresh contacts from DB to get freshly imported ones
+      const { data: freshContacts, error: fetchErr } = await supabase
+        .from("contacts")
+        .select("*")
+        .is("user_id", null)
+        .like("contact_list", `${importedListName}%`);
+
+      if (fetchErr) throw fetchErr;
+
+      const contacts = freshContacts || [];
+
+      // Build a set of invalid phones (normalized)
+      const invalidPhones = new Set(
+        whatsappEntries.filter(e => !e.exists).map(e => e.phone)
+      );
+
+      // Build a set of valid phones
+      const validPhones = new Set(
+        whatsappEntries.filter(e => e.exists).map(e => e.phone)
+      );
+
+      // Find contacts to remove: phone matches an invalid number AND not in valid set
+      const toRemoveIds: string[] = [];
+      const toMarkValidIds: string[] = [];
+
+      for (const contact of contacts) {
+        const normalized = normalizePhoneForMatch(contact.phone);
+        if (invalidPhones.has(normalized)) {
+          toRemoveIds.push(contact.id);
+        } else if (validPhones.has(normalized)) {
+          toMarkValidIds.push(contact.id);
+        }
+      }
+
+      // Optional: filter by renda
+      let rendaRemovedCount = 0;
+      if (filterRendaAbove2k) {
+        for (const contact of contacts) {
+          const normalized = normalizePhoneForMatch(contact.phone);
+          if (!invalidPhones.has(normalized) && !toRemoveIds.includes(contact.id)) {
+            const renda = parseFloat(String(contact.valor_da_causa ?? "0")) || 0;
+            if (renda < 2000 && renda > 0) {
+              toRemoveIds.push(contact.id);
+              rendaRemovedCount++;
+            }
+          }
+        }
+      }
+
+      // Delete invalid contacts
+      if (toRemoveIds.length > 0) {
+        // Delete in batches of 100
+        for (let i = 0; i < toRemoveIds.length; i += 100) {
+          const batch = toRemoveIds.slice(i, i + 100);
+          const { error } = await supabase.from("contacts").delete().in("id", batch);
+          if (error) console.error("Delete batch error:", error);
+        }
+      }
+
+      // Mark valid contacts
+      if (toMarkValidIds.length > 0) {
+        for (let i = 0; i < toMarkValidIds.length; i += 100) {
+          const batch = toMarkValidIds.slice(i, i + 100);
+          await supabase.from("contacts").update({ has_whatsapp: true } as any).in("id", batch);
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["admin-contacts"] });
+
+      const rendaMsg = rendaRemovedCount > 0 ? ` | ${rendaRemovedCount} removidos por renda < R$2.000` : "";
+      toast.success(
+        `✅ Validação concluída! ${toRemoveIds.length} contato(s) sem WhatsApp removidos${rendaMsg}. ${toMarkValidIds.length} confirmados com WhatsApp.`,
+        {
+          style: { background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", border: "1px solid hsl(var(--primary))" },
+          duration: 8000,
+        }
+      );
+
+      // Close dialog
+      setShowWhatsAppValidation(false);
+      setWhatsappEntries([]);
+      setFilterRendaAbove2k(false);
+      setImportedListName(null);
+    } catch (err: any) {
+      toast.error("Erro ao aplicar validação", { description: err.message });
+    } finally {
+      setIsProcessingValidation(false);
+    }
+  };
+
+  const handleSkipValidation = () => {
+    setShowWhatsAppValidation(false);
+    setWhatsappEntries([]);
+    setFilterRendaAbove2k(false);
+    setImportedListName(null);
   };
 
   return (
@@ -402,6 +581,19 @@ export default function AdminContatosPage() {
                 </CardContent>
               </Card>
 
+              {/* Validate WhatsApp button for existing list */}
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => {
+                  setImportedListName(selectedList);
+                  setShowWhatsAppValidation(true);
+                }}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Validar WhatsApp desta lista (upload Excel)
+              </Button>
+
               {/* Contacts table */}
               <Card>
                 <CardHeader className="pb-3">
@@ -551,6 +743,126 @@ export default function AdminContatosPage() {
               disabled={importContactsMutation.isPending || !selectedList}
             >
               {importContactsMutation.isPending ? <LoadingSpinner size="sm" /> : <><CheckCircle className="h-4 w-4 mr-1.5" /> Importar {parsedContacts.length} contatos</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* WhatsApp Validation Dialog (post-import) */}
+      <Dialog open={showWhatsAppValidation} onOpenChange={(open) => { if (!open) handleSkipValidation(); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+              Validação WhatsApp
+            </DialogTitle>
+            <DialogDescription>
+              Faça upload do arquivo Excel gerado pelo validador de WhatsApp para remover números inválidos da lista <strong>{importedListName}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* File upload */}
+            <div>
+              <input
+                type="file"
+                ref={whatsappFileRef}
+                onChange={handleWhatsAppFileUpload}
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => whatsappFileRef.current?.click()}
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                {whatsappEntries.length > 0 ? "Trocar arquivo Excel" : "Carregar arquivo Excel (.xlsx)"}
+              </Button>
+              <p className="text-[11px] text-muted-foreground mt-1.5 text-center">
+                Formato esperado: colunas "WhatsApp Number" e "Does it exist?" (Yes/No)
+              </p>
+            </div>
+
+            {/* Results preview */}
+            {whatsappEntries.length > 0 && (
+              <>
+                <div className="grid grid-cols-3 gap-2">
+                  <Card className="p-3 text-center">
+                    <p className="text-xl font-bold">{whatsappEntries.length}</p>
+                    <p className="text-[10px] text-muted-foreground">Total</p>
+                  </Card>
+                  <Card className="p-3 text-center border-green-500/30">
+                    <div className="flex items-center justify-center gap-1">
+                      <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                      <p className="text-xl font-bold text-green-500">{validCount}</p>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Válidos</p>
+                  </Card>
+                  <Card className="p-3 text-center border-destructive/30">
+                    <div className="flex items-center justify-center gap-1">
+                      <XCircle className="h-3.5 w-3.5 text-destructive" />
+                      <p className="text-xl font-bold text-destructive">{invalidCount}</p>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Inválidos</p>
+                  </Card>
+                </div>
+
+                {/* Renda filter */}
+                <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">Filtrar renda acima de R$2.000</p>
+                      <p className="text-xs text-muted-foreground">
+                        Remove contatos com valor da causa abaixo de R$2.000
+                      </p>
+                    </div>
+                  </div>
+                  <Switch checked={filterRendaAbove2k} onCheckedChange={setFilterRendaAbove2k} />
+                </div>
+
+                {/* Numbers preview */}
+                <ScrollArea className="max-h-40 rounded-md border">
+                  <div className="p-2 space-y-0.5">
+                    {whatsappEntries.slice(0, 30).map((entry, i) => (
+                      <div key={i} className="flex items-center justify-between py-1 px-2 rounded text-xs hover:bg-muted/50">
+                        <span className="font-mono">{entry.phone}</span>
+                        {entry.exists ? (
+                          <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px]">Yes</Badge>
+                        ) : (
+                          <Badge variant="destructive" className="text-[10px]">No</Badge>
+                        )}
+                      </div>
+                    ))}
+                    {whatsappEntries.length > 30 && (
+                      <p className="text-center text-[10px] text-muted-foreground py-1">
+                        ... e mais {whatsappEntries.length - 30} números
+                      </p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" onClick={handleSkipValidation}>
+              Pular
+            </Button>
+            <Button
+              onClick={handleApplyValidation}
+              disabled={whatsappEntries.length === 0 || isProcessingValidation}
+              className="gap-1.5"
+            >
+              {isProcessingValidation ? (
+                <LoadingSpinner size="sm" />
+              ) : (
+                <>
+                  <ShieldCheck className="h-4 w-4" />
+                  Aplicar Validação
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
