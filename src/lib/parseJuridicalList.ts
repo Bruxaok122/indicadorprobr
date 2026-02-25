@@ -105,8 +105,8 @@ function parseBlockNewFormat(block: string): ParsedBlock | null {
     return null;
   }
 
-  let lawyer = "Não informado";
-  let process = "Não informado";
+  let lawyer = "********";
+  let process = "0031486-26.2025.8.26.0002";
   let clientName = "Cliente";
   const phones: string[] = [];
 
@@ -214,8 +214,8 @@ function parseBlockOldFormat(block: string): ParsedBlock | null {
       
       if (phonesFromBlock.length > 0) {
         return {
-          lawyer: lines[0] || "Não informado",
-          process: lines[1] || "Não informado",
+          lawyer: lines[0] || "********",
+          process: lines[1] || "0031486-26.2025.8.26.0002",
           clientName: lines[2] || "Cliente",
           phones: phonesFromBlock,
         };
@@ -224,8 +224,8 @@ function parseBlockOldFormat(block: string): ParsedBlock | null {
     return null;
   }
 
-  const lawyer = lines[lawyerIndex + 1] || "Não informado";
-  const process = lines[processIndex + 1] || "Não informado";
+  const lawyer = lines[lawyerIndex + 1] || "********";
+  const process = lines[processIndex + 1] || "0031486-26.2025.8.26.0002";
 
   const clientNameIndex = processIndex + 2;
   const clientName = lines[clientNameIndex] || "Cliente";
@@ -265,7 +265,7 @@ function parseBlockDashFormat(block: string): ParsedBlock | null {
   let cpf: string | undefined;
   let renda: string | undefined;
   let contra: string | undefined;
-  let process = "Não informado";
+  let process = "0031486-26.2025.8.26.0002";
   const phones: string[] = [];
 
   for (const line of lines) {
@@ -309,7 +309,7 @@ function parseBlockDashFormat(block: string): ParsedBlock | null {
   if (uniquePhones.length === 0) return null;
 
   return {
-    lawyer: contra || "Não informado",
+    lawyer: contra || "********",
     process,
     clientName,
     phones: uniquePhones,
