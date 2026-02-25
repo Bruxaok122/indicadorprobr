@@ -225,13 +225,25 @@ export function useContacts() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Delete messages for user's contacts
-      const contactIds = contacts.map(c => c.id);
-      if (contactIds.length === 0) return;
+      // Delete by user_id directly instead of .in() with hundreds of IDs
+      // First delete messages belonging to user's contacts
+      const { data: userContacts } = await supabase
+        .from("contacts")
+        .select("id")
+        .eq("user_id", user.id);
 
-      await supabase.from("messages").delete().in("contact_id", contactIds);
-      await supabase.from("conversations").delete().in("contact_id", contactIds);
-      await supabase.from("contacts").delete().in("id", contactIds);
+      if (!userContacts || userContacts.length === 0) return;
+
+      // Delete in batches of 100 to avoid URL length limits
+      const batchSize = 100;
+      for (let i = 0; i < userContacts.length; i += batchSize) {
+        const batch = userContacts.slice(i, i + batchSize).map(c => c.id);
+        await supabase.from("messages").delete().in("contact_id", batch);
+        await supabase.from("conversations").delete().in("contact_id", batch);
+      }
+
+      // Delete all contacts for this user
+      await supabase.from("contacts").delete().eq("user_id", user.id);
     },
     onSuccess: () => {
       toast.success("Lista limpa com sucesso!");
