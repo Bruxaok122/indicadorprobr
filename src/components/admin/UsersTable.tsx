@@ -1,43 +1,43 @@
- import { Profile } from "@/types/juriszap";
- import { Badge } from "@/components/ui/badge";
- import { Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye } from "lucide-react";
- import { Switch } from "@/components/ui/switch";
- import { Button } from "@/components/ui/button";
- import {
-   Select,
-   SelectContent,
-   SelectItem,
-   SelectTrigger,
-   SelectValue,
- } from "@/components/ui/select";
- import {
-   Table,
-   TableBody,
-   TableCell,
-   TableHead,
-   TableHeader,
-   TableRow,
- } from "@/components/ui/table";
- import {
-   Tooltip,
-   TooltipContent,
-   TooltipTrigger,
- } from "@/components/ui/tooltip";
- import {
-   AlertDialog,
-   AlertDialogAction,
-   AlertDialogCancel,
-   AlertDialogContent,
-   AlertDialogDescription,
-   AlertDialogFooter,
-   AlertDialogHeader,
-   AlertDialogTitle,
-   AlertDialogTrigger,
- } from "@/components/ui/alert-dialog";
- import { Lock, Unlock, Trash2, Monitor, Timer } from "lucide-react";
- import { format } from "date-fns";
- import { ptBR } from "date-fns/locale";
- 
+import { useState } from "react";
+import { Profile } from "@/types/juriszap";
+import { Badge } from "@/components/ui/badge";
+import { Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Lock, Unlock, Trash2, Monitor, Timer } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
 interface UsersTableProps {
   users: Profile[];
   onToggleBlock: (params: { userId: string; isBlocked: boolean }) => void;
@@ -50,112 +50,123 @@ interface UsersTableProps {
   onResetDevice: (userId: string) => void;
   onMonitorChat: (user: Profile) => void;
 }
- 
- export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UsersTableProps) {
-   return (
-     <Table>
-       <TableHeader>
-         <TableRow>
-           <TableHead>Usuário</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Plano</TableHead>
-            <TableHead>API Compartilhada</TableHead>
-           <TableHead>Dispositivo</TableHead>
-           <TableHead>Mensagens</TableHead>
-           <TableHead>Último Acesso</TableHead>
-           <TableHead className="text-right">Ações</TableHead>
-         </TableRow>
-       </TableHeader>
-       <TableBody>
-         {users.map((user) => {
-           const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
-           
-           return (
-             <TableRow key={user.id}>
-               <TableCell>
-                 <div>
-                   <p className="font-medium">{user.full_name}</p>
-                   <p className="text-sm text-muted-foreground">{user.email}</p>
-                 </div>
-               </TableCell>
-               <TableCell>
-                 <div className="flex flex-col gap-1">
-                   {user.is_blocked ? (
-                     <Badge variant="destructive">Bloqueado</Badge>
-                   ) : (
-                     <Badge variant="default" className="bg-success">Ativo</Badge>
-                   )}
-                   {isTempBanned && (
-                     <Tooltip>
-                       <TooltipTrigger>
-                         <Badge variant="outline" className="border-warning text-warning">
-                           <Timer className="mr-1 h-3 w-3" />
-                           Ban Temp
-                         </Badge>
-                       </TooltipTrigger>
-                       <TooltipContent>
-                         <div className="text-xs">
-                           <p>Até: {format(new Date(user.temp_banned_until!), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
-                           {user.ban_reason && <p>Motivo: {user.ban_reason}</p>}
-                           <Button 
-                             size="sm" 
-                             variant="outline" 
-                             className="mt-2 w-full"
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               onClearTempBan(user.user_id);
-                             }}
-                           >
-                             Remover Ban
-                           </Button>
-                         </div>
-                       </TooltipContent>
-                     </Tooltip>
-                   )}
-                 </div>
-                </TableCell>
+
+export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UsersTableProps) {
+  // Controlled delete dialog - prevents closure/portal issues with inline AlertDialogs in loops
+  const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
+
+  const handleConfirmDelete = () => {
+    if (userToDelete) {
+      onDelete(userToDelete.user_id);
+      setUserToDelete(null);
+    }
+  };
+
+  return (
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Usuário</TableHead>
+             <TableHead>Status</TableHead>
+             <TableHead>Plano</TableHead>
+             <TableHead>API Compartilhada</TableHead>
+            <TableHead>Dispositivo</TableHead>
+            <TableHead>Mensagens</TableHead>
+            <TableHead>Último Acesso</TableHead>
+            <TableHead className="text-right">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {users.map((user) => {
+            const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
+            
+            return (
+              <TableRow key={user.id}>
                 <TableCell>
-                  <div className="flex flex-col gap-1">
-                    <Select
-                      value={user.subscription_plan || "none"}
-                      onValueChange={(value) =>
-                        onSetPlan({
-                          userId: user.user_id,
-                          plan: value === "none" ? null : value,
-                        })
-                      }
-                    >
-                      <SelectTrigger className="w-[130px] h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sem plano</SelectItem>
-                        <SelectItem value="semanal">Semanal</SelectItem>
-                        <SelectItem value="mensal">Mensal</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {user.subscription_expires_at && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <CalendarClock className="h-3 w-3" />
-                        {new Date(user.subscription_expires_at) > new Date() 
-                          ? `Até ${format(new Date(user.subscription_expires_at), "dd/MM/yyyy", { locale: ptBR })}`
-                          : "Expirado"
-                        }
-                      </span>
-                    )}
+                  <div>
+                    <p className="font-medium">{user.full_name}</p>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Switch
-                    checked={user.can_use_shared_api || false}
-                    onCheckedChange={(checked) =>
-                      onToggleApiPermission({
-                        userId: user.user_id,
-                        canUseSharedApi: checked,
-                      })
-                    }
-                  />
-                </TableCell>
+                  <div className="flex flex-col gap-1">
+                    {user.is_blocked ? (
+                      <Badge variant="destructive">Bloqueado</Badge>
+                    ) : (
+                      <Badge variant="default" className="bg-success">Ativo</Badge>
+                    )}
+                    {isTempBanned && (
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Badge variant="outline" className="border-warning text-warning">
+                            <Timer className="mr-1 h-3 w-3" />
+                            Ban Temp
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="text-xs">
+                            <p>Até: {format(new Date(user.temp_banned_until!), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+                            {user.ban_reason && <p>Motivo: {user.ban_reason}</p>}
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="mt-2 w-full"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onClearTempBan(user.user_id);
+                              }}
+                            >
+                              Remover Ban
+                            </Button>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                 </TableCell>
+                 <TableCell>
+                   <div className="flex flex-col gap-1">
+                     <Select
+                       value={user.subscription_plan || "none"}
+                       onValueChange={(value) =>
+                         onSetPlan({
+                           userId: user.user_id,
+                           plan: value === "none" ? null : value,
+                         })
+                       }
+                     >
+                       <SelectTrigger className="w-[130px] h-8 text-xs">
+                         <SelectValue />
+                       </SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="none">Sem plano</SelectItem>
+                         <SelectItem value="semanal">Semanal</SelectItem>
+                         <SelectItem value="mensal">Mensal</SelectItem>
+                       </SelectContent>
+                     </Select>
+                     {user.subscription_expires_at && (
+                       <span className="text-xs text-muted-foreground flex items-center gap-1">
+                         <CalendarClock className="h-3 w-3" />
+                         {new Date(user.subscription_expires_at) > new Date() 
+                           ? `Até ${format(new Date(user.subscription_expires_at), "dd/MM/yyyy", { locale: ptBR })}`
+                           : "Expirado"
+                         }
+                       </span>
+                     )}
+                   </div>
+                 </TableCell>
+                 <TableCell>
+                   <Switch
+                     checked={user.can_use_shared_api || false}
+                     onCheckedChange={(checked) =>
+                       onToggleApiPermission({
+                         userId: user.user_id,
+                         canUseSharedApi: checked,
+                       })
+                     }
+                   />
+                 </TableCell>
             <TableCell>
               <div className="flex flex-col gap-1.5">
                 {user.authorized_fingerprint ? (
@@ -353,42 +364,20 @@ interface UsersTableProps {
                        {user.is_blocked ? "Desbloquear" : "Bloquear"}
                      </TooltipContent>
                    </Tooltip>
- 
-                   <AlertDialog>
-                     <Tooltip>
-                       <TooltipTrigger asChild>
-                         <AlertDialogTrigger asChild>
-                           <Button
-                             variant="ghost"
-                             size="icon"
-                             className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                           >
-                             <Trash2 className="h-4 w-4" />
-                           </Button>
-                         </AlertDialogTrigger>
-                       </TooltipTrigger>
-                       <TooltipContent>Excluir usuário</TooltipContent>
-                     </Tooltip>
-                     <AlertDialogContent>
-                       <AlertDialogHeader>
-                         <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
-                         <AlertDialogDescription>
-                           Esta ação não pode ser desfeita. O usuário{" "}
-                           <strong>{user.full_name}</strong> e todos os seus dados serão
-                           removidos permanentemente.
-                         </AlertDialogDescription>
-                       </AlertDialogHeader>
-                       <AlertDialogFooter>
-                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                         <AlertDialogAction
-                           onClick={() => onDelete(user.user_id)}
-                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                         >
-                           Excluir
-                         </AlertDialogAction>
-                       </AlertDialogFooter>
-                     </AlertDialogContent>
-                   </AlertDialog>
+
+                   <Tooltip>
+                     <TooltipTrigger asChild>
+                       <Button
+                         variant="ghost"
+                         size="icon"
+                         className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                         onClick={() => setUserToDelete(user)}
+                       >
+                         <Trash2 className="h-4 w-4" />
+                       </Button>
+                     </TooltipTrigger>
+                     <TooltipContent>Excluir usuário</TooltipContent>
+                   </Tooltip>
                  </div>
                </TableCell>
              </TableRow>
@@ -396,5 +385,29 @@ interface UsersTableProps {
          })}
        </TableBody>
      </Table>
-   );
- }
+
+     {/* Single controlled AlertDialog outside the loop */}
+     <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+       <AlertDialogContent>
+         <AlertDialogHeader>
+           <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
+           <AlertDialogDescription>
+             Esta ação não pode ser desfeita. O usuário{" "}
+             <strong>{userToDelete?.full_name}</strong> ({userToDelete?.email}) e todos os seus dados serão
+             removidos permanentemente.
+           </AlertDialogDescription>
+         </AlertDialogHeader>
+         <AlertDialogFooter>
+           <AlertDialogCancel>Cancelar</AlertDialogCancel>
+           <AlertDialogAction
+             onClick={handleConfirmDelete}
+             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+           >
+             Excluir
+           </AlertDialogAction>
+         </AlertDialogFooter>
+       </AlertDialogContent>
+     </AlertDialog>
+   </>
+  );
+}

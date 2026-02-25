@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
 import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Users, UserPlus, Radio, Mic, HeartPulse } from "lucide-react";
@@ -55,6 +56,7 @@ export default function AdminPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [phonePermUser, setPhonePermUser] = useState<Profile | null>(null);
   const [monitorUser, setMonitorUser] = useState<Profile | null>(null);
+  const [userToDeleteMobile, setUserToDeleteMobile] = useState<Profile | null>(null);
 
   const handleLogout = async () => {
     await signOut();
@@ -129,7 +131,7 @@ export default function AdminPage() {
                         user={user}
                         onToggleBlock={toggleBlock}
                         onToggleApiPermission={toggleApiPermission}
-                        onDelete={deleteUser}
+                        onDelete={setUserToDeleteMobile}
                         onClearTempBan={clearTempBan}
                         onManagePhones={setPhonePermUser}
                         onSetPlan={setSubscriptionPlan}
@@ -204,6 +206,34 @@ export default function AdminPage() {
         onOpenChange={(open) => !open && setMonitorUser(null)}
         user={monitorUser}
       />
+
+      {/* Mobile delete confirmation dialog */}
+      <AlertDialog open={!!userToDeleteMobile} onOpenChange={(open) => !open && setUserToDeleteMobile(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O usuário{" "}
+              <strong>{userToDeleteMobile?.full_name}</strong> ({userToDeleteMobile?.email}) e todos os seus dados serão
+              removidos permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (userToDeleteMobile) {
+                  deleteUser(userToDeleteMobile.user_id);
+                  setUserToDeleteMobile(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
