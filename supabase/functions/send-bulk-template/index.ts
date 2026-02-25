@@ -9,15 +9,19 @@ const corsHeaders = {
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Map a variable mapping key to the actual contact field value
+function isEmpty(val: any): boolean {
+  return !val || val === "Não informado" || val.toString().trim() === "";
+}
+
 function resolveVariable(contact: any, fieldKey: string): string {
   switch (fieldKey) {
-    case "name": return contact.name || "Cliente";
+    case "name": return isEmpty(contact.name) ? "Cliente" : contact.name;
     case "phone": return contact.phone || "";
-    case "lawyer_name": return contact.lawyer_name || "********";
-    case "process_number": return contact.process_number || "0031486-26.2025.8.26.0002";
-    case "cpf": return contact.cpf || "Não informado";
+    case "lawyer_name": return isEmpty(contact.lawyer_name) ? "********" : contact.lawyer_name;
+    case "process_number": return isEmpty(contact.process_number) ? "0031486-26.2025.8.26.0002" : contact.process_number;
+    case "cpf": return isEmpty(contact.cpf) ? "Não informado" : contact.cpf;
     case "valor_da_causa": return contact.valor_da_causa ? `R$ ${Number(contact.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Não informado";
-    default: return fieldKey; // treat as literal text
+    default: return fieldKey;
   }
 }
 
