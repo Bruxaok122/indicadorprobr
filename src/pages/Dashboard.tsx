@@ -236,9 +236,11 @@ export default function Dashboard() {
                       <p className="text-xs text-muted-foreground">Últimas atualizações</p>
                     </div>
                   </div>
-                  <Button asChild variant="ghost" size="sm" className="rounded-full text-xs text-muted-foreground hover:text-foreground gap-1">
-                    <Link to="/contatos">Ver todos <ArrowRight className="h-3 w-3" /></Link>
-                  </Button>
+                  {isAdmin && (
+                    <Button asChild variant="ghost" size="sm" className="rounded-full text-xs text-muted-foreground hover:text-foreground gap-1">
+                      <Link to="/contatos">Ver todos <ArrowRight className="h-3 w-3" /></Link>
+                    </Button>
+                  )}
                 </div>
               </div>
               <div className="px-3 pb-3">
