@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
+import { Input } from "@/components/ui/input";
 import { Radio, Send, List, Layers } from "lucide-react";
 import { toast } from "sonner";
 
@@ -60,7 +61,7 @@ export default function AdminDisparosPage() {
 
   // Batch mode
   const [batchMode, setBatchMode] = useState(false);
-  const BATCH_SIZE = 50;
+  const [batchSize, setBatchSize] = useState(50);
 
   // Auto-select phone
   useEffect(() => {
@@ -135,7 +136,7 @@ export default function AdminDisparosPage() {
 
     // If batch mode, take only BATCH_SIZE
     if (batchMode) {
-      contactsToSend = contactsToSend.slice(0, BATCH_SIZE);
+      contactsToSend = contactsToSend.slice(0, batchSize);
     }
 
     sendBulk(
@@ -294,7 +295,7 @@ export default function AdminDisparosPage() {
             <CardDescription>
               {selectedList && listContactCount > 0
                 ? batchMode
-                  ? `${Math.min(BATCH_SIZE, listContactCount)} de ${listContactCount} contato(s) serão disparados`
+                  ? `${Math.min(batchSize, listContactCount)} de ${listContactCount} contato(s) serão disparados`
                   : `${listContactCount} contato(s) serão disparados`
                 : "Selecione a lista de contatos"}
             </CardDescription>
@@ -330,15 +331,31 @@ export default function AdminDisparosPage() {
             )}
 
             {/* Batch mode toggle */}
-            <div className="flex items-center justify-between rounded-lg border border-border p-3">
-              <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <Label htmlFor="batch-mode" className="text-sm font-medium cursor-pointer">Modo lote (50 em 50)</Label>
-                  <p className="text-xs text-muted-foreground">Envia 50 e remove da lista</p>
+            <div className="rounded-lg border border-border p-3 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <Label htmlFor="batch-mode" className="text-sm font-medium cursor-pointer">Modo lote</Label>
+                    <p className="text-xs text-muted-foreground">Envia e remove da lista</p>
+                  </div>
                 </div>
+                <Switch id="batch-mode" checked={batchMode} onCheckedChange={setBatchMode} />
               </div>
-              <Switch id="batch-mode" checked={batchMode} onCheckedChange={setBatchMode} />
+              {batchMode && (
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="batch-size" className="text-xs text-muted-foreground whitespace-nowrap">Quantidade:</Label>
+                  <Input
+                    id="batch-size"
+                    type="number"
+                    min={1}
+                    max={listContactCount || 9999}
+                    value={batchSize}
+                    onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="h-8 w-24 text-sm"
+                  />
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -384,13 +401,13 @@ export default function AdminDisparosPage() {
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Contatos:</span>
                 <span className="font-medium">
-                  {batchMode ? `${Math.min(BATCH_SIZE, listContactCount)} de ${listContactCount}` : listContactCount}
+                  {batchMode ? `${Math.min(batchSize, listContactCount)} de ${listContactCount}` : listContactCount}
                 </span>
               </div>
               {batchMode && (
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Modo:</span>
-                  <Badge variant="outline" className="text-xs">Lote de 50</Badge>
+                  <Badge variant="outline" className="text-xs">Lote de {batchSize}</Badge>
                 </div>
               )}
               <div className="flex justify-between text-xs">
@@ -416,7 +433,7 @@ export default function AdminDisparosPage() {
               {isSendingBulk ? (
                 <><LoadingSpinner size="sm" /> Disparando...</>
               ) : (
-                <><Send className="h-4 w-4" /> Disparar para {batchMode ? Math.min(BATCH_SIZE, listContactCount) : listContactCount} contato{(batchMode ? Math.min(BATCH_SIZE, listContactCount) : listContactCount) !== 1 ? "s" : ""}</>
+                <><Send className="h-4 w-4" /> Disparar para {batchMode ? Math.min(batchSize, listContactCount) : listContactCount} contato{(batchMode ? Math.min(batchSize, listContactCount) : listContactCount) !== 1 ? "s" : ""}</>
               )}
             </Button>
           </CardContent>
