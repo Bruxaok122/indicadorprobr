@@ -155,22 +155,8 @@ serve(async (req) => {
           continue;
         }
 
-        if (userId) {
-          const { data: existingOwner } = await supabase
-            .from("contacts")
-            .select("user_id")
-            .eq("phone", contact.phone)
-            .not("user_id", "is", null)
-            .neq("user_id", userId)
-            .limit(1)
-            .maybeSingle();
-
-          if (existingOwner) {
-            results.failed++;
-            results.errors.push(`${contact.name}: Este contato já foi atendido por outro usuário`);
-            continue;
-          }
-        }
+        // Admin bulk dispatch skips phone ownership check
+        // The admin has authority to reassign contacts to any operator
 
         const effectiveUserId = contact.user_id || userId || null;
 
