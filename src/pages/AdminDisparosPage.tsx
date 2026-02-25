@@ -8,8 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
-import { Radio, Send, List } from "lucide-react";
+import { Radio, Send, List, Layers } from "lucide-react";
 import { toast } from "sonner";
 
 const CONTACT_FIELD_OPTIONS = [
@@ -55,6 +57,10 @@ export default function AdminDisparosPage() {
   const [availableLists, setAvailableLists] = useState<ContactList[]>([]);
   const [listContactCount, setListContactCount] = useState(0);
   const [loadingLists, setLoadingLists] = useState(false);
+
+  // Batch mode
+  const [batchMode, setBatchMode] = useState(false);
+  const BATCH_SIZE = 50;
 
   // Auto-select phone
   useEffect(() => {
@@ -113,7 +119,7 @@ export default function AdminDisparosPage() {
       return;
     }
 
-    // Fetch contact IDs for the selected list
+    // Fetch contacts for the selected list
     const { data, error } = await (supabase as any)
       .from("contacts")
       .select("id")
@@ -125,16 +131,67 @@ export default function AdminDisparosPage() {
       return;
     }
 
-    const contactIds = (data as any[]).map((c) => c.id);
+    let contactsToSend = (data as any[]).map((c) => c.id);
 
-    sendBulk({
-      contactIds,
-      templateName: selectedTemplate.name,
-      templateLanguage: selectedTemplate.language,
-      selectedPhoneNumberId: selectedPhoneNumberId || undefined,
-      variableMappings,
-      targetUserId: selectedUserId || undefined,
-    });
+    // If batch mode, take only BATCH_SIZE
+    if (batchMode) {
+      contactsToSend = contactsToSend.slice(0, BATCH_SIZE);
+    }
+
+    sendBulk(
+      {
+        contactIds: contactsToSend,
+        templateName: selectedTemplate.name,
+        templateLanguage: selectedTemplate.language,
+        selectedPhoneNumberId: selectedPhoneNumberId || undefined,
+        variableMappings,
+        targetUserId: selectedUserId || undefined,
+      },
+      {
+        onSuccess: async () => {
+          if (batchMode) {
+            // Delete sent contacts from the pool list
+            const { error: delError } = await supabase
+              .from("contacts")
+              .delete()
+              .in("id", contactsToSend);
+
+            if (delError) {
+              toast.error("Disparo enviado, mas houve erro ao remover contatos da lista");
+            } else {
+              toast.success(`${contactsToSend.length} contatos disparados e removidos da lista`);
+            }
+
+            // Refresh lists
+            refreshLists();
+          }
+        },
+      }
+    );
+  };
+
+  const refreshLists = () => {
+    supabase
+      .from("contacts")
+      .select("*")
+      .is("user_id", null)
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, number> = {};
+        (data as any[]).forEach((c) => {
+          const listName = c.contact_list;
+          if (!listName) return;
+          map[listName] = (map[listName] || 0) + 1;
+        });
+        const lists = Object.entries(map).map(([name, count]) => ({ name, count }));
+        setAvailableLists(lists);
+        // Update selected list count
+        const found = lists.find((l) => l.name === selectedList);
+        setListContactCount(found?.count || 0);
+        if (found && found.count === 0) {
+          setSelectedList("");
+        }
+      });
   };
 
   const templateBody = selectedTemplate ? getTemplateBody(selectedTemplate) : "";
@@ -236,7 +293,9 @@ export default function AdminDisparosPage() {
             </CardTitle>
             <CardDescription>
               {selectedList && listContactCount > 0
-                ? `${listContactCount} contato(s) serão disparados`
+                ? batchMode
+                  ? `${Math.min(BATCH_SIZE, listContactCount)} de ${listContactCount} contato(s) serão disparados`
+                  : `${listContactCount} contato(s) serão disparados`
                 : "Selecione a lista de contatos"}
             </CardDescription>
           </CardHeader>
@@ -269,6 +328,18 @@ export default function AdminDisparosPage() {
                 ))}
               </div>
             )}
+
+            {/* Batch mode toggle */}
+            <div className="flex items-center justify-between rounded-lg border border-border p-3">
+              <div className="flex items-center gap-2">
+                <Layers className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <Label htmlFor="batch-mode" className="text-sm font-medium cursor-pointer">Modo lote (50 em 50)</Label>
+                  <p className="text-xs text-muted-foreground">Envia 50 e remove da lista</p>
+                </div>
+              </div>
+              <Switch id="batch-mode" checked={batchMode} onCheckedChange={setBatchMode} />
+            </div>
           </CardContent>
         </Card>
 
@@ -312,8 +383,16 @@ export default function AdminDisparosPage() {
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Contatos:</span>
-                <span className="font-medium">{listContactCount}</span>
+                <span className="font-medium">
+                  {batchMode ? `${Math.min(BATCH_SIZE, listContactCount)} de ${listContactCount}` : listContactCount}
+                </span>
               </div>
+              {batchMode && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Modo:</span>
+                  <Badge variant="outline" className="text-xs">Lote de 50</Badge>
+                </div>
+              )}
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Responsável:</span>
                 <span className="font-medium">
@@ -337,7 +416,7 @@ export default function AdminDisparosPage() {
               {isSendingBulk ? (
                 <><LoadingSpinner size="sm" /> Disparando...</>
               ) : (
-                <><Send className="h-4 w-4" /> Disparar para {listContactCount} contato{listContactCount !== 1 ? "s" : ""}</>
+                <><Send className="h-4 w-4" /> Disparar para {batchMode ? Math.min(BATCH_SIZE, listContactCount) : listContactCount} contato{(batchMode ? Math.min(BATCH_SIZE, listContactCount) : listContactCount) !== 1 ? "s" : ""}</>
               )}
             </Button>
           </CardContent>

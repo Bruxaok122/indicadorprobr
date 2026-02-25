@@ -57,7 +57,7 @@ const App = () => (
             <Route
               path="/importar"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireAdmin>
                   <ImportarPage />
                 </ProtectedRoute>
               }
@@ -65,7 +65,7 @@ const App = () => (
             <Route
               path="/contatos"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireAdmin>
                   <ContatosPage />
                 </ProtectedRoute>
               }
