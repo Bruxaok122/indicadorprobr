@@ -16,12 +16,12 @@ import { Radio, Send, List, Layers } from "lucide-react";
 import { toast } from "sonner";
 
 const CONTACT_FIELD_OPTIONS = [
-  { value: "name", label: "Nome do Cliente" },
-  { value: "phone", label: "Telefone" },
-  { value: "lawyer_name", label: "Parte Contrária" },
-  { value: "process_number", label: "Número do Processo" },
-  { value: "cpf", label: "CPF" },
-  { value: "valor_da_causa", label: "Valor da Causa" },
+  { value: "name", label: "Nome do Cliente", defaultHint: "" },
+  { value: "phone", label: "Telefone", defaultHint: "" },
+  { value: "lawyer_name", label: "Parte Contrária", defaultHint: "Padrão: ********" },
+  { value: "process_number", label: "Número do Processo", defaultHint: "Padrão: 0031486-26.2025.8.26.0002" },
+  { value: "cpf", label: "CPF", defaultHint: "" },
+  { value: "valor_da_causa", label: "Valor da Causa", defaultHint: "" },
 ];
 
 function extractVariables(text: string): number[] {
@@ -237,26 +237,34 @@ export default function AdminDisparosPage() {
             {templateVars.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">Variáveis personalizadas</p>
-                {templateVars.map((v) => (
-                  <div key={v} className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs shrink-0">{`{{${v}}}`}</Badge>
-                    <Select
-                      value={variableMappings[String(v)] || ""}
-                      onValueChange={(val) => setVariableMappings((prev) => ({ ...prev, [String(v)]: val }))}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Campo..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CONTACT_FIELD_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+                {templateVars.map((v) => {
+                  const selectedField = CONTACT_FIELD_OPTIONS.find(opt => opt.value === variableMappings[String(v)]);
+                  return (
+                    <div key={v} className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs shrink-0">{`{{${v}}}`}</Badge>
+                        <Select
+                          value={variableMappings[String(v)] || ""}
+                          onValueChange={(val) => setVariableMappings((prev) => ({ ...prev, [String(v)]: val }))}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Campo..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CONTACT_FIELD_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {selectedField?.defaultHint && (
+                        <p className="text-[10px] text-muted-foreground ml-14">{selectedField.defaultHint}</p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
