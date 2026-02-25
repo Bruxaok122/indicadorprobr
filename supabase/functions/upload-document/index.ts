@@ -20,6 +20,7 @@ serve(async (req) => {
     const file = formData.get("file") as File;
     const contactId = formData.get("contactId") as string;
     const caption = formData.get("caption") as string | null;
+    const selectedPhoneNumberId = formData.get("selectedPhoneNumberId") as string | null;
 
     if (!file || !contactId) {
       return new Response(
@@ -28,18 +29,20 @@ serve(async (req) => {
       );
     }
 
-    // Validate file type
-    if (file.type !== "application/pdf") {
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf";
+
+    if (!isImage && !isPdf) {
       return new Response(
-        JSON.stringify({ error: "Apenas arquivos PDF são permitidos" }),
+        JSON.stringify({ error: "Apenas PDF e imagens são permitidos" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Validate file size (10MB max)
-    if (file.size > 10 * 1024 * 1024) {
+    const maxSize = isImage ? 16 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
       return new Response(
-        JSON.stringify({ error: "Arquivo muito grande. Máximo 10MB." }),
+        JSON.stringify({ error: `Arquivo muito grande. Máximo ${isImage ? "16" : "10"}MB.` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -51,10 +54,14 @@ serve(async (req) => {
 
     // Upload to storage
     const fileBuffer = await file.arrayBuffer();
+    // Normalize content type for storage compatibility
+    let contentType = file.type;
+    if (contentType.includes(";")) contentType = contentType.split(";")[0];
+
     const { error: uploadError } = await supabase.storage
       .from("documents")
       .upload(fileName, fileBuffer, {
-        contentType: file.type,
+        contentType,
         upsert: false,
       });
 
@@ -67,39 +74,48 @@ serve(async (req) => {
     }
 
     // Get public URL
-    const { data: urlData } = supabase.storage
-      .from("documents")
-      .getPublicUrl(fileName);
-
+    const { data: urlData } = supabase.storage.from("documents").getPublicUrl(fileName);
     const documentUrl = urlData.publicUrl;
+    console.log("File uploaded successfully:", documentUrl, "isImage:", isImage);
 
-    console.log("Document uploaded successfully:", documentUrl);
+    // Determine which phone to use
+    let phoneNumberId: string | null = null;
+    let accessToken: string | null = null;
 
-    // Now send via WhatsApp
-    // Get WhatsApp config
-    const { data: config, error: configError } = await supabase
-      .from("whatsapp_config")
-      .select("*")
-      .limit(1)
-      .single();
+    if (selectedPhoneNumberId) {
+      // Look up the WABA phone
+      const { data: wabaPhone } = await supabase
+        .from("waba_phone_numbers")
+        .select("phone_number_id")
+        .eq("phone_number_id", selectedPhoneNumberId)
+        .single();
 
-    if (configError || !config) {
+      if (wabaPhone) {
+        phoneNumberId = wabaPhone.phone_number_id;
+        // Get shared config access token
+        const { data: config } = await supabase.from("whatsapp_config").select("access_token").limit(1).single();
+        accessToken = config?.access_token || null;
+      }
+    }
+
+    if (!phoneNumberId || !accessToken) {
+      const { data: config } = await supabase.from("whatsapp_config").select("*").limit(1).single();
+      if (config) {
+        phoneNumberId = config.phone_number_id;
+        accessToken = config.access_token;
+      }
+    }
+
+    if (!phoneNumberId || !accessToken) {
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          documentUrl,
-          error: "WhatsApp não configurado. Documento salvo mas não enviado."
-        }),
+        JSON.stringify({ success: true, documentUrl, error: "WhatsApp não configurado. Arquivo salvo mas não enviado." }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Get contact
     const { data: contact, error: contactError } = await supabase
-      .from("contacts")
-      .select("*")
-      .eq("id", contactId)
-      .single();
+      .from("contacts").select("*").eq("id", contactId).single();
 
     if (contactError || !contact) {
       return new Response(
@@ -108,26 +124,39 @@ serve(async (req) => {
       );
     }
 
-    // Send document via WhatsApp API
-    const whatsappUrl = `https://graph.facebook.com/v18.0/${config.phone_number_id}/messages`;
+    // Build WhatsApp API request based on file type
+    const whatsappUrl = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
 
-    const requestBody = {
-      messaging_product: "whatsapp",
-      to: contact.phone,
-      type: "document",
-      document: {
-        link: documentUrl,
-        filename: file.name,
-        caption: caption || undefined,
-      },
-    };
+    let requestBody: any;
+    if (isImage) {
+      requestBody = {
+        messaging_product: "whatsapp",
+        to: contact.phone,
+        type: "image",
+        image: {
+          link: documentUrl,
+          caption: caption || undefined,
+        },
+      };
+    } else {
+      requestBody = {
+        messaging_product: "whatsapp",
+        to: contact.phone,
+        type: "document",
+        document: {
+          link: documentUrl,
+          filename: file.name,
+          caption: caption || undefined,
+        },
+      };
+    }
 
-    console.log("Sending document to WhatsApp:", JSON.stringify(requestBody, null, 2));
+    console.log("Sending file to WhatsApp:", JSON.stringify(requestBody, null, 2));
 
     const response = await fetch(whatsappUrl, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${config.access_token}`,
+        "Authorization": `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(requestBody),
@@ -137,68 +166,46 @@ serve(async (req) => {
     console.log("WhatsApp API response:", JSON.stringify(result, null, 2));
 
     if (!response.ok) {
-      const errorMessage = result.error?.message || "Erro ao enviar documento";
+      const errorMessage = result.error?.message || "Erro ao enviar arquivo";
       return new Response(
-        JSON.stringify({ 
-          success: false,
-          documentUrl,
-          error: errorMessage, 
-          details: result.error 
-        }),
+        JSON.stringify({ success: false, documentUrl, error: errorMessage, details: result.error }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Get or create conversation
     let { data: conversation } = await supabase
-      .from("conversations")
-      .select("*")
-      .eq("contact_id", contactId)
-      .eq("is_active", true)
-      .single();
+      .from("conversations").select("*").eq("contact_id", contactId).eq("is_active", true).single();
 
     if (!conversation) {
       const { data: newConversation } = await supabase
         .from("conversations")
-        .insert({
-          contact_id: contactId,
-          is_active: true,
-          window_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        })
-        .select()
-        .single();
+        .insert({ contact_id: contactId, is_active: true, window_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() })
+        .select().single();
       conversation = newConversation;
     }
 
     // Save message to database
+    const messageType = isImage ? "image" : "document";
     await supabase.from("messages").insert({
       conversation_id: conversation!.id,
       contact_id: contactId,
       direction: "outgoing",
-      message_type: "document",
-      content: caption || `[Documento: ${file.name}]`,
-      document_url: documentUrl,
-      document_name: file.name,
+      message_type: messageType,
+      content: caption || (isImage ? `[Imagem enviada]` : `[Documento: ${file.name}]`),
+      ...(isImage ? { image_url: documentUrl } : { document_url: documentUrl, document_name: file.name }),
       whatsapp_message_id: result.messages?.[0]?.id,
       status: "sent",
     });
 
     // Update contact
-    await supabase
-      .from("contacts")
-      .update({
-        status: "aguardando",
-        last_message_at: new Date().toISOString(),
-      })
-      .eq("id", contactId);
+    await supabase.from("contacts").update({
+      status: "aguardando",
+      last_message_at: new Date().toISOString(),
+    }).eq("id", contactId);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        documentUrl,
-        messageId: result.messages?.[0]?.id,
-        message: "Documento enviado com sucesso!"
-      }),
+      JSON.stringify({ success: true, documentUrl, messageId: result.messages?.[0]?.id, message: "Arquivo enviado com sucesso!" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {

@@ -33,9 +33,11 @@ export function ChatInput({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"];
-      if (!allowedTypes.includes(file.type)) { toast.error("Apenas PDF e imagens são permitidos"); return; }
-      if (file.size > 10 * 1024 * 1024) { toast.error("Arquivo muito grande. Máximo 10MB."); return; }
+      const isImage = file.type.startsWith("image/");
+      const isPdf = file.type === "application/pdf";
+      if (!isImage && !isPdf) { toast.error("Apenas PDF e imagens são permitidos"); return; }
+      const maxSize = isImage ? 16 * 1024 * 1024 : 10 * 1024 * 1024;
+      if (file.size > maxSize) { toast.error(`Arquivo muito grande. Máximo ${isImage ? "16" : "10"}MB.`); return; }
       onFileSelected(file);
     }
     if (fileInputRef.current) fileInputRef.current.value = "";
