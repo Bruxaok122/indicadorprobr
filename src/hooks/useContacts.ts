@@ -2,18 +2,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Contact, ParsedContact } from "@/types/juriszap";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
 
 export function useContacts() {
   const queryClient = useQueryClient();
-  const { isAdmin } = useAuthContext();
+  const { isAdmin, user } = useAuthContext();
 
   const { data: contacts = [], isLoading, refetch: refetchContacts } = useQuery({
-    queryKey: ["contacts", isAdmin],
+    queryKey: ["contacts", isAdmin, user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!user?.id) return [];
 
       // Admin sees own contacts + orphan contacts (user_id = null) so no response is lost
       if (isAdmin) {
@@ -39,7 +38,10 @@ export function useContacts() {
       if (error) throw error;
       return data as Contact[];
     },
-    enabled: isAdmin !== undefined,
+    enabled: !!user?.id,
+    // Auto-refresh every 10 seconds to ensure operator always sees latest contacts
+    refetchInterval: 10000,
+    refetchIntervalInBackground: false,
   });
 
   // Realtime subscription
@@ -62,7 +64,6 @@ export function useContacts() {
 
   const addContactMutation = useMutation({
     mutationFn: async (contact: Omit<ParsedContact, 'phone'> & { phone: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
       const { data, error } = await supabase
@@ -94,7 +95,6 @@ export function useContacts() {
 
   const importContactsMutation = useMutation({
     mutationFn: async (contacts: ParsedContact[]) => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
       const results = { successful: 0, failed: 0 };
@@ -222,7 +222,6 @@ export function useContacts() {
 
   const clearAllContactsMutation = useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
       // Delete by user_id directly instead of .in() with hundreds of IDs
