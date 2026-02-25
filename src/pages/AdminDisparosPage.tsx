@@ -150,22 +150,10 @@ export default function AdminDisparosPage() {
       },
       {
         onSuccess: async () => {
-          if (batchMode) {
-            // Delete sent contacts from the pool list
-            const { error: delError } = await supabase
-              .from("contacts")
-              .delete()
-              .in("id", contactsToSend);
-
-            if (delError) {
-              toast.error("Disparo enviado, mas houve erro ao remover contatos da lista");
-            } else {
-              toast.success(`${contactsToSend.length} contatos disparados e removidos da lista`);
-            }
-
-            // Refresh lists
-            refreshLists();
-          }
+          // Contacts were already assigned to the operator by the edge function
+          // (user_id set = removed from admin pool automatically)
+          // Just refresh the lists to reflect the updated counts
+          refreshLists();
         },
       }
     );
