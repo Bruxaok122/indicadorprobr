@@ -14,7 +14,7 @@ export function useMessages(contactId: string | null) {
     queryFn: async () => {
       if (!contactId || !user?.id) return [];
 
-      // All users (including admin) see only messages linked to their user_id
+      // All users see messages linked to their user_id OR with null user_id
       const { data, error } = await supabase
         .from("messages")
         .select("*")
@@ -26,6 +26,9 @@ export function useMessages(contactId: string | null) {
       return data as Message[];
     },
     enabled: !!contactId && !!user?.id,
+    // Auto-refresh to ensure operator sees new incoming messages
+    refetchInterval: 8000,
+    refetchIntervalInBackground: false,
   });
 
   // Check if conversation has any messages (to enforce template-first rule)
