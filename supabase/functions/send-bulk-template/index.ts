@@ -11,12 +11,12 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // Map a variable mapping key to the actual contact field value
 function resolveVariable(contact: any, fieldKey: string): string {
   switch (fieldKey) {
-    case "name": return contact.name || "";
+    case "name": return contact.name || "Cliente";
     case "phone": return contact.phone || "";
-    case "lawyer_name": return contact.lawyer_name || "";
-    case "process_number": return contact.process_number || "";
-    case "cpf": return contact.cpf || "";
-    case "valor_da_causa": return contact.valor_da_causa ? `R$ ${Number(contact.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "";
+    case "lawyer_name": return contact.lawyer_name || "********";
+    case "process_number": return contact.process_number || "0031486-26.2025.8.26.0002";
+    case "cpf": return contact.cpf || "Não informado";
+    case "valor_da_causa": return contact.valor_da_causa ? `R$ ${Number(contact.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Não informado";
     default: return fieldKey; // treat as literal text
   }
 }
