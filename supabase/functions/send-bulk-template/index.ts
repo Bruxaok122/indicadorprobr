@@ -206,9 +206,46 @@ serve(async (req) => {
         const result = await response.json();
 
         if (!response.ok) {
+          const errorCode = result.error?.code;
+          const errorMsg = result.error?.message || "Erro desconhecido";
+          
+          // Translate common Meta API errors to Portuguese
+          let friendlyMsg = errorMsg;
+          let shouldStopBatch = false;
+          
+          switch (errorCode) {
+            case 131031:
+              friendlyMsg = "🔒 Conta Business bloqueada pela Meta. Verifique no Meta Business Suite.";
+              shouldStopBatch = true;
+              break;
+            case 131049:
+              friendlyMsg = "⚠️ Bloqueado pela Meta para manter engajamento saudável";
+              break;
+            case 131026:
+              friendlyMsg = "📵 Número não possui WhatsApp";
+              // Mark contact as not having WhatsApp
+              await supabase.from("contacts").update({ has_whatsapp: false }).eq("id", contact.id);
+              break;
+            case 131047:
+              friendlyMsg = "⏳ Mensagem não enviada - mais de 24h sem interação";
+              break;
+            case 131056:
+              friendlyMsg = "🚫 Número de destino faz parte de uma conta business";
+              break;
+            case 131053:
+              friendlyMsg = "📵 Número de telefone inválido ou não registrado";
+              break;
+          }
+          
           results.failed++;
-          results.errors.push(`${contact.name}: ${result.error?.message || "Erro desconhecido"}`);
-          console.error(`Failed to send to ${contact.name}:`, result.error);
+          results.errors.push(`${contact.name}: ${friendlyMsg}`);
+          console.error(`Failed to send to ${contact.name}: code=${errorCode}`, result.error);
+          
+          // If business account is locked, stop entire batch
+          if (shouldStopBatch) {
+            results.errors.push("🛑 Disparo interrompido: Conta Business bloqueada pela Meta.");
+            break;
+          }
           continue;
         }
 
