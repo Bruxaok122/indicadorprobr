@@ -47,7 +47,7 @@ export function useMetaTemplates() {
       targetUserId?: string;
     }) => {
       const { targetUserId, contactIds, ...rest } = params;
-      const userId = user?.id;
+      const userId = targetUserId || user?.id;
       const BATCH_SIZE = 50;
       const totalResults = { total: contactIds.length, sent: 0, failed: 0, errors: [] as string[] };
 
@@ -59,7 +59,7 @@ export function useMetaTemplates() {
         toast.info(`Enviando lote ${batchNum}/${totalBatches}...`, { id: "bulk-progress" });
 
         const { data, error } = await supabase.functions.invoke("send-bulk-template", {
-          body: { ...rest, contactIds: batch, userId, targetUserId },
+          body: { ...rest, contactIds: batch, userId },
         });
 
         if (error) throw error;

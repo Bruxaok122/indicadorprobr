@@ -115,10 +115,6 @@ export default function AdminDisparosPage() {
 
   const handleSend = async () => {
     if (!selectedTemplate || !selectedList) return;
-    if (!selectedUserId) {
-      toast.error("Selecione o operador responsável");
-      return;
-    }
     if (phones.length > 0 && !selectedPhoneNumberId) {
       toast.error("Selecione um número de disparo");
       return;
@@ -150,7 +146,7 @@ export default function AdminDisparosPage() {
         templateLanguage: selectedTemplate.language,
         selectedPhoneNumberId: selectedPhoneNumberId || undefined,
         variableMappings,
-        targetUserId: selectedUserId,
+        targetUserId: selectedUserId || undefined,
       },
       {
         onSuccess: async () => {
@@ -375,6 +371,7 @@ export default function AdminDisparosPage() {
                 <SelectValue placeholder="Selecione o usuário..." />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="__admin__">Administrador</SelectItem>
                 {users.map((u) => (
                   <SelectItem key={u.user_id} value={u.user_id}>
                     {u.full_name}
@@ -383,7 +380,7 @@ export default function AdminDisparosPage() {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Selecione o operador que receberá os contatos e verá os disparos em "Respondidos".
+              Se nenhum usuário for selecionado, o contato ficará sem responsável.
             </p>
 
             {/* Summary */}
@@ -412,7 +409,7 @@ export default function AdminDisparosPage() {
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Responsável:</span>
                 <span className="font-medium">
-                  {users.find(u => u.user_id === selectedUserId)?.full_name || "—"}
+                  {selectedUserId === "__admin__" ? "Administrador" : users.find(u => u.user_id === selectedUserId)?.full_name || "—"}
                 </span>
               </div>
             </div>
@@ -423,7 +420,7 @@ export default function AdminDisparosPage() {
               onClick={handleSend}
               disabled={
                 !selectedTemplate ||
-                !selectedUserId ||
+                !selectedList ||
                 listContactCount === 0 ||
                 isSendingBulk ||
                 (phones.length > 0 && !selectedPhoneNumberId)
