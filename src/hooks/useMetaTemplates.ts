@@ -59,7 +59,7 @@ export function useMetaTemplates() {
         toast.info(`Enviando lote ${batchNum}/${totalBatches}...`, { id: "bulk-progress" });
 
         const { data, error } = await supabase.functions.invoke("send-bulk-template", {
-          body: { ...rest, contactIds: batch, userId, targetUserId: targetUserId && targetUserId !== "__admin__" ? targetUserId : undefined },
+          body: { ...rest, contactIds: batch, userId, targetUserId },
         });
 
         if (error) throw error;
