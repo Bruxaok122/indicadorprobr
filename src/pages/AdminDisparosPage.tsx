@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +48,7 @@ export default function AdminDisparosPage() {
   const { users } = useAdmin();
   const { allTemplates, sendBulk, isSendingBulk } = useMetaTemplates();
   const { phones } = useWabaPhones();
+  const { user } = useAuthContext();
 
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
@@ -114,7 +116,7 @@ export default function AdminDisparosPage() {
   const approvedTemplates = allTemplates.filter((t) => t.status === "APPROVED");
 
   const handleSend = async () => {
-    if (!selectedTemplate || !selectedList) return;
+    if (!selectedTemplate || !selectedList || !selectedUserId) return;
     if (phones.length > 0 && !selectedPhoneNumberId) {
       toast.error("Selecione um número de disparo");
       return;
@@ -368,19 +370,23 @@ export default function AdminDisparosPage() {
           <CardContent className="space-y-3">
             <Select value={selectedUserId} onValueChange={setSelectedUserId}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o usuário..." />
+                <SelectValue placeholder="Selecione o operador..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__admin__">Administrador</SelectItem>
-                {users.map((u) => (
-                  <SelectItem key={u.user_id} value={u.user_id}>
-                    {u.full_name}
-                  </SelectItem>
-                ))}
+                {users
+                  .filter((u) => {
+                    // Exclude current admin from operators list
+                    return u.user_id !== user?.id;
+                  })
+                  .map((u) => (
+                    <SelectItem key={u.user_id} value={u.user_id}>
+                      {u.full_name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Se nenhum usuário for selecionado, o contato ficará sem responsável.
+              Selecione o operador que atenderá os clientes.
             </p>
 
             {/* Summary */}
@@ -409,7 +415,7 @@ export default function AdminDisparosPage() {
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Responsável:</span>
                 <span className="font-medium">
-                  {selectedUserId === "__admin__" ? "Administrador" : users.find(u => u.user_id === selectedUserId)?.full_name || "—"}
+                  {users.find(u => u.user_id === selectedUserId)?.full_name || "—"}
                 </span>
               </div>
             </div>
@@ -421,6 +427,7 @@ export default function AdminDisparosPage() {
               disabled={
                 !selectedTemplate ||
                 !selectedList ||
+                !selectedUserId ||
                 listContactCount === 0 ||
                 isSendingBulk ||
                 (phones.length > 0 && !selectedPhoneNumberId)
