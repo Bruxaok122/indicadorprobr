@@ -47,7 +47,7 @@ export function useMetaTemplates() {
       targetUserId?: string;
     }) => {
       const { targetUserId, contactIds, ...rest } = params;
-      const userId = targetUserId || user?.id;
+      const userId = targetUserId; // Must be explicitly set - never fallback to admin's own ID
       const BATCH_SIZE = 50;
       const totalResults = { total: contactIds.length, sent: 0, failed: 0, errors: [] as string[] };
 
