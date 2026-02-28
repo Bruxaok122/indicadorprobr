@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Users, UserPlus, Radio, Mic, HeartPulse } from "lucide-react";
+import { Users, UserPlus, Radio, Mic, HeartPulse, Zap } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdminDisparosPage from "@/pages/AdminDisparosPage";
 import AdminContatosPage from "@/pages/AdminContatosPage";
 import AdminAudioPage from "@/pages/AdminAudioPage";
+import { ApiConfigsSection } from "@/components/admin/ApiConfigsSection";
 
 
 export default function AdminPage() {
@@ -70,8 +71,11 @@ export default function AdminPage() {
       <main className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
         <StatsCards stats={stats} isLoading={isLoadingStats} />
 
-        <Tabs defaultValue="saude">
+        <Tabs defaultValue="apis">
           <TabsList className="w-full sm:w-auto flex-wrap">
+            <TabsTrigger value="apis" className="gap-1.5">
+              <Zap className="h-4 w-4" /> APIs
+            </TabsTrigger>
             <TabsTrigger value="saude" className="gap-1.5">
               <HeartPulse className="h-4 w-4" /> Saúde API
             </TabsTrigger>
@@ -92,6 +96,10 @@ export default function AdminPage() {
             </TabsTrigger>
           </TabsList>
 
+
+          <TabsContent value="apis" className="mt-4">
+            <ApiConfigsSection />
+          </TabsContent>
 
           <TabsContent value="saude" className="mt-4">
             <ApiHealthMonitor />

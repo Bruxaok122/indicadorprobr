@@ -62,6 +62,19 @@ export interface WhatsAppConfig {
   updated_at: string;
 }
 
+export interface ApiConfig {
+  id: string;
+  name: string;
+  access_token: string;
+  waba_id: string;
+  phone_number_id: string;
+  is_active: boolean;
+  is_validated: boolean;
+  status_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ImportLog {
   id: string;
   total_contacts: number;

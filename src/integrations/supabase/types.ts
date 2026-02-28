@@ -41,8 +41,48 @@ export type Database = {
         }
         Relationships: []
       }
+      api_configs: {
+        Row: {
+          access_token: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_validated: boolean
+          name: string
+          phone_number_id: string
+          status_message: string | null
+          updated_at: string
+          waba_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_validated?: boolean
+          name: string
+          phone_number_id: string
+          status_message?: string | null
+          updated_at?: string
+          waba_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_validated?: boolean
+          name?: string
+          phone_number_id?: string
+          status_message?: string | null
+          updated_at?: string
+          waba_id?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
+          api_config_id: string | null
           contact_list: string | null
           cpf: string | null
           created_at: string
@@ -62,6 +102,7 @@ export type Database = {
           valor_da_causa: number | null
         }
         Insert: {
+          api_config_id?: string | null
           contact_list?: string | null
           cpf?: string | null
           created_at?: string
@@ -81,6 +122,7 @@ export type Database = {
           valor_da_causa?: number | null
         }
         Update: {
+          api_config_id?: string | null
           contact_list?: string | null
           cpf?: string | null
           created_at?: string
@@ -99,10 +141,19 @@ export type Database = {
           user_id?: string | null
           valor_da_causa?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contacts_api_config_id_fkey"
+            columns: ["api_config_id"]
+            isOneToOne: false
+            referencedRelation: "api_configs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conversations: {
         Row: {
+          api_config_id: string | null
           contact_id: string
           created_at: string
           id: string
@@ -115,6 +166,7 @@ export type Database = {
           window_expires_at: string | null
         }
         Insert: {
+          api_config_id?: string | null
           contact_id: string
           created_at?: string
           id?: string
@@ -127,6 +179,7 @@ export type Database = {
           window_expires_at?: string | null
         }
         Update: {
+          api_config_id?: string | null
           contact_id?: string
           created_at?: string
           id?: string
@@ -139,6 +192,13 @@ export type Database = {
           window_expires_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "conversations_api_config_id_fkey"
+            columns: ["api_config_id"]
+            isOneToOne: false
+            referencedRelation: "api_configs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "conversations_contact_id_fkey"
             columns: ["contact_id"]
@@ -494,6 +554,7 @@ export type Database = {
       }
       waba_phone_numbers: {
         Row: {
+          api_config_id: string | null
           created_at: string
           created_by: string | null
           display_phone_number: string
@@ -506,6 +567,7 @@ export type Database = {
           verified_name: string | null
         }
         Insert: {
+          api_config_id?: string | null
           created_at?: string
           created_by?: string | null
           display_phone_number: string
@@ -518,6 +580,7 @@ export type Database = {
           verified_name?: string | null
         }
         Update: {
+          api_config_id?: string | null
           created_at?: string
           created_by?: string | null
           display_phone_number?: string
@@ -529,7 +592,15 @@ export type Database = {
           updated_at?: string
           verified_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "waba_phone_numbers_api_config_id_fkey"
+            columns: ["api_config_id"]
+            isOneToOne: false
+            referencedRelation: "api_configs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       whatsapp_config: {
         Row: {
