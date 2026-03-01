@@ -445,7 +445,7 @@ export default function AdminDisparosPage() {
       </div>
 
       {/* Step content with animation */}
-      <div className="relative overflow-hidden min-h-[340px]">
+      <div className="relative overflow-hidden min-h-[340px] max-w-xl mx-auto">
         <AnimatePresence initial={false} custom={direction} mode="wait">
           <motion.div
             key={currentStep}
