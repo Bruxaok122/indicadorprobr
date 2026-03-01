@@ -73,7 +73,16 @@ export function useMessages(contactId: string | null) {
         body: { ...params, userId: user?.id },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Try to extract actual error message from the response
+        try {
+          const errorBody = await (error as any).context?.json?.();
+          if (errorBody?.error) throw new Error(errorBody.error);
+        } catch (e) {
+          if (e instanceof Error && e.message !== error.message) throw e;
+        }
+        throw error;
+      }
       if (data.error) throw new Error(data.error);
       return data;
     },
