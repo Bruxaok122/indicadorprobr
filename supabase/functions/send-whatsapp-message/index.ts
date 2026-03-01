@@ -203,6 +203,47 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorMessage = result.error?.message || "Erro ao enviar mensagem";
+      const errorCode = String(result.error?.code || response.status);
+
+      // Save failed message to DB so the operator can see why it failed
+      let failConversation = null;
+      const { data: existingConv } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("contact_id", contactId)
+        .eq("is_active", true)
+        .single();
+
+      if (existingConv) {
+        failConversation = existingConv;
+      } else {
+        const { data: newConv } = await supabase
+          .from("conversations")
+          .insert({
+            contact_id: contactId,
+            user_id: effectiveUserId,
+            is_active: true,
+          })
+          .select()
+          .single();
+        failConversation = newConv;
+      }
+
+      if (failConversation) {
+        await supabase.from("messages").insert({
+          conversation_id: failConversation.id,
+          contact_id: contactId,
+          user_id: effectiveUserId,
+          direction: "outgoing",
+          message_type: isTemplate ? "template" : "text",
+          content: message || `[Template: ${templateName}]`,
+          template_name: templateName || null,
+          status: "failed",
+          error_code: errorCode,
+          error_details: errorMessage,
+        });
+      }
+
       return new Response(
         JSON.stringify({ 
           error: errorMessage, 
