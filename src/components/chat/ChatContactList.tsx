@@ -294,7 +294,7 @@ export function ChatContactList({
                   transition={{ duration: 0.15 }}
                   onClick={() => onSelectContact(contact.id)}
                   className={cn(
-                    "flex w-full items-center gap-3 px-3 py-3 text-left transition-all",
+                    "flex w-full items-center gap-3 px-3 py-3 text-left transition-all overflow-hidden",
                     "hover:bg-gray-50 dark:hover:bg-gray-800/50 active:scale-[0.99]",
                     "border-b border-gray-100 dark:border-gray-800/50",
                     isSelected && "bg-green-50 dark:bg-green-900/10 border-l-[3px] border-l-green-500",
@@ -302,9 +302,9 @@ export function ChatContactList({
                   )}
                 >
                   {/* Avatar */}
-                  <div className="relative">
+                  <div className="relative shrink-0">
                     <div className={cn(
-                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white shadow-sm",
+                      "flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold text-white shadow-sm",
                       contact.is_priority ? "bg-amber-500 ring-2 ring-amber-400 ring-offset-1 ring-offset-background" : getAvatarColor(contact.name)
                     )}>
                       {contact.is_priority ? (
@@ -321,7 +321,7 @@ export function ChatContactList({
                   </div>
 
                   {/* Info */}
-                  <div className="min-w-0 flex-1 overflow-hidden">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                         {contact.name}
@@ -337,12 +337,12 @@ export function ChatContactList({
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5 w-full overflow-hidden">
-                      <p className="truncate text-xs text-muted-foreground min-w-0 flex-shrink">
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-muted-foreground truncate min-w-0">
                         {contact.last_message_preview || contact.phone}
                       </p>
                       <span className={cn(
-                        "shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap max-w-[80px]",
+                        "shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap",
                         contact.status === "aguardando" && "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
                         contact.status === "respondido" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
                         contact.status === "encerrado" && "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500",
