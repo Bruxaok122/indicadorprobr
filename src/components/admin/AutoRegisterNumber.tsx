@@ -52,17 +52,29 @@ export function AutoRegisterNumber() {
     setResult(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke("auto-register-number", {
-        body: { operator, pin },
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auto-register-number`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ operator, pin }),
+        }
+      );
 
-      if (error) {
-        toast.error("Erro na comunicação com o servidor", { description: error.message });
-        setResult({ error: error.message });
-        return;
-      }
+      const data = await response.json();
 
       setSteps(data.steps || []);
+
+      if (!response.ok || data.error) {
+        const errorMsg = data.error || `Erro HTTP ${response.status}`;
+        toast.error("Falha no registro", { description: errorMsg });
+        setResult({ error: errorMsg });
+        return;
+      }
 
       if (data.success) {
         setResult({ success: true, phone_number: data.phone_number });
