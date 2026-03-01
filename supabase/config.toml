@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.pre-dispatch-review]
 verify_jwt = false
+
+[functions.auto-register-number]
+verify_jwt = false

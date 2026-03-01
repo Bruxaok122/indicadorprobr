@@ -15,6 +15,7 @@ import { UserCard } from "@/components/admin/UserCard";
 import { UsersTable } from "@/components/admin/UsersTable";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { PhoneNumbersSection } from "@/components/admin/PhoneNumbersSection";
+import { AutoRegisterNumber } from "@/components/admin/AutoRegisterNumber";
 import { PhonePermissionsDialog } from "@/components/admin/PhonePermissionsDialog";
 import { AdminChatMonitor } from "@/components/admin/AdminChatMonitor";
 import { ApiHealthMonitor } from "@/components/admin/ApiHealthMonitor";
@@ -167,7 +168,8 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="numeros" className="mt-4">
+          <TabsContent value="numeros" className="mt-4 space-y-4">
+            <AutoRegisterNumber />
             <PhoneNumbersSection />
           </TabsContent>
 
