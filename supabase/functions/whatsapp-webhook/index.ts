@@ -71,14 +71,15 @@ serve(async (req) => {
 
                 console.log(`Processing message from ${phone}: ${message.type}`);
 
-                // Find existing contact by phone - prioritize ones with user_id set
-                // This prevents duplicate contacts and ensures messages go to the right owner
+                // Find existing contact by phone - prioritize the one with the most recent activity
+                // This ensures incoming replies go to the operator who most recently dispatched
                 const { data: contactsWithPhone } = await supabase
                   .from("contacts")
                   .select("*")
                   .eq("phone", phone)
-                  .order("user_id", { ascending: false, nullsFirst: false }) // user_id NOT NULL first
-                  .order("created_at", { ascending: true });
+                  .not("status", "eq", "encerrado") // skip blocked contacts
+                  .order("last_message_at", { ascending: false, nullsFirst: true }) // most recent activity first
+                  .order("created_at", { ascending: false });
 
                 let existingContact = contactsWithPhone?.[0] || null;
 
