@@ -96,20 +96,38 @@ serve(async (req) => {
       );
     }
 
-    // Check if this PHONE is already owned by another user (even if different contact record)
+    // Ownership guard: block only when the active/latest record for this phone belongs to another user
     if (userId) {
-      const { data: existingOwner } = await supabase
+      // If this exact contact already belongs to another user, block immediately
+      if (contact.user_id && contact.user_id !== userId) {
+        return new Response(
+          JSON.stringify({
+            error: "Este contato já foi atendido por outro usuário.",
+            code: "CONTACT_ALREADY_CLAIMED"
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Resolve the current owner by latest activity for this phone (ignore closed contacts)
+      const { data: latestOwnedForPhone } = await supabase
         .from("contacts")
-        .select("user_id")
+        .select("id, user_id")
         .eq("phone", contact.phone)
+        .neq("status", "encerrado")
         .not("user_id", "is", null)
-        .neq("user_id", userId)
+        .order("last_message_at", { ascending: false, nullsFirst: false })
+        .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (existingOwner) {
+      if (
+        latestOwnedForPhone &&
+        latestOwnedForPhone.user_id !== userId &&
+        latestOwnedForPhone.id !== contact.id
+      ) {
         return new Response(
-          JSON.stringify({ 
+          JSON.stringify({
             error: "Este contato já foi atendido por outro usuário.",
             code: "CONTACT_ALREADY_CLAIMED"
           }),
