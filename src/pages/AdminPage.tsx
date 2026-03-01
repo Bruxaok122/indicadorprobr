@@ -58,6 +58,7 @@ export default function AdminPage() {
   const [phonePermUser, setPhonePermUser] = useState<Profile | null>(null);
   const [monitorUser, setMonitorUser] = useState<Profile | null>(null);
   const [userToDeleteMobile, setUserToDeleteMobile] = useState<Profile | null>(null);
+  const [activeTab, setActiveTab] = useState("apis");
 
   const handleLogout = async () => {
     await signOut();
@@ -69,9 +70,7 @@ export default function AdminPage() {
       <AdminHeader onLogout={handleLogout} onRefresh={refreshAll} />
 
       <main className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
-        <StatsCards stats={stats} isLoading={isLoadingStats} />
-
-        <Tabs defaultValue="apis">
+        <Tabs defaultValue="apis" onValueChange={(v) => setActiveTab(v)}>
           <TabsList className="w-full sm:w-auto flex-wrap">
             <TabsTrigger value="apis" className="gap-1.5">
               <Zap className="h-4 w-4" /> APIs
@@ -105,7 +104,8 @@ export default function AdminPage() {
             <ApiHealthMonitor />
           </TabsContent>
 
-          <TabsContent value="usuarios" className="mt-4">
+          <TabsContent value="usuarios" className="mt-4 space-y-4">
+            <StatsCards stats={stats} isLoading={isLoadingStats} />
             <Card>
               <CardHeader>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">

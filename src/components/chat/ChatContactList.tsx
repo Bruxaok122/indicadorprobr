@@ -337,8 +337,8 @@ export function ChatContactList({
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5 overflow-hidden">
-                      <p className="truncate text-xs text-muted-foreground min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mt-0.5 w-full overflow-hidden">
+                      <p className="truncate text-xs text-muted-foreground min-w-0 flex-shrink">
                         {contact.last_message_preview || contact.phone}
                       </p>
                       <span className={cn(
