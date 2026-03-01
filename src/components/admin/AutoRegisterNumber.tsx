@@ -30,6 +30,11 @@ const STEP_LABELS: Record<string, string> = {
   fatal: "Erro Fatal",
 };
 
+const SERVICES = [
+  { value: "wa", label: "WhatsApp" },
+  { value: "fb", label: "Facebook" },
+];
+
 const OPERATORS = [
   { value: "any", label: "Qualquer operadora" },
   { value: "claro", label: "Claro" },
@@ -43,6 +48,7 @@ export function AutoRegisterNumber() {
   const [steps, setSteps] = useState<StepResult[]>([]);
   const [result, setResult] = useState<{ success?: boolean; phone_number?: string; error?: string } | null>(null);
   const [operator, setOperator] = useState("any");
+  const [service, setService] = useState("wa");
   const [pin, setPin] = useState("000000");
   const queryClient = useQueryClient();
 
@@ -61,7 +67,7 @@ export function AutoRegisterNumber() {
             Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ operator, pin }),
+          body: JSON.stringify({ operator, pin, service }),
         }
       );
 
@@ -110,7 +116,22 @@ export function AutoRegisterNumber() {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Config */}
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Serviço</Label>
+            <Select value={service} onValueChange={setService} disabled={isRunning}>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SERVICES.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Operadora</Label>
             <Select value={operator} onValueChange={setOperator} disabled={isRunning}>

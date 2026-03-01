@@ -110,10 +110,12 @@ serve(async (req) => {
     // Parse optional body params
     let operator = "any";
     let pin = "000000";
+    let service = "wa";
     try {
       const body = await req.json();
       if (body.operator) operator = body.operator;
       if (body.pin) pin = body.pin;
+      if (body.service) service = body.service;
     } catch {
       // No body or invalid JSON — use defaults
     }
@@ -158,7 +160,7 @@ serve(async (req) => {
     // service=wa (WhatsApp), country=73 (Brazil)
     const getNumberResult = await sms24hRequest(sms24hApiKey, {
       action: "getNumber",
-      service: "wa",
+      service,
       operator,
       country: "73",
     });
