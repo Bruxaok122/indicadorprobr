@@ -13,7 +13,7 @@ function isEmpty(val: any): boolean {
   return !val || val === "Não informado" || val.toString().trim() === "";
 }
 
-function resolveVariable(contact: any, fieldKey: string): string {
+function resolveVariable(contact: any, fieldKey: string, extra?: { phoneVerifiedName?: string }): string {
   switch (fieldKey) {
     case "name": return isEmpty(contact.name) ? "Cliente" : contact.name;
     case "phone": return contact.phone || "";
@@ -21,6 +21,7 @@ function resolveVariable(contact: any, fieldKey: string): string {
     case "process_number": return isEmpty(contact.process_number) ? "0031486-26.2025.8.26.0002" : contact.process_number;
     case "cpf": return isEmpty(contact.cpf) ? "Não informado" : contact.cpf;
     case "valor_da_causa": return contact.valor_da_causa ? `R$ ${Number(contact.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Não informado";
+    case "advogado": return extra?.phoneVerifiedName || "Advogado";
     default: return fieldKey;
   }
 }
@@ -35,7 +36,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { contactIds, templateName, templateLanguage, userId, selectedPhoneNumberId, variableMappings } = await req.json();
+    const { contactIds, templateName, templateLanguage, userId, selectedPhoneNumberId, variableMappings, phoneVerifiedName } = await req.json();
 
     if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
       return new Response(
@@ -174,7 +175,7 @@ serve(async (req) => {
           const sortedKeys = Object.keys(variableMappings).sort((a, b) => parseInt(a) - parseInt(b));
           const parameters = sortedKeys.map((key) => ({
             type: "text",
-            text: resolveVariable(contact, variableMappings[key]),
+            text: resolveVariable(contact, variableMappings[key], { phoneVerifiedName }),
           }));
 
           templateObj.components = [

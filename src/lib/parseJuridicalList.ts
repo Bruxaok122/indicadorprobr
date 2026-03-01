@@ -370,6 +370,7 @@ export function parseJuridicalList(rawText: string): {
           phone,
           lawyer_name: parsed.lawyer,
           process_number: parsed.process,
+          cpf: parsed.cpf,
         });
       });
     } else {
@@ -407,6 +408,7 @@ export function parseJuridicalList(rawText: string): {
         phone,
         lawyer_name: parsed.lawyer,
         process_number: parsed.process,
+        cpf: parsed.cpf,
       });
     });
   });
