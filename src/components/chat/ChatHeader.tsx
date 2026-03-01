@@ -21,6 +21,7 @@ interface ChatHeaderProps {
   onTransferDone?: () => void;
   onTogglePriority?: (contactId: string, isPriority: boolean) => void;
   isTogglingPriority?: boolean;
+  lawyerName?: string;
 }
 
 function formatCurrency(value?: number): string {
@@ -28,10 +29,10 @@ function formatCurrency(value?: number): string {
   return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function buildContactTemplate(contact: Contact): string {
+function buildContactTemplate(contact: Contact, lawyerName?: string): string {
   const cpf = contact.cpf || "";
   const valor = formatCurrency(contact.valor_da_causa);
-  return `PARTE CONTRÁRIA: ${contact.lawyer_name || "—"}\n\nPROCESSO: ${contact.process_number || "—"}\n\n👤 Nome: ${contact.name}\n\n💳 Doc.: CPF: ${cpf}\n\n📞 Telefones: ${contact.phone}\n\n💰 Valor da Causa: R$ ${valor}\n\nDATA AGENDADA: \n\nDados bancários:\n\nCPF: ${cpf}\n\nCaixa Econômica\n\nAgência: \n\nConta: `;
+  return `ADVOGADO: ${lawyerName || "—"}\n\nPARTE CONTRÁRIA: ${contact.lawyer_name || "—"}\n\nPROCESSO: ${contact.process_number || "—"}\n\n👤 Nome: ${contact.name}\n\n💳 Doc. CPF: ${cpf}\n\n📞 Telefones: ${contact.phone}\n\n💰 Valor da Causa: R$ ${valor}\n\nDATA AGENDADA: \n\nDados bancários:\n\nCPF: ${cpf}\n\nCaixa Econômica\n\nAgência: \n\nConta: `;
 }
 
 const avatarColors = [
@@ -65,14 +66,14 @@ function getStatusLabel(status: string) {
   }
 }
 
-export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglingBlock, onOpenProfile, onTransferDone, onTogglePriority, isTogglingPriority }: ChatHeaderProps) {
+export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglingBlock, onOpenProfile, onTransferDone, onTogglePriority, isTogglingPriority, lawyerName }: ChatHeaderProps) {
   const { user, isAdmin } = useAuthContext();
   const queryClient = useQueryClient();
   const isBlocked = contact.status === "encerrado";
   const [isTransferring, setIsTransferring] = useState(false);
 
   const handleCopyTemplate = async () => {
-    const text = buildContactTemplate(contact);
+    const text = buildContactTemplate(contact, lawyerName);
     try {
       await navigator.clipboard.writeText(text);
       toast.success("Modelo copiado!", { description: "Cole onde precisar." });

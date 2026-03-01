@@ -195,6 +195,7 @@ export default function ConversasPage() {
                   onOpenProfile={() => setShowProfileDrawer(true)}
                   onTogglePriority={(contactId, isPriority) => togglePriority({ contactId, isPriority })}
                   isTogglingPriority={isTogglingPriority}
+                  lawyerName={operatorLawyer}
                   onTransferDone={() => {
                     setSelectedContactId(null);
                     if (isMobile) setMobileShowChat(false);

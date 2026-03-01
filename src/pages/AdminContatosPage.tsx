@@ -194,6 +194,7 @@ export default function AdminContatosPage() {
           phone: c.phone,
           lawyer_name: c.lawyer_name,
           process_number: c.process_number,
+          cpf: (c as any).cpf || null,
           contact_list: targetList,
           status: "novo",
           user_id: null,

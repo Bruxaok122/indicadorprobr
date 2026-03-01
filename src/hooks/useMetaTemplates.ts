@@ -45,6 +45,7 @@ export function useMetaTemplates() {
       selectedPhoneNumberId?: string;
       variableMappings?: Record<string, string>;
       targetUserId?: string;
+      phoneVerifiedName?: string;
     }) => {
       const { targetUserId, contactIds, ...rest } = params;
       const userId = targetUserId; // Must be explicitly set - never fallback to admin's own ID

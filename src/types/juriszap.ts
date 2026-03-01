@@ -89,6 +89,7 @@ export interface ParsedContact {
   phone: string;
   lawyer_name: string;
   process_number: string;
+  cpf?: string;
 }
 
 export interface ParsedBlock {
