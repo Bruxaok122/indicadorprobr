@@ -140,6 +140,8 @@ function QualityBadge({ rating }: { rating: string | null }) {
 export function ApiHealthMonitor() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizeResults, setOptimizeResults] = useState<Record<string, number> | null>(null);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [reviewResults, setReviewResults] = useState<{ checks: { id: string; label: string; status: "ok" | "warning" | "error"; detail: string }[]; summary: string; canDispatch: boolean } | null>(null);
 
   const {
     messageStats,
@@ -165,6 +167,25 @@ export function ApiHealthMonitor() {
       toast.error("Erro ao otimizar: " + (err.message || "Tente novamente"));
     } finally {
       setIsOptimizing(false);
+    }
+  };
+
+  const handleReview = async () => {
+    setIsReviewing(true);
+    setReviewResults(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("pre-dispatch-review");
+      if (error) throw error;
+      setReviewResults(data);
+      if (data.canDispatch) {
+        toast.success("Revisão concluída: tudo pronto!");
+      } else {
+        toast.warning("Revisão concluída: há problemas a corrigir.");
+      }
+    } catch (err: any) {
+      toast.error("Erro na revisão: " + (err.message || "Tente novamente"));
+    } finally {
+      setIsReviewing(false);
     }
   };
 
@@ -208,7 +229,20 @@ export function ApiHealthMonitor() {
             Monitoramento em tempo real · Atualiza a cada 30s
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button
+            onClick={handleReview}
+            disabled={isReviewing}
+            className="gap-2"
+            variant="default"
+          >
+            {isReviewing ? (
+              <LoadingSpinner size="sm" />
+            ) : (
+              <CheckCircle className="h-4 w-4" />
+            )}
+            {isReviewing ? "Revisando..." : "Revisão de Trabalho"}
+          </Button>
           <Button
             onClick={handleOptimize}
             disabled={isOptimizing}
@@ -225,6 +259,52 @@ export function ApiHealthMonitor() {
           <HealthScoreBadge score={deliveryRate} />
         </div>
       </div>
+
+      {/* Pre-Dispatch Review Results */}
+      {reviewResults && (
+        <Card className={`border-${reviewResults.canDispatch ? "green" : "yellow"}-500/30 bg-${reviewResults.canDispatch ? "green" : "yellow"}-500/5`}>
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              {reviewResults.canDispatch ? (
+                <CheckCircle className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+              )}
+              <div className="space-y-3 w-full">
+                <p className={`text-sm font-medium ${reviewResults.canDispatch ? "text-green-400" : "text-yellow-400"}`}>
+                  {reviewResults.summary}
+                </p>
+                <div className="space-y-2">
+                  {reviewResults.checks.map((check) => (
+                    <div
+                      key={check.id}
+                      className={`flex items-start gap-2 p-2 rounded-lg ${
+                        check.status === "ok"
+                          ? "bg-green-500/10"
+                          : check.status === "warning"
+                          ? "bg-yellow-500/10"
+                          : "bg-red-500/10"
+                      }`}
+                    >
+                      {check.status === "ok" ? (
+                        <CheckCircle className="h-4 w-4 text-green-400 flex-shrink-0 mt-0.5" />
+                      ) : check.status === "warning" ? (
+                        <AlertTriangle className="h-4 w-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-400 flex-shrink-0 mt-0.5" />
+                      )}
+                      <div>
+                        <p className="text-xs font-semibold">{check.label}</p>
+                        <p className="text-xs text-muted-foreground">{check.detail}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Optimization Results */}
       {optimizeResults && (
