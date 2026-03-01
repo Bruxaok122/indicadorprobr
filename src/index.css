@@ -206,8 +206,9 @@ div[style*="Edit with Lovable"],
 /* 3D floating chat panel */
 .chat-panel-float {
   box-shadow: 
-    -4px 0 16px -4px rgba(0, 0, 0, 0.08),
-    0 4px 24px -8px rgba(0, 0, 0, 0.12);
+    -4px 0 20px -4px rgba(0, 0, 0, 0.12),
+    0 6px 32px -8px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
   border-left: 1px solid hsl(var(--border));
 }
 
@@ -231,8 +232,9 @@ div[style*="Edit with Lovable"],
 
 .contact-list-float {
   box-shadow: 
-    4px 0 16px -4px rgba(0, 0, 0, 0.08),
-    0 4px 24px -8px rgba(0, 0, 0, 0.1);
+    4px 0 20px -4px rgba(0, 0, 0, 0.12),
+    0 6px 32px -8px rgba(0, 0, 0, 0.16),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
   border: 1px solid hsl(var(--border));
 }
 
