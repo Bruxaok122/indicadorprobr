@@ -225,15 +225,6 @@ export function AutoRegisterNumber() {
             </div>
           </div>
         )}
-
-        {/* Warning */}
-        <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-          <AlertTriangle className="h-4 w-4 text-yellow-400 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-muted-foreground">
-            <strong className="text-yellow-400">Atenção:</strong> Números virtuais podem ser detectados
-            e rejeitados pela Meta. Use por sua conta e risco.
-          </p>
-        </div>
       </CardContent>
     </Card>
   );
