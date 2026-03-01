@@ -764,37 +764,37 @@ export default function AdminDisparosPage() {
             )}
           </motion.div>
         </AnimatePresence>
-      </div>
 
-      {/* Navigation buttons */}
-      {!isDispatching && (
-        <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={currentStep === 1}
-            className="gap-1.5"
-          >
-            <ChevronLeft className="h-4 w-4" /> Voltar
-          </Button>
-
-          <span className="text-xs text-muted-foreground">
-            Etapa {currentStep} de {STEPS.length}
-          </span>
-
-          {currentStep < 4 ? (
+        {/* Navigation buttons inside the container */}
+        {!isDispatching && (
+          <div className="flex items-center justify-between mt-4">
             <Button
-              onClick={handleNext}
-              disabled={!canProceed(currentStep)}
+              variant="outline"
+              onClick={handleBack}
+              disabled={currentStep === 1}
               className="gap-1.5"
             >
-              Próximo <ChevronRight className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" /> Voltar
             </Button>
-          ) : (
-            <div className="w-[100px]" />
-          )}
-        </div>
-      )}
+
+            <span className="text-xs text-muted-foreground">
+              Etapa {currentStep} de {STEPS.length}
+            </span>
+
+            {currentStep < 4 ? (
+              <Button
+                onClick={handleNext}
+                disabled={!canProceed(currentStep)}
+                className="gap-1.5"
+              >
+                Próximo <ChevronRight className="h-4 w-4" />
+              </Button>
+            ) : (
+              <div className="w-[100px]" />
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
