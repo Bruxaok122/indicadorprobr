@@ -36,6 +36,11 @@ function formatCurrency(value?: number): string {
   });
 }
 
+function formatFirstName(fullName: string): string {
+  const first = fullName.trim().split(/\s+/)[0] || "";
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
 export function ContactProfileDrawer({
   contact,
   open,
@@ -58,6 +63,7 @@ export function ContactProfileDrawer({
   };
 
   const infoItems = [
+    { icon: User, label: "Nome do Cliente", value: formatFirstName(contact.name), copyable: true },
     { icon: Phone, label: "Telefone", value: contact.phone, copyable: true },
     { icon: FileText, label: "Nº do Processo", value: contact.process_number || "—", copyable: !!contact.process_number },
     { icon: Scale, label: "Parte Contrária", value: contact.lawyer_name || "—", copyable: !!contact.lawyer_name },
