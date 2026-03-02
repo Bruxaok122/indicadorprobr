@@ -13,10 +13,12 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
 import { Input } from "@/components/ui/input";
-import { Radio, Send, List, Layers, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import DispatchContactTracker, { DispatchContact, DispatchTrackerRef } from "@/components/admin/DispatchContactTracker";
+
+// --- Types & helpers ---
 
 const CONTACT_FIELD_OPTIONS = [
   { value: "name", label: "Nome do Cliente", defaultHint: "" },
@@ -49,6 +51,23 @@ interface ContactList {
 
 type DispatchMode = "batch" | "individual";
 
+interface ActiveDispatch {
+  id: string;
+  operatorName: string;
+  operatorId: string;
+  templateName: string;
+  listName: string;
+  mode: DispatchMode;
+  total: number;
+  sent: number;
+  failed: number;
+  current: number;
+  isPaused: boolean;
+  isCancelled: boolean;
+  isFinished: boolean;
+  errors: string[];
+}
+
 const STEPS = [
   { id: 1, label: "Número", icon: Phone },
   { id: 2, label: "Template", icon: FileText },
@@ -57,18 +76,9 @@ const STEPS = [
 ];
 
 const slideVariants = {
-  enter: (direction: number) => ({
-    x: direction > 0 ? 300 : -300,
-    opacity: 0,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-  },
-  exit: (direction: number) => ({
-    x: direction < 0 ? 300 : -300,
-    opacity: 0,
-  }),
+  enter: (direction: number) => ({ x: direction > 0 ? 300 : -300, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (direction: number) => ({ x: direction < 0 ? 300 : -300, opacity: 0 }),
 };
 
 export default function AdminDisparosPage() {
@@ -82,11 +92,9 @@ export default function AdminDisparosPage() {
 
   // Step 1: Phone
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
-
   // Step 2: Template
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
   const [variableMappings, setVariableMappings] = useState<Record<string, string>>({});
-
   // Step 3: List + dispatch mode
   const [selectedList, setSelectedList] = useState<string>("");
   const [availableLists, setAvailableLists] = useState<ContactList[]>([]);
@@ -96,24 +104,18 @@ export default function AdminDisparosPage() {
   const [batchMode, setBatchMode] = useState(false);
   const [batchSize, setBatchSize] = useState(50);
   const [intervalSeconds, setIntervalSeconds] = useState(5);
-
   // Step 4: Responsible
   const [selectedUserId, setSelectedUserId] = useState<string>("");
 
-  // Dispatch control
-  const [isDispatching, setIsDispatching] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const isPausedRef = useRef(false);
-  const isCancelledRef = useRef(false);
-
-  // Per-contact tracker
-  const trackerRef = useRef<DispatchTrackerRef>(null);
-  const [dispatchContacts, setDispatchContacts] = useState<DispatchContact[]>([]);
-  
+  // Multiple active dispatches
+  const [activeDispatches, setActiveDispatches] = useState<ActiveDispatch[]>([]);
+  const dispatchControlsRef = useRef<Record<string, { isPaused: boolean; isCancelled: boolean }>>({});
 
   // Phone data for advogado variable
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
   const phoneVerifiedName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
+
+  const hasActiveDispatch = activeDispatches.some(d => !d.isFinished);
 
   // Auto-select phone
   useEffect(() => {
@@ -137,20 +139,17 @@ export default function AdminDisparosPage() {
           if (!listName) return;
           map[listName] = (map[listName] || 0) + 1;
         });
-        const lists = Object.entries(map).map(([name, count]) => ({ name, count }));
-        setAvailableLists(lists);
+        setAvailableLists(Object.entries(map).map(([name, count]) => ({ name, count })));
         setLoadingLists(false);
       });
   }, []);
 
-  // Update contact count when list changes
   useEffect(() => {
     if (!selectedList) { setListContactCount(0); return; }
     const found = availableLists.find((l) => l.name === selectedList);
     setListContactCount(found?.count || 0);
   }, [selectedList, availableLists]);
 
-  // Auto-detect variables when template changes
   useEffect(() => {
     if (!selectedTemplate) { setVariableMappings({}); return; }
     const body = getTemplateBody(selectedTemplate);
@@ -166,31 +165,8 @@ export default function AdminDisparosPage() {
   const approvedTemplates = allTemplates.filter((t) => t.status === "APPROVED");
   const templateBody = selectedTemplate ? getTemplateBody(selectedTemplate) : "";
   const templateVars = extractVariables(templateBody);
-
-  const refreshLists = () => {
-    supabase
-      .from("contacts")
-      .select("*")
-      .is("user_id", null)
-      .then(({ data }) => {
-        if (!data) return;
-        const map: Record<string, number> = {};
-        (data as any[]).forEach((c) => {
-          const listName = c.contact_list;
-          if (!listName) return;
-          map[listName] = (map[listName] || 0) + 1;
-        });
-        const lists = Object.entries(map).map(([name, count]) => ({ name, count }));
-        setAvailableLists(lists);
-        const found = lists.find((l) => l.name === selectedList);
-        setListContactCount(found?.count || 0);
-        if (found && found.count === 0) setSelectedList("");
-      });
-  };
-
   const effectiveCount = batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
 
-  // Step validation
   const isStep1Valid = phones.length === 0 || !!selectedPhoneNumberId;
   const isStep2Valid = !!selectedTemplate;
   const isStep3Valid = !!selectedList && listContactCount > 0;
@@ -208,50 +184,26 @@ export default function AdminDisparosPage() {
     setDirection(step > currentStep ? 1 : -1);
     setCurrentStep(step);
   };
+  const handleNext = () => { if (currentStep < 4 && canProceed(currentStep)) goToStep(currentStep + 1); };
+  const handleBack = () => { if (currentStep > 1) goToStep(currentStep - 1); };
 
-  const handleNext = () => {
-    if (currentStep < 4 && canProceed(currentStep)) {
-      goToStep(currentStep + 1);
-    }
-  };
-
-  const handleBack = () => {
-    if (currentStep > 1) {
-      goToStep(currentStep - 1);
-    }
-  };
-
-  // Send a single contact
-  const sendSingleContact = async (contactId: string) => {
-    if (!selectedTemplate) return false;
-    
-    trackerRef.current?.setContactStatus(contactId, "sending");
-
-    const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
-      body: {
-        contactIds: [contactId],
-        templateName: selectedTemplate.name,
-        templateLanguage: selectedTemplate.language,
-        userId: selectedUserId,
-        selectedPhoneNumberId: selectedPhoneNumberId || undefined,
-        variableMappings,
-        phoneVerifiedName,
-      },
+  const refreshLists = () => {
+    supabase.from("contacts").select("*").is("user_id", null).then(({ data }) => {
+      if (!data) return;
+      const map: Record<string, number> = {};
+      (data as any[]).forEach((c) => {
+        const listName = c.contact_list;
+        if (!listName) return;
+        map[listName] = (map[listName] || 0) + 1;
+      });
+      const lists = Object.entries(map).map(([name, count]) => ({ name, count }));
+      setAvailableLists(lists);
     });
+  };
 
-    if (!sendError && result?.results) {
-      if (result.results.sent > 0) {
-        trackerRef.current?.setContactStatus(contactId, "sent");
-        return true;
-      } else {
-        const errMsg = result.results.errors?.[0] || "Falha no envio";
-        trackerRef.current?.setContactStatus(contactId, "failed", errMsg);
-        return false;
-      }
-    } else {
-      trackerRef.current?.setContactStatus(contactId, "failed", sendError?.message || "Erro desconhecido");
-      return false;
-    }
+  // --- Dispatch logic ---
+  const updateDispatch = (dispatchId: string, updates: Partial<ActiveDispatch>) => {
+    setActiveDispatches((prev) => prev.map((d) => (d.id === dispatchId ? { ...d, ...updates } : d)));
   };
 
   const handleSend = async () => {
@@ -261,10 +213,9 @@ export default function AdminDisparosPage() {
       return;
     }
 
-    // Load contacts for the list
     const { data, error } = await (supabase as any)
       .from("contacts")
-      .select("id, name, phone")
+      .select("id")
       .is("user_id", null)
       .eq("contact_list", selectedList);
 
@@ -273,146 +224,177 @@ export default function AdminDisparosPage() {
       return;
     }
 
-    let contacts: DispatchContact[] = (data as any[]).map((c) => ({
-      id: c.id,
-      name: c.name,
-      phone: c.phone,
-    }));
+    let contactIds = (data as any[]).map((c) => c.id);
+    if (batchMode) contactIds = contactIds.slice(0, batchSize);
 
-    if (batchMode) contacts = contacts.slice(0, batchSize);
+    const operatorProfile = users.find((u) => u.user_id === selectedUserId);
+    const dispatchId = crypto.randomUUID();
 
-    setDispatchContacts(contacts);
-    setIsDispatching(true);
-    isPausedRef.current = false;
-    isCancelledRef.current = false;
-    setIsPaused(false);
-    
+    // Save refs for this dispatch's controls
+    dispatchControlsRef.current[dispatchId] = { isPaused: false, isCancelled: false };
 
-    // Wait a tick for tracker to initialize
-    await new Promise((r) => setTimeout(r, 100));
+    const newDispatch: ActiveDispatch = {
+      id: dispatchId,
+      operatorName: operatorProfile?.full_name || "Operador",
+      operatorId: selectedUserId,
+      templateName: selectedTemplate.name,
+      listName: selectedList,
+      mode: dispatchMode,
+      total: contactIds.length,
+      sent: 0,
+      failed: 0,
+      current: 0,
+      isPaused: false,
+      isCancelled: false,
+      isFinished: false,
+      errors: [],
+    };
 
-    try {
-      if (dispatchMode === "individual") {
-        // Individual mode: send one by one with interval
-        for (let i = 0; i < contacts.length; i++) {
-          if (isCancelledRef.current) break;
+    setActiveDispatches((prev) => [newDispatch, ...prev]);
 
-          const contactId = contacts[i].id;
+    // Capture values for the async closure
+    const capturedTemplate = selectedTemplate;
+    const capturedUserId = selectedUserId;
+    const capturedPhoneId = selectedPhoneNumberId;
+    const capturedMappings = { ...variableMappings };
+    const capturedPhoneVerifiedName = phoneVerifiedName;
+    const capturedMode = dispatchMode;
+    const capturedInterval = intervalSeconds;
 
-          // Check if this contact was skipped individually
-          if (trackerRef.current?.isContactSkipped(contactId)) continue;
+    // Run dispatch in background
+    (async () => {
+      const results = { sent: 0, failed: 0, errors: [] as string[] };
 
-          // Global pause check
-          while (isPausedRef.current && !isCancelledRef.current) {
-            await new Promise((r) => setTimeout(r, 500));
-          }
-          if (isCancelledRef.current) break;
+      try {
+        if (capturedMode === "individual") {
+          for (let i = 0; i < contactIds.length; i++) {
+            const ctrl = dispatchControlsRef.current[dispatchId];
+            if (ctrl?.isCancelled) break;
 
-          // Re-check after global resume
-          if (trackerRef.current?.isContactSkipped(contactId)) continue;
-
-          await sendSingleContact(contactId);
-
-          // Wait interval between sends
-          if (i < contacts.length - 1 && !isCancelledRef.current) {
-            for (let s = 0; s < intervalSeconds * 2; s++) {
-              if (isCancelledRef.current) break;
-              while (isPausedRef.current && !isCancelledRef.current) {
-                await new Promise((r) => setTimeout(r, 500));
-              }
-              if (isCancelledRef.current) break;
+            // Pause loop
+            while (ctrl?.isPaused && !ctrl?.isCancelled) {
               await new Promise((r) => setTimeout(r, 500));
             }
-          }
-        }
+            if (ctrl?.isCancelled) break;
 
-      } else {
-        // Batch mode: send in chunks of 50
-        const CHUNK = 50;
-        const totalChunks = Math.ceil(contacts.length / CHUNK);
-
-        for (let i = 0; i < contacts.length; i += CHUNK) {
-          if (isCancelledRef.current) break;
-
-          while (isPausedRef.current && !isCancelledRef.current) {
-            await new Promise((r) => setTimeout(r, 500));
-          }
-          if (isCancelledRef.current) break;
-
-          const chunk = contacts.slice(i, i + CHUNK);
-
-          // Filter out skipped from the chunk
-          const activeChunk = chunk.filter(
-            (c) => !trackerRef.current?.isContactSkipped(c.id)
-          );
-
-          if (activeChunk.length === 0) continue;
-
-          // Mark all as sending
-          activeChunk.forEach((c) => trackerRef.current?.setContactStatus(c.id, "sending"));
-
-          const chunkNum = Math.floor(i / CHUNK) + 1;
-          toast.info(`Enviando lote ${chunkNum}/${totalChunks}...`, { id: "bulk-progress" });
-
-          const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
-            body: {
-              contactIds: activeChunk.map((c) => c.id),
-              templateName: selectedTemplate.name,
-              templateLanguage: selectedTemplate.language,
-              userId: selectedUserId,
-              selectedPhoneNumberId: selectedPhoneNumberId || undefined,
-              variableMappings,
-              phoneVerifiedName,
-            },
-          });
-
-          if (!sendError && result?.results) {
-            // In batch mode, we mark per-contact status based on errors
-            const errorNames = new Set(
-              (result.results.errors || []).map((e: string) => e.split(":")[0]?.trim())
-            );
-            activeChunk.forEach((c) => {
-              if (errorNames.has(c.name)) {
-                const err = (result.results.errors || []).find((e: string) => e.startsWith(c.name));
-                trackerRef.current?.setContactStatus(c.id, "failed", err || "Falha");
-              } else {
-                trackerRef.current?.setContactStatus(c.id, "sent");
-              }
+            const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
+              body: {
+                contactIds: [contactIds[i]],
+                templateName: capturedTemplate.name,
+                templateLanguage: capturedTemplate.language,
+                userId: capturedUserId,
+                selectedPhoneNumberId: capturedPhoneId || undefined,
+                variableMappings: capturedMappings,
+                phoneVerifiedName: capturedPhoneVerifiedName,
+              },
             });
-          } else {
-            activeChunk.forEach((c) =>
-              trackerRef.current?.setContactStatus(c.id, "failed", sendError?.message || "Erro")
-            );
+
+            if (!sendError && result?.results) {
+              results.sent += result.results.sent || 0;
+              results.failed += result.results.failed || 0;
+              if (result.results.errors) results.errors.push(...result.results.errors);
+            } else {
+              results.failed++;
+              if (sendError) results.errors.push(sendError.message);
+            }
+
+            updateDispatch(dispatchId, {
+              current: i + 1,
+              sent: results.sent,
+              failed: results.failed,
+              errors: [...results.errors],
+            });
+
+            // Interval between sends
+            if (i < contactIds.length - 1 && !ctrl?.isCancelled) {
+              for (let s = 0; s < capturedInterval * 2; s++) {
+                if (ctrl?.isCancelled) break;
+                while (ctrl?.isPaused && !ctrl?.isCancelled) {
+                  await new Promise((r) => setTimeout(r, 500));
+                }
+                if (ctrl?.isCancelled) break;
+                await new Promise((r) => setTimeout(r, 500));
+              }
+            }
+          }
+        } else {
+          // Batch mode
+          const CHUNK = 50;
+          for (let i = 0; i < contactIds.length; i += CHUNK) {
+            const ctrl = dispatchControlsRef.current[dispatchId];
+            if (ctrl?.isCancelled) break;
+
+            while (ctrl?.isPaused && !ctrl?.isCancelled) {
+              await new Promise((r) => setTimeout(r, 500));
+            }
+            if (ctrl?.isCancelled) break;
+
+            const chunk = contactIds.slice(i, i + CHUNK);
+
+            const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
+              body: {
+                contactIds: chunk,
+                templateName: capturedTemplate.name,
+                templateLanguage: capturedTemplate.language,
+                userId: capturedUserId,
+                selectedPhoneNumberId: capturedPhoneId || undefined,
+                variableMappings: capturedMappings,
+                phoneVerifiedName: capturedPhoneVerifiedName,
+              },
+            });
+
+            if (!sendError && result?.results) {
+              results.sent += result.results.sent || 0;
+              results.failed += result.results.failed || 0;
+              if (result.results.errors) results.errors.push(...result.results.errors);
+            }
+
+            updateDispatch(dispatchId, {
+              current: Math.min(i + CHUNK, contactIds.length),
+              sent: results.sent,
+              failed: results.failed,
+              errors: [...results.errors],
+            });
           }
         }
 
+        const ctrl = dispatchControlsRef.current[dispatchId];
+        if (ctrl?.isCancelled) {
+          toast.warning(`${operatorProfile?.full_name}: Cancelado — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}` });
+        } else {
+          toast.success(`${operatorProfile?.full_name}: Concluído — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}` });
+        }
+      } catch (err: any) {
+        toast.error(`Erro no disparo (${operatorProfile?.full_name})`, { description: err.message });
+      } finally {
+        updateDispatch(dispatchId, { isFinished: true });
+        delete dispatchControlsRef.current[dispatchId];
+        refreshLists();
       }
+    })();
 
-      const stats = trackerRef.current?.getStats();
-      if (isCancelledRef.current) {
-        toast.warning(`Disparo cancelado: ${stats?.sent || 0} enviados, ${stats?.failed || 0} falhas`, { id: "bulk-progress" });
-      } else {
-        toast.success(`Disparo concluído: ${stats?.sent || 0} enviados, ${stats?.failed || 0} falhas`, { id: "bulk-progress" });
-      }
-    } catch (err: any) {
-      toast.error("Erro no disparo", { description: err.message, id: "bulk-progress" });
-    } finally {
-      setIsDispatching(false);
-      refreshLists();
-    }
+    // Don't reset form — allow another dispatch immediately
+    toast.info(`Disparo iniciado para ${operatorProfile?.full_name}`, { id: `dispatch-${dispatchId}` });
   };
 
-  const handlePauseAll = () => {
-    isPausedRef.current = !isPausedRef.current;
-    setIsPaused(!isPaused);
+  const handlePause = (dispatchId: string) => {
+    const ctrl = dispatchControlsRef.current[dispatchId];
+    if (!ctrl) return;
+    ctrl.isPaused = !ctrl.isPaused;
+    updateDispatch(dispatchId, { isPaused: ctrl.isPaused });
   };
 
-  const handleCancelAll = () => {
-    isCancelledRef.current = true;
-    isPausedRef.current = false;
-    setIsPaused(false);
+  const handleCancel = (dispatchId: string) => {
+    const ctrl = dispatchControlsRef.current[dispatchId];
+    if (!ctrl) return;
+    ctrl.isCancelled = true;
+    ctrl.isPaused = false;
+    updateDispatch(dispatchId, { isCancelled: true, isPaused: false });
   };
 
+  const handleDismissDispatch = (dispatchId: string) => {
+    setActiveDispatches((prev) => prev.filter((d) => d.id !== dispatchId));
+  };
 
   return (
     <div className="space-y-6">
@@ -426,20 +408,88 @@ export default function AdminDisparosPage() {
         </p>
       </div>
 
-      {/* Per-contact dispatch tracker */}
-      {(isDispatching || dispatchContacts.length > 0) && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="pt-4">
-            <DispatchContactTracker
-              ref={trackerRef}
-              contacts={dispatchContacts}
-              isDispatching={isDispatching}
-              onPauseAll={handlePauseAll}
-              onCancelAll={handleCancelAll}
-              isPausedGlobal={isPaused}
-            />
-          </CardContent>
-        </Card>
+      {/* Active dispatches — per operator */}
+      {activeDispatches.length > 0 && (
+        <div className="space-y-3">
+          {activeDispatches.map((dispatch) => {
+            const progress = dispatch.total > 0 ? (dispatch.current / dispatch.total) * 100 : 0;
+            return (
+              <motion.div
+                key={dispatch.id}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <Card className={dispatch.isFinished ? "border-muted" : "border-primary/30 bg-primary/5"}>
+                  <CardContent className="pt-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <User className="h-4 w-4 text-primary shrink-0" />
+                        <span className="text-sm font-semibold truncate">{dispatch.operatorName}</span>
+                        <Badge variant="outline" className="text-[10px] shrink-0">
+                          {dispatch.templateName}
+                        </Badge>
+                        <Badge variant="secondary" className="text-[10px] shrink-0">
+                          {dispatch.listName}
+                        </Badge>
+                      </div>
+                      {!dispatch.isFinished ? (
+                        <div className="flex gap-1.5 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handlePause(dispatch.id)}
+                            className="gap-1 h-7 text-xs"
+                          >
+                            {dispatch.isPaused ? (
+                              <><Play className="h-3 w-3" /> Retomar</>
+                            ) : (
+                              <><Pause className="h-3 w-3" /> Pausar</>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleCancel(dispatch.id)}
+                            className="gap-1 h-7 text-xs"
+                          >
+                            <XCircle className="h-3 w-3" /> Cancelar
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDismissDispatch(dispatch.id)}
+                          className="h-7 text-xs text-muted-foreground"
+                        >
+                          Fechar
+                        </Button>
+                      )}
+                    </div>
+
+                    <Progress value={progress} className="h-2" />
+
+                    <div className="flex flex-wrap gap-3 text-xs">
+                      <span className="text-muted-foreground">
+                        {dispatch.isPaused ? "⏸️ Pausado" : dispatch.isFinished ? (dispatch.isCancelled ? "🚫 Cancelado" : "✅ Concluído") : `📤 ${dispatch.mode === "individual" ? "Individual" : "Lote"}`}
+                      </span>
+                      <span className="text-muted-foreground">{dispatch.current}/{dispatch.total}</span>
+                      {dispatch.sent > 0 && <span className="text-success">✓ {dispatch.sent}</span>}
+                      {dispatch.failed > 0 && <span className="text-destructive">✗ {dispatch.failed}</span>}
+                    </div>
+
+                    {dispatch.errors.length > 0 && (
+                      <div className="max-h-20 overflow-y-auto rounded border p-2 text-xs text-destructive space-y-0.5">
+                        {dispatch.errors.slice(-3).map((err, i) => <p key={i}>{err}</p>)}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </div>
       )}
 
       {/* Step indicator */}
@@ -449,7 +499,6 @@ export default function AdminDisparosPage() {
           const isCompleted = currentStep > step.id;
           const isActive = currentStep === step.id;
           const isClickable = step.id === 1 || (step.id <= currentStep) || canProceed(step.id - 1);
-
           return (
             <div key={step.id} className="flex items-center flex-1 last:flex-none">
               <button
@@ -472,15 +521,11 @@ export default function AdminDisparosPage() {
                 </motion.div>
                 <span className={`text-[11px] font-medium ${
                   isActive ? "text-primary" : isCompleted ? "text-foreground" : "text-muted-foreground/50"
-                }`}>
-                  {step.label}
-                </span>
+                }`}>{step.label}</span>
               </button>
               {idx < STEPS.length - 1 && (
                 <div className="flex-1 mx-2 mt-[-18px]">
-                  <div className={`h-0.5 rounded-full transition-colors ${
-                    isCompleted ? "bg-primary" : "bg-muted-foreground/15"
-                  }`} />
+                  <div className={`h-0.5 rounded-full transition-colors ${isCompleted ? "bg-primary" : "bg-muted-foreground/15"}`} />
                 </div>
               )}
             </div>
@@ -488,7 +533,7 @@ export default function AdminDisparosPage() {
         })}
       </div>
 
-      {/* Step content with animation */}
+      {/* Step content */}
       <div className="relative overflow-hidden min-h-[340px] max-w-xl mx-auto">
         <AnimatePresence initial={false} custom={direction} mode="wait">
           <motion.div
@@ -512,17 +557,9 @@ export default function AdminDisparosPage() {
                 <CardContent className="space-y-4">
                   {phones.length > 0 ? (
                     <div>
-                      <PhoneNumberSelector
-                        phones={phones}
-                        selectedPhoneNumberId={selectedPhoneNumberId}
-                        onSelect={setSelectedPhoneNumberId}
-                      />
+                      <PhoneNumberSelector phones={phones} selectedPhoneNumberId={selectedPhoneNumberId} onSelect={setSelectedPhoneNumberId} />
                       {phoneVerifiedName && (
-                        <motion.p
-                          initial={{ opacity: 0, y: -5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="text-sm text-primary mt-3 flex items-center gap-2"
-                        >
+                        <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-sm text-primary mt-3 flex items-center gap-2">
                           👨‍⚖️ Advogado: <span className="font-semibold">{phoneVerifiedName}</span>
                         </motion.p>
                       )}
@@ -548,41 +585,21 @@ export default function AdminDisparosPage() {
                   <CardDescription>Selecione o template aprovado pela Meta e mapeie as variáveis</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Select
-                    value={selectedTemplate?.name || ""}
-                    onValueChange={(name) => {
-                      const t = approvedTemplates.find((t) => t.name === name);
-                      setSelectedTemplate(t || null);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o template..." />
-                    </SelectTrigger>
+                  <Select value={selectedTemplate?.name || ""} onValueChange={(name) => setSelectedTemplate(approvedTemplates.find((t) => t.name === name) || null)}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o template..." /></SelectTrigger>
                     <SelectContent>
-                      {approvedTemplates.map((t) => (
-                        <SelectItem key={t.id} value={t.name}>
-                          {t.name}
-                        </SelectItem>
-                      ))}
+                      {approvedTemplates.map((t) => (<SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>))}
                     </SelectContent>
                   </Select>
 
                   {selectedTemplate && templateBody && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="rounded-lg bg-muted p-3 text-sm text-muted-foreground"
-                    >
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
                       {templateBody}
                     </motion.div>
                   )}
 
                   {templateVars.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="space-y-2"
-                    >
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
                       <p className="text-xs font-medium text-muted-foreground">Variáveis personalizadas</p>
                       {templateVars.map((v) => {
                         const selectedField = CONTACT_FIELD_OPTIONS.find(opt => opt.value === variableMappings[String(v)]);
@@ -591,28 +608,15 @@ export default function AdminDisparosPage() {
                           <div key={v} className="space-y-1">
                             <div className="flex items-center gap-2">
                               <Badge variant="outline" className="text-xs shrink-0">{`{{${v}}}`}</Badge>
-                              <Select
-                                value={variableMappings[String(v)] || ""}
-                                onValueChange={(val) => setVariableMappings((prev) => ({ ...prev, [String(v)]: val }))}
-                              >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder="Campo..." />
-                                </SelectTrigger>
+                              <Select value={variableMappings[String(v)] || ""} onValueChange={(val) => setVariableMappings((prev) => ({ ...prev, [String(v)]: val }))}>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Campo..." /></SelectTrigger>
                                 <SelectContent>
-                                  {CONTACT_FIELD_OPTIONS.map((opt) => (
-                                    <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                                      {opt.label}
-                                    </SelectItem>
-                                  ))}
+                                  {CONTACT_FIELD_OPTIONS.map((opt) => (<SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>))}
                                 </SelectContent>
                               </Select>
                             </div>
-                            {isAdvogado && phoneVerifiedName && (
-                              <p className="text-[10px] text-primary ml-14">→ {phoneVerifiedName}</p>
-                            )}
-                            {selectedField?.defaultHint && !isAdvogado && (
-                              <p className="text-[10px] text-muted-foreground ml-14">{selectedField.defaultHint}</p>
-                            )}
+                            {isAdvogado && phoneVerifiedName && <p className="text-[10px] text-primary ml-14">→ {phoneVerifiedName}</p>}
+                            {selectedField?.defaultHint && !isAdvogado && <p className="text-[10px] text-muted-foreground ml-14">{selectedField.defaultHint}</p>}
                           </div>
                         );
                       })}
@@ -630,9 +634,7 @@ export default function AdminDisparosPage() {
                     Lista e Modo de Disparo
                   </CardTitle>
                   <CardDescription>
-                    {selectedList && listContactCount > 0
-                      ? `${effectiveCount} contato(s) serão disparados`
-                      : "Selecione a lista e o modo de envio"}
+                    {selectedList && listContactCount > 0 ? `${effectiveCount} contato(s) serão disparados` : "Selecione a lista e o modo de envio"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -642,65 +644,39 @@ export default function AdminDisparosPage() {
                     <div className="rounded-lg border border-dashed p-6 text-center">
                       <List className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">Nenhuma lista disponível</p>
-                      <p className="text-xs text-muted-foreground/70 mt-1">Importe contatos na aba Contatos</p>
                     </div>
                   ) : (
                     <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
                       {availableLists.map((list) => (
-                        <button
-                          key={list.name}
-                          onClick={() => setSelectedList(list.name)}
+                        <button key={list.name} onClick={() => setSelectedList(list.name)}
                           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors text-left ${
-                            selectedList === list.name
-                              ? "border-primary bg-primary/5 text-foreground"
-                              : "border-border hover:bg-muted"
-                          }`}
-                        >
+                            selectedList === list.name ? "border-primary bg-primary/5 text-foreground" : "border-border hover:bg-muted"
+                          }`}>
                           <span className="font-medium">{list.name}</span>
-                          <Badge variant={selectedList === list.name ? "default" : "secondary"} className="text-xs">
-                            {list.count} contatos
-                          </Badge>
+                          <Badge variant={selectedList === list.name ? "default" : "secondary"} className="text-xs">{list.count} contatos</Badge>
                         </button>
                       ))}
                     </div>
                   )}
 
-                  {/* Dispatch mode selection */}
                   <div className="rounded-lg border border-border p-3 space-y-3">
                     <p className="text-xs font-medium text-muted-foreground">Modo de disparo</p>
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => setDispatchMode("batch")}
-                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                          dispatchMode === "batch" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"
-                        }`}
-                      >
-                        <Layers className="h-4 w-4 mx-auto mb-1" />
-                        Lote
+                      <button onClick={() => setDispatchMode("batch")}
+                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "batch" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
+                        <Layers className="h-4 w-4 mx-auto mb-1" /> Lote
                       </button>
-                      <button
-                        onClick={() => setDispatchMode("individual")}
-                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                          dispatchMode === "individual" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"
-                        }`}
-                      >
-                        <Timer className="h-4 w-4 mx-auto mb-1" />
-                        Individual
+                      <button onClick={() => setDispatchMode("individual")}
+                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "individual" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
+                        <Timer className="h-4 w-4 mx-auto mb-1" /> Individual
                       </button>
                     </div>
 
                     {dispatchMode === "individual" && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex items-center gap-2">
                         <Label htmlFor="interval" className="text-xs text-muted-foreground whitespace-nowrap">Intervalo:</Label>
-                        <Input
-                          id="interval"
-                          type="number"
-                          min={1}
-                          max={300}
-                          value={intervalSeconds}
-                          onChange={(e) => setIntervalSeconds(Math.max(1, parseInt(e.target.value) || 1))}
-                          className="h-8 w-20 text-sm"
-                        />
+                        <Input id="interval" type="number" min={1} max={300} value={intervalSeconds}
+                          onChange={(e) => setIntervalSeconds(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-20 text-sm" />
                         <span className="text-xs text-muted-foreground">segundos</span>
                       </motion.div>
                     )}
@@ -717,15 +693,8 @@ export default function AdminDisparosPage() {
                         {batchMode && (
                           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
                             <Label htmlFor="batch-size" className="text-xs text-muted-foreground whitespace-nowrap">Quantidade:</Label>
-                            <Input
-                              id="batch-size"
-                              type="number"
-                              min={1}
-                              max={listContactCount || 9999}
-                              value={batchSize}
-                              onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))}
-                              className="h-8 w-24 text-sm"
-                            />
+                            <Input id="batch-size" type="number" min={1} max={listContactCount || 9999} value={batchSize}
+                              onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-24 text-sm" />
                           </motion.div>
                         )}
                       </>
@@ -745,29 +714,16 @@ export default function AdminDisparosPage() {
                   <CardDescription>Revise o resumo e dispare</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o operador..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {users
-                          .filter((u) => u.user_id !== user?.id)
-                          .map((u) => (
-                            <SelectItem key={u.user_id} value={u.user_id}>
-                              {u.full_name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o operador..." /></SelectTrigger>
+                    <SelectContent>
+                      {users.filter((u) => u.user_id !== user?.id).map((u) => (
+                        <SelectItem key={u.user_id} value={u.user_id}>{u.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-                  {/* Summary */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-lg bg-muted p-4 space-y-2"
-                  >
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg bg-muted p-4 space-y-2">
                     <p className="text-xs font-semibold mb-2">Resumo do disparo</p>
                     {[
                       { label: "Número", value: selectedPhoneData?.display_phone_number || "—" },
@@ -784,24 +740,9 @@ export default function AdminDisparosPage() {
                     ))}
                   </motion.div>
 
-                  <Button
-                    className="w-full gap-2"
-                    size="lg"
-                    onClick={handleSend}
-                    disabled={
-                      !selectedTemplate ||
-                      !selectedList ||
-                      !selectedUserId ||
-                      listContactCount === 0 ||
-                      isDispatching ||
-                      (phones.length > 0 && !selectedPhoneNumberId)
-                    }
-                  >
-                    {isDispatching ? (
-                      <><LoadingSpinner size="sm" /> Disparando...</>
-                    ) : (
-                      <><Send className="h-4 w-4" /> Disparar para {effectiveCount} contato{effectiveCount !== 1 ? "s" : ""}</>
-                    )}
+                  <Button className="w-full gap-2" size="lg" onClick={handleSend}
+                    disabled={!selectedTemplate || !selectedList || !selectedUserId || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId)}>
+                    <Send className="h-4 w-4" /> Disparar para {effectiveCount} contato{effectiveCount !== 1 ? "s" : ""}
                   </Button>
                 </CardContent>
               </Card>
@@ -809,35 +750,20 @@ export default function AdminDisparosPage() {
           </motion.div>
         </AnimatePresence>
 
-        {/* Navigation buttons inside the container */}
-        {!isDispatching && (
-          <div className="flex items-center justify-between mt-4">
-            <Button
-              variant="outline"
-              onClick={handleBack}
-              disabled={currentStep === 1}
-              className="gap-1.5"
-            >
-              <ChevronLeft className="h-4 w-4" /> Voltar
+        {/* Navigation */}
+        <div className="flex items-center justify-between mt-4">
+          <Button variant="outline" onClick={handleBack} disabled={currentStep === 1} className="gap-1.5">
+            <ChevronLeft className="h-4 w-4" /> Voltar
+          </Button>
+          <span className="text-xs text-muted-foreground">Etapa {currentStep} de {STEPS.length}</span>
+          {currentStep < 4 ? (
+            <Button onClick={handleNext} disabled={!canProceed(currentStep)} className="gap-1.5">
+              Próximo <ChevronRight className="h-4 w-4" />
             </Button>
-
-            <span className="text-xs text-muted-foreground">
-              Etapa {currentStep} de {STEPS.length}
-            </span>
-
-            {currentStep < 4 ? (
-              <Button
-                onClick={handleNext}
-                disabled={!canProceed(currentStep)}
-                className="gap-1.5"
-              >
-                Próximo <ChevronRight className="h-4 w-4" />
-              </Button>
-            ) : (
-              <div className="w-[100px]" />
-            )}
-          </div>
-        )}
+          ) : (
+            <div className="w-[100px]" />
+          )}
+        </div>
       </div>
     </div>
   );
