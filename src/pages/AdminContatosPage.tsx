@@ -137,8 +137,8 @@ export default function AdminContatosPage() {
 
     if (filterRendaMinValue > 0) {
       filtered = filtered.filter(c => {
-        const parsed = c as any;
-        const renda = parseFloat(String(parsed.renda ?? parsed.valor_da_causa ?? "0")) || 0;
+        const renda = c.renda ?? 0;
+        // Se renda não foi informada (0), mantém o contato; se informada e abaixo do mínimo, remove
         return renda === 0 || renda >= filterRendaMinValue;
       });
     }

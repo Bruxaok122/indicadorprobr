@@ -365,12 +365,13 @@ export function parseJuridicalList(rawText: string): {
       const displayName = totalPhones > 1
           ? `${parsed.clientName} /${phoneIndex + 1}`
           : parsed.clientName;
-        contacts.push({
+      contacts.push({
           name: displayName,
           phone,
           lawyer_name: parsed.lawyer,
           process_number: parsed.process,
           cpf: parsed.cpf,
+          renda: parsed.renda ? parseFloat(parsed.renda.replace(/\./g, "").replace(",", ".")) || undefined : undefined,
         });
       });
     } else {
@@ -409,6 +410,7 @@ export function parseJuridicalList(rawText: string): {
         lawyer_name: parsed.lawyer,
         process_number: parsed.process,
         cpf: parsed.cpf,
+        renda: parsed.renda ? parseFloat(parsed.renda.replace(/\./g, "").replace(",", ".")) || undefined : undefined,
       });
     });
   });
