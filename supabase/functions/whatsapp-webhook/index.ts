@@ -273,6 +273,65 @@ serve(async (req) => {
                   messageType = "document";
                 } else if (message.type === "audio") {
                   content = "[Áudio recebido]";
+                  messageType = "audio";
+                  // Download and store audio like images
+                  try {
+                    if (config?.access_token && message.audio?.id) {
+                      const accessToken = config.access_token;
+                      const mediaId = message.audio.id;
+                      const mimeType = message.audio.mime_type || "audio/ogg";
+                      const ext = mimeType.includes("ogg") ? "ogg" : mimeType.split('/')[1] || "ogg";
+                      const fileName = `${Date.now()}-${mediaId}.${ext}`;
+
+                      console.log(`Fetching audio media URL for ID: ${mediaId}`);
+                      const mediaResponse = await fetch(
+                        `https://graph.facebook.com/v21.0/${mediaId}`,
+                        { headers: { Authorization: `Bearer ${accessToken}` } }
+                      );
+
+                      let downloadUrl: string | null = null;
+                      if (mediaResponse.ok) {
+                        const mediaData = await mediaResponse.json();
+                        downloadUrl = mediaData.url;
+                        console.log("Got audio download URL from Graph API");
+                      } else {
+                        console.error("Audio media API error:", await mediaResponse.text());
+                      }
+
+                      if (downloadUrl) {
+                        const audioResponse = await fetch(downloadUrl, {
+                          headers: { Authorization: `Bearer ${accessToken}` },
+                        });
+                        if (audioResponse.ok) {
+                          const arrayBuffer = await audioResponse.arrayBuffer();
+                          const uint8Array = new Uint8Array(arrayBuffer);
+                          console.log(`Audio downloaded, size: ${uint8Array.length} bytes`);
+
+                          const { error: uploadError } = await supabase
+                            .storage
+                            .from("documents")
+                            .upload(`audio/${fileName}`, uint8Array, {
+                              contentType: mimeType,
+                              upsert: false,
+                            });
+
+                          if (uploadError) {
+                            console.error("Audio storage upload error:", uploadError);
+                          } else {
+                            const { data: urlData } = supabase.storage
+                              .from("documents")
+                              .getPublicUrl(`audio/${fileName}`);
+                            imageUrl = urlData.publicUrl;
+                            console.log("Audio uploaded successfully, URL:", imageUrl);
+                          }
+                        } else {
+                          console.error("Audio download failed:", await audioResponse.text());
+                        }
+                      }
+                    }
+                  } catch (audioError) {
+                    console.error("Error downloading audio:", audioError);
+                  }
                 } else if (message.type === "video") {
                   content = "[Vídeo recebido]";
                 } else {
