@@ -124,25 +124,27 @@ export default function AdminDisparosPage() {
     }
   }, [phones, selectedPhoneNumberId]);
 
-  // Load available lists
+  // Load available lists — refetch whenever step 3 is shown
   useEffect(() => {
-    setLoadingLists(true);
-    supabase
-      .from("contacts")
-      .select("*")
-      .is("user_id", null)
-      .then(({ data }) => {
-        if (!data) { setLoadingLists(false); return; }
-        const map: Record<string, number> = {};
-        (data as any[]).forEach((c) => {
-          const listName = c.contact_list;
-          if (!listName) return;
-          map[listName] = (map[listName] || 0) + 1;
+    if (currentStep === 3 || availableLists.length === 0) {
+      setLoadingLists(true);
+      supabase
+        .from("contacts")
+        .select("*")
+        .is("user_id", null)
+        .then(({ data }) => {
+          if (!data) { setLoadingLists(false); return; }
+          const map: Record<string, number> = {};
+          (data as any[]).forEach((c) => {
+            const listName = c.contact_list;
+            if (!listName) return;
+            map[listName] = (map[listName] || 0) + 1;
+          });
+          setAvailableLists(Object.entries(map).map(([name, count]) => ({ name, count })));
+          setLoadingLists(false);
         });
-        setAvailableLists(Object.entries(map).map(([name, count]) => ({ name, count })));
-        setLoadingLists(false);
-      });
-  }, []);
+    }
+  }, [currentStep]);
 
   useEffect(() => {
     if (!selectedList) { setListContactCount(0); return; }
