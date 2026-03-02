@@ -69,7 +69,7 @@ export default function AdminContatosPage() {
 
   // WhatsApp validation (inside preview, before import)
   const [whatsappEntries, setWhatsappEntries] = useState<WhatsAppValidationEntry[]>([]);
-  const [filterRendaAbove2k, setFilterRendaAbove2k] = useState(false);
+  const [filterRendaMinValue, setFilterRendaMinValue] = useState(0);
 
   // WhatsApp validation for existing list
   const [showExistingValidation, setShowExistingValidation] = useState(false);
@@ -135,11 +135,11 @@ export default function AdminContatosPage() {
       return validPhones.has(normalized);
     });
 
-    if (filterRendaAbove2k) {
+    if (filterRendaMinValue > 0) {
       filtered = filtered.filter(c => {
         const parsed = c as any;
         const renda = parseFloat(String(parsed.renda ?? parsed.valor_da_causa ?? "0")) || 0;
-        return renda === 0 || renda >= 2000;
+        return renda === 0 || renda >= filterRendaMinValue;
       });
     }
 
@@ -218,7 +218,7 @@ export default function AdminContatosPage() {
       );
       queryClient.invalidateQueries({ queryKey: ["admin-contacts"] });
       setRawText(""); setParsedContacts([]); setParseErrors([]); setShowPreview(false);
-      setSplitByState(false); setWhatsappEntries([]); setFilterRendaAbove2k(false);
+      setSplitByState(false); setWhatsappEntries([]); setFilterRendaMinValue(0);
     },
     onError: (e: any) => toast.error("Erro na importação", { description: e.message }),
   });
@@ -262,7 +262,7 @@ export default function AdminContatosPage() {
     setParsedContacts(contacts);
     setParseErrors(errors);
     setWhatsappEntries([]);
-    setFilterRendaAbove2k(false);
+    setFilterRendaMinValue(0);
     if (contacts.length > 0) setShowPreview(true);
     else toast.warning("Nenhum contato encontrado");
   };
@@ -279,7 +279,7 @@ export default function AdminContatosPage() {
       setParsedContacts(contacts);
       setParseErrors(errors);
       setWhatsappEntries([]);
-      setFilterRendaAbove2k(false);
+      setFilterRendaMinValue(0);
       if (contacts.length > 0) { setShowPreview(true); toast.success(`${contacts.length} contato(s) encontrado(s)`); }
       else toast.warning("Nenhum contato encontrado");
     } catch { toast.error("Erro ao ler arquivo"); }
@@ -709,7 +709,7 @@ export default function AdminContatosPage() {
         if (!open) {
           setShowPreview(false);
           setWhatsappEntries([]);
-          setFilterRendaAbove2k(false);
+           setFilterRendaMinValue(0);
         }
       }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -789,18 +789,28 @@ export default function AdminContatosPage() {
                   <div className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                     <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Filtrar renda acima de R$2.000</p>
-                      <p className="text-xs text-muted-foreground">Remove clientes com valor da causa abaixo de R$2.000</p>
+                      <p className="text-sm font-medium">Filtrar por renda mínima</p>
+                      <p className="text-xs text-muted-foreground">Remove clientes com valor da causa abaixo do limite</p>
                     </div>
                   </div>
-                  <Switch checked={filterRendaAbove2k} onCheckedChange={setFilterRendaAbove2k} />
+                  <select
+                    value={filterRendaMinValue}
+                    onChange={(e) => setFilterRendaMinValue(Number(e.target.value))}
+                    className="rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value={0}>Desligado</option>
+                    <option value={2000}>R$ 2.000+</option>
+                    <option value={5000}>R$ 5.000+</option>
+                    <option value={10000}>R$ 10.000+</option>
+                    <option value={20000}>R$ 20.000+</option>
+                  </select>
                 </div>
 
                 {/* Summary */}
                 <AlertBanner type={removedCount > 0 ? "warning" : "info"} title="Resultado do filtro">
                   <p className="text-xs">
                     <strong>{validatedContacts.length}</strong> cliente(s) serão importados.
-                    {removedCount > 0 && <> <strong className="text-destructive">{removedCount}</strong> cliente(s) serão removidos (WhatsApp inválido{filterRendaAbove2k ? " ou renda < R$2.000" : ""}).</>}
+                    {removedCount > 0 && <> <strong className="text-destructive">{removedCount}</strong> cliente(s) serão removidos (WhatsApp inválido{filterRendaMinValue > 0 ? ` ou renda < R$${filterRendaMinValue.toLocaleString("pt-BR")}` : ""}).</>}
                   </p>
                 </AlertBanner>
               </div>
@@ -884,7 +894,7 @@ export default function AdminContatosPage() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowPreview(false); setWhatsappEntries([]); setFilterRendaAbove2k(false); }} disabled={importContactsMutation.isPending}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setShowPreview(false); setWhatsappEntries([]); setFilterRendaMinValue(0); }} disabled={importContactsMutation.isPending}>Cancelar</Button>
             <Button
               onClick={handleConfirmImport}
               disabled={importContactsMutation.isPending || !selectedList || validatedContacts.length === 0}
