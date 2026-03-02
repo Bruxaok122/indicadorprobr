@@ -206,6 +206,22 @@ export default function AdminDisparosPage() {
     setActiveDispatches((prev) => prev.map((d) => (d.id === dispatchId ? { ...d, ...updates } : d)));
   };
 
+  const getInvokeErrorMessage = (sendError: any): string => {
+    const fallback = sendError?.message || "Falha ao chamar função de disparo";
+    const responseText = sendError?.context?.responseText;
+
+    if (!responseText || typeof responseText !== "string") return fallback;
+
+    try {
+      const parsed = JSON.parse(responseText);
+      if (parsed?.error && typeof parsed.error === "string") return parsed.error;
+      if (parsed?.message && typeof parsed.message === "string") return parsed.message;
+      return fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
   const handleSend = async () => {
     if (!selectedTemplate || !selectedList || !selectedUserId) return;
     if (phones.length > 0 && !selectedPhoneNumberId) {
@@ -295,7 +311,7 @@ export default function AdminDisparosPage() {
               if (result.results.errors) results.errors.push(...result.results.errors);
             } else {
               results.failed++;
-              if (sendError) results.errors.push(sendError.message);
+              if (sendError) results.errors.push(getInvokeErrorMessage(sendError));
             }
 
             updateDispatch(dispatchId, {
@@ -350,7 +366,7 @@ export default function AdminDisparosPage() {
             } else {
               // Em lote, se a chamada falhar, considera todo o chunk como falho
               results.failed += chunk.length;
-              results.errors.push(sendError?.message || "Falha ao enviar lote");
+              results.errors.push(getInvokeErrorMessage(sendError));
 
               // Erros de autorização/permissão não devem continuar processando
               const statusCode = (sendError as any)?.context?.status;
