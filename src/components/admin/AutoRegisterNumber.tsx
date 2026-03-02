@@ -21,6 +21,7 @@ const STEP_LABELS: Record<string, string> = {
   sms24h_saldo: "Saldo SMS24H",
   sms24h_numero: "Obter Número",
   meta_registro: "Registrar na Meta",
+  meta_aguardar: "Aguardando Meta",
   meta_solicitar_codigo: "Solicitar Código SMS",
   sms24h_codigo: "Aguardar Código SMS",
   meta_verificar_codigo: "Verificar Código na Meta",
