@@ -225,62 +225,42 @@ serve(async (req) => {
     }
 
     // ===== STEP 4: Request SMS verification code from Meta =====
-    // Wait a few seconds for Meta to process the phone number registration
+    // Wait for Meta to process the phone number registration
     addStep("meta_aguardar", "ok", "Aguardando 5s para Meta processar o registro...");
     await new Promise((r) => setTimeout(r, 5000));
 
-    const maxRetries = 3;
-    let codeRequested = false;
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const codeRes = await fetch(`${META_API}/${metaPhoneNumberId}/request_code`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${config.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ code_method: "SMS", language: "pt_BR" }),
-        });
+    try {
+      const codeRes = await fetch(`${META_API}/${metaPhoneNumberId}/request_code`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${config.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code_method: "SMS", language: "pt_BR" }),
+      });
 
-        const codeData = await codeRes.json();
-        log("meta_solicitar_codigo", `Tentativa ${attempt} - Response: ${JSON.stringify(codeData)}`);
+      const codeData = await codeRes.json();
+      log("meta_solicitar_codigo", `Response: ${JSON.stringify(codeData)}`);
 
-        if (codeRes.ok) {
-          addStep("meta_solicitar_codigo", "ok", `Código SMS solicitado à Meta com sucesso (tentativa ${attempt})`);
-          codeRequested = true;
-          break;
-        }
-
+      if (!codeRes.ok) {
         const errorMsg = codeData.error?.message || JSON.stringify(codeData);
         const errorCode = codeData.error?.code;
-
-        // If it's a transient error and we have retries left, wait and retry
-        if (attempt < maxRetries) {
-          addStep("meta_solicitar_codigo", "skipped", `Tentativa ${attempt} falhou: ${errorMsg}. Retentando em 5s...`);
-          await new Promise((r) => setTimeout(r, 5000));
-          continue;
-        }
-
-        // Final attempt failed
-        addStep("meta_solicitar_codigo", "error", `Erro ao solicitar código SMS (${maxRetries} tentativas): ${errorMsg} (code: ${errorCode})`);
+        addStep("meta_solicitar_codigo", "error", `Erro ao solicitar código SMS: ${errorMsg} (code: ${errorCode})`);
         await sms24hRequest(sms24hApiKey, { action: "setStatus", id: activationId, status: "8" });
         return new Response(
           JSON.stringify({ error: `Meta request_code: ${errorMsg}`, steps }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
-      } catch (err: any) {
-        if (attempt < maxRetries) {
-          addStep("meta_solicitar_codigo", "skipped", `Tentativa ${attempt} exceção: ${err.message}. Retentando em 5s...`);
-          await new Promise((r) => setTimeout(r, 5000));
-          continue;
-        }
-        addStep("meta_solicitar_codigo", "error", `Exceção após ${maxRetries} tentativas: ${err.message}`);
-        await sms24hRequest(sms24hApiKey, { action: "setStatus", id: activationId, status: "8" });
-        return new Response(
-          JSON.stringify({ error: `Meta request_code exception: ${err.message}`, steps }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
       }
+
+      addStep("meta_solicitar_codigo", "ok", "Código SMS solicitado à Meta com sucesso");
+    } catch (err: any) {
+      addStep("meta_solicitar_codigo", "error", `Exceção: ${err.message}`);
+      await sms24hRequest(sms24hApiKey, { action: "setStatus", id: activationId, status: "8" });
+      return new Response(
+        JSON.stringify({ error: `Meta request_code exception: ${err.message}`, steps }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Notify SMS24H that SMS was sent (optional but recommended)
