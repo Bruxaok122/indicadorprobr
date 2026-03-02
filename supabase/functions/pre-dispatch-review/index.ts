@@ -128,7 +128,8 @@ serve(async (req) => {
         } else {
           // Check name_status
           const nameStatus = tokenTestResult.name_status;
-          if (nameStatus && nameStatus !== "APPROVED" && nameStatus !== "AVAILABLE") {
+          const validStatuses = ["APPROVED", "AVAILABLE", "AVAILABLE_WITHOUT_REVIEW"];
+          if (nameStatus && !validStatuses.includes(nameStatus)) {
             checks.push({
               id: "access_token",
               label: "Token de Acesso / Display Name",
