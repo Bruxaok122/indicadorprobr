@@ -14,9 +14,13 @@ import {
   DollarSign,
   Calendar,
   Scale,
+  Copy,
+  Check,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface ContactProfileDrawerProps {
   contact: Contact | null;
@@ -37,40 +41,32 @@ export function ContactProfileDrawer({
   open,
   onOpenChange,
 }: ContactProfileDrawerProps) {
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
   if (!contact) return null;
 
+  const handleCopy = async (label: string, value: string) => {
+    if (!value || value === "—") return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(label);
+      toast.success(`${label} copiado!`);
+      setTimeout(() => setCopiedField(null), 1500);
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  };
+
   const infoItems = [
+    { icon: Phone, label: "Telefone", value: contact.phone, copyable: true },
+    { icon: FileText, label: "Nº do Processo", value: contact.process_number || "—", copyable: !!contact.process_number },
+    { icon: Scale, label: "Parte Contrária", value: contact.lawyer_name || "—", copyable: !!contact.lawyer_name },
+    { icon: CreditCard, label: "CPF", value: contact.cpf || "—", copyable: !!contact.cpf },
+    { icon: DollarSign, label: "Valor da Causa", value: formatCurrency(contact.valor_da_causa), copyable: contact.valor_da_causa != null },
     {
-      icon: Phone,
-      label: "Telefone",
-      value: contact.phone,
-    },
-    {
-      icon: FileText,
-      label: "Nº do Processo",
-      value: contact.process_number || "—",
-    },
-    {
-      icon: Scale,
-      label: "Parte Contrária",
-      value: contact.lawyer_name || "—",
-    },
-    {
-      icon: CreditCard,
-      label: "CPF",
-      value: contact.cpf || "—",
-    },
-    {
-      icon: DollarSign,
-      label: "Valor da Causa",
-      value: formatCurrency(contact.valor_da_causa),
-    },
-    {
-      icon: Calendar,
-      label: "Cadastrado em",
-      value: format(new Date(contact.created_at), "dd 'de' MMMM 'de' yyyy", {
-        locale: ptBR,
-      }),
+      icon: Calendar, label: "Cadastrado em",
+      value: format(new Date(contact.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }),
+      copyable: false,
     },
   ];
 
@@ -104,7 +100,7 @@ export function ContactProfileDrawer({
             {infoItems.map((item) => (
               <div
                 key={item.label}
-                className="flex items-start gap-3 rounded-lg px-3 py-3 hover:bg-muted/50 transition-colors"
+                className="flex items-start gap-3 rounded-lg px-3 py-3 hover:bg-muted/50 transition-colors group"
               >
                 <item.icon className="h-4 w-4 mt-0.5 text-primary shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -113,6 +109,20 @@ export function ContactProfileDrawer({
                     {item.value}
                   </p>
                 </div>
+                {item.copyable && (
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(item.label, item.value)}
+                    className="shrink-0 mt-1 p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    title={`Copiar ${item.label}`}
+                  >
+                    {copiedField === item.label ? (
+                      <Check className="h-3.5 w-3.5 text-green-500" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                )}
               </div>
             ))}
           </div>
