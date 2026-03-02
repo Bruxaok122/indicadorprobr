@@ -90,6 +90,7 @@ export interface ParsedContact {
   lawyer_name: string;
   process_number: string;
   cpf?: string;
+  renda?: number;
 }
 
 export interface ParsedBlock {
