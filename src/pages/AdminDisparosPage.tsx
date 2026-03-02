@@ -124,27 +124,21 @@ export default function AdminDisparosPage() {
     }
   }, [phones, selectedPhoneNumberId]);
 
-  // Load available lists — refetch whenever step 3 is shown
+  // Load available lists (initial + every time step 3 is active)
   useEffect(() => {
-    if (currentStep === 3 || availableLists.length === 0) {
-      setLoadingLists(true);
-      supabase
-        .from("contacts")
-        .select("*")
-        .is("user_id", null)
-        .then(({ data }) => {
-          if (!data) { setLoadingLists(false); return; }
-          const map: Record<string, number> = {};
-          (data as any[]).forEach((c) => {
-            const listName = c.contact_list;
-            if (!listName) return;
-            map[listName] = (map[listName] || 0) + 1;
-          });
-          setAvailableLists(Object.entries(map).map(([name, count]) => ({ name, count })));
-          setLoadingLists(false);
-        });
+    if (currentStep !== 3 && availableLists.length > 0) return;
+
+    refreshLists();
+
+    // Keep lists fresh while user is on step 3 (admin tabs may stay mounted)
+    if (currentStep === 3) {
+      const interval = setInterval(() => {
+        refreshLists();
+      }, 5000);
+
+      return () => clearInterval(interval);
     }
-  }, [currentStep]);
+  }, [currentStep, availableLists.length]);
 
   useEffect(() => {
     if (!selectedList) { setListContactCount(0); return; }
@@ -189,9 +183,13 @@ export default function AdminDisparosPage() {
   const handleNext = () => { if (currentStep < 4 && canProceed(currentStep)) goToStep(currentStep + 1); };
   const handleBack = () => { if (currentStep > 1) goToStep(currentStep - 1); };
 
-  const refreshLists = () => {
+  function refreshLists() {
+    setLoadingLists(true);
     supabase.from("contacts").select("*").is("user_id", null).then(({ data }) => {
-      if (!data) return;
+      if (!data) {
+        setLoadingLists(false);
+        return;
+      }
       const map: Record<string, number> = {};
       (data as any[]).forEach((c) => {
         const listName = c.contact_list;
@@ -200,8 +198,9 @@ export default function AdminDisparosPage() {
       });
       const lists = Object.entries(map).map(([name, count]) => ({ name, count }));
       setAvailableLists(lists);
+      setLoadingLists(false);
     });
-  };
+  }
 
   // --- Dispatch logic ---
   const updateDispatch = (dispatchId: string, updates: Partial<ActiveDispatch>) => {
