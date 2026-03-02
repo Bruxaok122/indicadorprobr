@@ -109,7 +109,7 @@ export default function AdminDisparosPage() {
   // Per-contact tracker
   const trackerRef = useRef<DispatchTrackerRef>(null);
   const [dispatchContacts, setDispatchContacts] = useState<DispatchContact[]>([]);
-  const resumeQueueRef = useRef<string[]>([]);
+  
 
   // Phone data for advogado variable
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
@@ -286,7 +286,7 @@ export default function AdminDisparosPage() {
     isPausedRef.current = false;
     isCancelledRef.current = false;
     setIsPaused(false);
-    resumeQueueRef.current = [];
+    
 
     // Wait a tick for tracker to initialize
     await new Promise((r) => setTimeout(r, 100));
@@ -299,8 +299,7 @@ export default function AdminDisparosPage() {
 
           const contactId = contacts[i].id;
 
-          // Check if this contact was paused or skipped individually
-          if (trackerRef.current?.isContactPaused(contactId)) continue;
+          // Check if this contact was skipped individually
           if (trackerRef.current?.isContactSkipped(contactId)) continue;
 
           // Global pause check
@@ -310,7 +309,6 @@ export default function AdminDisparosPage() {
           if (isCancelledRef.current) break;
 
           // Re-check after global resume
-          if (trackerRef.current?.isContactPaused(contactId)) continue;
           if (trackerRef.current?.isContactSkipped(contactId)) continue;
 
           await sendSingleContact(contactId);
@@ -328,29 +326,6 @@ export default function AdminDisparosPage() {
           }
         }
 
-        // Process resume queue: contacts that were paused and then resumed
-        while (resumeQueueRef.current.length > 0 && !isCancelledRef.current) {
-          const nextId = resumeQueueRef.current.shift()!;
-          if (trackerRef.current?.isContactSkipped(nextId)) continue;
-
-          while (isPausedRef.current && !isCancelledRef.current) {
-            await new Promise((r) => setTimeout(r, 500));
-          }
-          if (isCancelledRef.current) break;
-
-          await sendSingleContact(nextId);
-
-          if (resumeQueueRef.current.length > 0 && !isCancelledRef.current) {
-            for (let s = 0; s < intervalSeconds * 2; s++) {
-              if (isCancelledRef.current) break;
-              while (isPausedRef.current && !isCancelledRef.current) {
-                await new Promise((r) => setTimeout(r, 500));
-              }
-              if (isCancelledRef.current) break;
-              await new Promise((r) => setTimeout(r, 500));
-            }
-          }
-        }
       } else {
         // Batch mode: send in chunks of 50
         const CHUNK = 50;
@@ -366,9 +341,9 @@ export default function AdminDisparosPage() {
 
           const chunk = contacts.slice(i, i + CHUNK);
 
-          // Filter out paused/skipped from the chunk
+          // Filter out skipped from the chunk
           const activeChunk = chunk.filter(
-            (c) => !trackerRef.current?.isContactPaused(c.id) && !trackerRef.current?.isContactSkipped(c.id)
+            (c) => !trackerRef.current?.isContactSkipped(c.id)
           );
 
           if (activeChunk.length === 0) continue;
@@ -411,49 +386,6 @@ export default function AdminDisparosPage() {
           }
         }
 
-        // Process paused contacts that were resumed during batch
-        while (resumeQueueRef.current.length > 0 && !isCancelledRef.current) {
-          const batch = [...resumeQueueRef.current];
-          resumeQueueRef.current = [];
-
-          const activeBatch = batch.filter(
-            (id) => !trackerRef.current?.isContactSkipped(id)
-          );
-          if (activeBatch.length === 0) continue;
-
-          activeBatch.forEach((id) => trackerRef.current?.setContactStatus(id, "sending"));
-
-          const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
-            body: {
-              contactIds: activeBatch,
-              templateName: selectedTemplate.name,
-              templateLanguage: selectedTemplate.language,
-              userId: selectedUserId,
-              selectedPhoneNumberId: selectedPhoneNumberId || undefined,
-              variableMappings,
-              phoneVerifiedName,
-            },
-          });
-
-          if (!sendError && result?.results) {
-            const errorNames = new Set(
-              (result.results.errors || []).map((e: string) => e.split(":")[0]?.trim())
-            );
-            const contactsMap = dispatchContacts.reduce((m, c) => { m[c.id] = c; return m; }, {} as Record<string, DispatchContact>);
-            activeBatch.forEach((id) => {
-              const name = contactsMap[id]?.name || "";
-              if (errorNames.has(name)) {
-                trackerRef.current?.setContactStatus(id, "failed", "Falha no envio");
-              } else {
-                trackerRef.current?.setContactStatus(id, "sent");
-              }
-            });
-          } else {
-            activeBatch.forEach((id) =>
-              trackerRef.current?.setContactStatus(id, "failed", sendError?.message || "Erro")
-            );
-          }
-        }
       }
 
       const stats = trackerRef.current?.getStats();
@@ -481,58 +413,6 @@ export default function AdminDisparosPage() {
     setIsPaused(false);
   };
 
-  const handleResumeContact = (contactId: string) => {
-    resumeQueueRef.current.push(contactId);
-  };
-
-  const handleResumeAllPaused = () => {
-    const paused = trackerRef.current?.getPausedContacts() || [];
-    paused.forEach((id) => {
-      trackerRef.current?.setContactStatus(id, "queued");
-      resumeQueueRef.current.push(id);
-    });
-    // Restart dispatch for paused contacts
-    if (!isDispatching && paused.length > 0) {
-      handleResendPaused(paused);
-    }
-  };
-
-  const handleResendPaused = async (contactIds: string[]) => {
-    if (!selectedTemplate) return;
-    setIsDispatching(true);
-    isCancelledRef.current = false;
-    isPausedRef.current = false;
-
-    try {
-      for (const contactId of contactIds) {
-        if (isCancelledRef.current) break;
-        if (trackerRef.current?.isContactSkipped(contactId)) continue;
-
-        while (isPausedRef.current && !isCancelledRef.current) {
-          await new Promise((r) => setTimeout(r, 500));
-        }
-        if (isCancelledRef.current) break;
-
-        await sendSingleContact(contactId);
-
-        if (!isCancelledRef.current && contactIds.indexOf(contactId) < contactIds.length - 1) {
-          const wait = dispatchMode === "individual" ? intervalSeconds : 0.1;
-          for (let s = 0; s < wait * 2; s++) {
-            if (isCancelledRef.current) break;
-            await new Promise((r) => setTimeout(r, 500));
-          }
-        }
-      }
-
-      const stats = trackerRef.current?.getStats();
-      toast.success(`Reenvio concluído: ${stats?.sent || 0} enviados, ${stats?.failed || 0} falhas`);
-    } catch (err: any) {
-      toast.error("Erro no reenvio", { description: err.message });
-    } finally {
-      setIsDispatching(false);
-      refreshLists();
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -554,8 +434,6 @@ export default function AdminDisparosPage() {
               ref={trackerRef}
               contacts={dispatchContacts}
               isDispatching={isDispatching}
-              onResumeContact={handleResumeContact}
-              onResumeAllPaused={handleResumeAllPaused}
               onPauseAll={handlePauseAll}
               onCancelAll={handleCancelAll}
               isPausedGlobal={isPaused}
