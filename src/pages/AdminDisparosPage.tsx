@@ -209,7 +209,7 @@ export default function AdminDisparosPage() {
   const handleSend = async () => {
     if (!selectedTemplate || !selectedList || !selectedUserId) return;
     if (phones.length > 0 && !selectedPhoneNumberId) {
-      toast.error("Selecione um número de disparo");
+      toast.error("Selecione um número de disparo", { duration: 8000 });
       return;
     }
 
@@ -220,7 +220,7 @@ export default function AdminDisparosPage() {
       .eq("contact_list", selectedList);
 
     if (error || !data || data.length === 0) {
-      toast.error("Nenhum contato encontrado na lista selecionada");
+      toast.error("Nenhum contato encontrado na lista selecionada", { duration: 8000 });
       return;
     }
 
@@ -360,12 +360,14 @@ export default function AdminDisparosPage() {
 
         const ctrl = dispatchControlsRef.current[dispatchId];
         if (ctrl?.isCancelled) {
-          toast.warning(`${operatorProfile?.full_name}: Cancelado — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}` });
+          toast.warning(`${operatorProfile?.full_name}: Cancelado — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}`, duration: 10000 });
+        } else if (results.failed > 0) {
+          toast.error(`${operatorProfile?.full_name}: Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}`, duration: 15000 });
         } else {
-          toast.success(`${operatorProfile?.full_name}: Concluído — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}` });
+          toast.success(`${operatorProfile?.full_name}: Concluído — ${results.sent} enviados`, { id: `dispatch-${dispatchId}`, duration: 8000 });
         }
       } catch (err: any) {
-        toast.error(`Erro no disparo (${operatorProfile?.full_name})`, { description: err.message });
+        toast.error(`Erro no disparo (${operatorProfile?.full_name})`, { description: err.message, duration: 15000 });
       } finally {
         updateDispatch(dispatchId, { isFinished: true });
         delete dispatchControlsRef.current[dispatchId];
@@ -374,7 +376,7 @@ export default function AdminDisparosPage() {
     })();
 
     // Don't reset form — allow another dispatch immediately
-    toast.info(`Disparo iniciado para ${operatorProfile?.full_name}`, { id: `dispatch-${dispatchId}` });
+    toast.info(`Disparo iniciado para ${operatorProfile?.full_name}`, { id: `dispatch-${dispatchId}`, duration: 5000 });
   };
 
   const handlePause = (dispatchId: string) => {
@@ -468,15 +470,20 @@ export default function AdminDisparosPage() {
                       )}
                     </div>
 
-                    <Progress value={progress} className="h-2" />
-
-                    <div className="flex flex-wrap gap-3 text-xs">
-                      <span className="text-muted-foreground">
-                        {dispatch.isPaused ? "⏸️ Pausado" : dispatch.isFinished ? (dispatch.isCancelled ? "🚫 Cancelado" : "✅ Concluído") : `📤 ${dispatch.mode === "individual" ? "Individual" : "Lote"}`}
-                      </span>
-                      <span className="text-muted-foreground">{dispatch.current}/{dispatch.total}</span>
-                      {dispatch.sent > 0 && <span className="text-success">✓ {dispatch.sent}</span>}
-                      {dispatch.failed > 0 && <span className="text-destructive">✗ {dispatch.failed}</span>}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground font-medium">
+                          {dispatch.isPaused ? "⏸️ Pausado" : dispatch.isFinished ? (dispatch.isCancelled ? "🚫 Cancelado" : "✅ Concluído") : "📤 Enviando..."}
+                        </span>
+                        <span className="font-semibold text-foreground">{Math.round(progress)}%</span>
+                      </div>
+                      <Progress value={progress} className="h-2.5" />
+                      <div className="flex flex-wrap gap-3 text-xs pt-0.5">
+                        <span className="text-muted-foreground">{dispatch.current}/{dispatch.total} processados</span>
+                        <span className="text-muted-foreground">({dispatch.mode === "individual" ? "Individual" : "Lote"})</span>
+                        {dispatch.sent > 0 && <span className="text-success font-medium">✓ {dispatch.sent} enviados</span>}
+                        {dispatch.failed > 0 && <span className="text-destructive font-medium">✗ {dispatch.failed} falhas</span>}
+                      </div>
                     </div>
 
                     {dispatch.errors.length > 0 && (
