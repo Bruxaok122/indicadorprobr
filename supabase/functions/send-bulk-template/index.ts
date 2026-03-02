@@ -41,7 +41,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { contactIds, templateName, templateLanguage, userId, selectedPhoneNumberId, variableMappings, phoneVerifiedName } = await req.json();
+    const { contactIds, templateName, templateLanguage, userId, assignedUserId, selectedPhoneNumberId, variableMappings, phoneVerifiedName } = await req.json();
 
     if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
       return new Response(
@@ -57,16 +57,20 @@ serve(async (req) => {
       );
     }
 
-    // Check if user has permission to use shared API
+    // Authorization user (quem está executando) e usuário de atribuição (responsável pós-disparo)
+    const requesterUserId = userId || null;
+    const assignedDispatchUserId = assignedUserId || userId || null;
+
+    // Check if requester has permission to use shared API
     let config = null;
-    
-    if (userId) {
+
+    if (requesterUserId) {
       const { data: userProfile } = await supabase
         .from("profiles")
         .select("can_use_shared_api")
-        .eq("user_id", userId)
+        .eq("user_id", requesterUserId)
         .single();
-      
+
       if (userProfile?.can_use_shared_api) {
         const { data: sharedConfig } = await supabase
           .from("whatsapp_config")
@@ -78,7 +82,7 @@ serve(async (req) => {
         const { data: userConfig } = await supabase
           .from("user_whatsapp_config")
           .select("*")
-          .eq("user_id", userId)
+          .eq("user_id", requesterUserId)
           .eq("is_validated", true)
           .single();
         if (userConfig) config = userConfig;
@@ -130,13 +134,13 @@ serve(async (req) => {
         );
       }
 
-      if (userId) {
-        const { data: isUserAdmin } = await supabase.rpc("is_admin", { _user_id: userId });
+      if (requesterUserId) {
+        const { data: isUserAdmin } = await supabase.rpc("is_admin", { _user_id: requesterUserId });
         if (!isUserAdmin) {
           const { data: permission } = await supabase
             .from("user_phone_permissions")
             .select("id")
-            .eq("user_id", userId)
+            .eq("user_id", requesterUserId)
             .eq("phone_number_id", phoneRecord.id)
             .maybeSingle();
 
@@ -168,7 +172,7 @@ serve(async (req) => {
         // Admin bulk dispatch skips phone ownership check
         // The admin has authority to reassign contacts to any operator
 
-        const effectiveUserId = contact.user_id || userId || null;
+        const effectiveUserId = contact.user_id || assignedDispatchUserId || requesterUserId || null;
 
         // Build template object with personalized variables
         const templateObj: any = {
