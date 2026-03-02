@@ -61,6 +61,15 @@ export function ChatBubble({ message }: ChatBubbleProps) {
       );
     }
     if (message.message_type === "audio") {
+      // If we have a stored audio URL, render a player
+      if (message.image_url) {
+        return (
+          <div className="flex items-center gap-1.5 py-0.5 min-w-[180px]">
+            <Mic className="h-4 w-4 shrink-0 opacity-70" />
+            <audio src={message.image_url} controls className="h-8 max-w-[220px]" style={{ minWidth: 0 }} />
+          </div>
+        );
+      }
       return (
         <div className="flex items-center gap-1.5 py-0.5">
           <Mic className="h-4 w-4 shrink-0 opacity-70" />
