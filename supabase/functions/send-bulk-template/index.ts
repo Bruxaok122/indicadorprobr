@@ -13,9 +13,14 @@ function isEmpty(val: any): boolean {
   return !val || val === "Não informado" || val.toString().trim() === "";
 }
 
+function formatFirstName(fullName: string): string {
+  const first = fullName.trim().split(/\s+/)[0] || "";
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
 function resolveVariable(contact: any, fieldKey: string, extra?: { phoneVerifiedName?: string }): string {
   switch (fieldKey) {
-    case "name": return isEmpty(contact.name) ? "Cliente" : contact.name;
+    case "name": return isEmpty(contact.name) ? "Cliente" : formatFirstName(contact.name);
     case "phone": return contact.phone || "";
     case "lawyer_name": return isEmpty(contact.lawyer_name) ? "********" : contact.lawyer_name;
     case "process_number": return isEmpty(contact.process_number) ? "0031486-26.2025.8.26.0002" : contact.process_number;
