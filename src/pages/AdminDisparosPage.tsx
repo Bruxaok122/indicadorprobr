@@ -206,20 +206,34 @@ export default function AdminDisparosPage() {
     setActiveDispatches((prev) => prev.map((d) => (d.id === dispatchId ? { ...d, ...updates } : d)));
   };
 
-  const getInvokeErrorMessage = (sendError: any): string => {
+  const getInvokeErrorMessage = async (sendError: any): Promise<string> => {
     const fallback = sendError?.message || "Falha ao chamar função de disparo";
-    const responseText = sendError?.context?.responseText;
+    const statusCode = sendError?.context?.status;
+    const statusLabel = statusCode ? ` (HTTP ${statusCode})` : "";
 
-    if (!responseText || typeof responseText !== "string") return fallback;
+    const response = sendError?.context;
+    if (response && typeof response.clone === "function") {
+      try {
+        const rawText = await response.clone().text();
+        if (rawText) {
+          try {
+            const parsed = JSON.parse(rawText);
+            const backendMessage =
+              (typeof parsed?.error === "string" && parsed.error) ||
+              (typeof parsed?.message === "string" && parsed.message) ||
+              null;
 
-    try {
-      const parsed = JSON.parse(responseText);
-      if (parsed?.error && typeof parsed.error === "string") return parsed.error;
-      if (parsed?.message && typeof parsed.message === "string") return parsed.message;
-      return fallback;
-    } catch {
-      return fallback;
+            if (backendMessage) return `${backendMessage}${statusLabel}`;
+          } catch {
+            return `${rawText}${statusLabel}`;
+          }
+        }
+      } catch {
+        // ignora falha de leitura do body e usa fallback
+      }
     }
+
+    return `${fallback}${statusLabel}`;
   };
 
   const handleSend = async () => {
@@ -311,7 +325,7 @@ export default function AdminDisparosPage() {
               if (result.results.errors) results.errors.push(...result.results.errors);
             } else {
               results.failed++;
-              if (sendError) results.errors.push(getInvokeErrorMessage(sendError));
+              if (sendError) results.errors.push(await getInvokeErrorMessage(sendError));
             }
 
             updateDispatch(dispatchId, {
@@ -366,7 +380,7 @@ export default function AdminDisparosPage() {
             } else {
               // Em lote, se a chamada falhar, considera todo o chunk como falho
               results.failed += chunk.length;
-              results.errors.push(getInvokeErrorMessage(sendError));
+              results.errors.push(await getInvokeErrorMessage(sendError));
 
               // Erros de autorização/permissão não devem continuar processando
               const statusCode = (sendError as any)?.context?.status;
