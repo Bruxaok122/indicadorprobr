@@ -347,6 +347,22 @@ export default function AdminDisparosPage() {
               results.sent += result.results.sent || 0;
               results.failed += result.results.failed || 0;
               if (result.results.errors) results.errors.push(...result.results.errors);
+            } else {
+              // Em lote, se a chamada falhar, considera todo o chunk como falho
+              results.failed += chunk.length;
+              results.errors.push(sendError?.message || "Falha ao enviar lote");
+
+              // Erros de autorização/permissão não devem continuar processando
+              const statusCode = (sendError as any)?.context?.status;
+              if (statusCode === 401 || statusCode === 403) {
+                updateDispatch(dispatchId, {
+                  current: Math.min(i + CHUNK, contactIds.length),
+                  sent: results.sent,
+                  failed: results.failed,
+                  errors: [...results.errors],
+                });
+                break;
+              }
             }
 
             updateDispatch(dispatchId, {
