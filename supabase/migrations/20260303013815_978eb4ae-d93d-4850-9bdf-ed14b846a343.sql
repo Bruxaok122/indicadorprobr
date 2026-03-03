@@ -1,0 +1,2 @@
+ALTER TABLE public.messages DROP CONSTRAINT messages_message_type_check;
+ALTER TABLE public.messages ADD CONSTRAINT messages_message_type_check CHECK (message_type = ANY (ARRAY['text'::text, 'template'::text, 'document'::text, 'image'::text, 'audio'::text, 'video'::text]));
