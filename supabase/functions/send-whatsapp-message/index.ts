@@ -140,7 +140,33 @@ serve(async (req) => {
     const effectiveUserId = contact.user_id || userId || null;
 
     // Determine which phone_number_id to use
+    // Priority: selectedPhoneNumberId > contact.dispatched_phone_number_id > config.phone_number_id
     let finalPhoneNumberId = config.phone_number_id;
+
+    // If the contact was previously dispatched from a specific number, reply from the same one
+    if (!selectedPhoneNumberId && contact.dispatched_phone_number_id) {
+      console.log(`Using contact's dispatched phone: ${contact.dispatched_phone_number_id}`);
+      finalPhoneNumberId = contact.dispatched_phone_number_id;
+
+      // Try to get access_token from the api_config linked to that phone number
+      const { data: phoneWithApi } = await supabase
+        .from("waba_phone_numbers")
+        .select("api_config_id")
+        .eq("phone_number_id", contact.dispatched_phone_number_id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (phoneWithApi?.api_config_id) {
+        const { data: apiConfig } = await supabase
+          .from("api_configs")
+          .select("access_token")
+          .eq("id", phoneWithApi.api_config_id)
+          .single();
+        if (apiConfig?.access_token) {
+          config = { ...config, access_token: apiConfig.access_token };
+        }
+      }
+    }
 
     if (selectedPhoneNumberId) {
       // Validate the selected phone number exists and is active
