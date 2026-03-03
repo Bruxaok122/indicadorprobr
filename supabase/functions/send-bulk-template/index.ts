@@ -26,7 +26,10 @@ function resolveVariable(contact: any, fieldKey: string, extra?: { phoneVerified
     case "process_number": return isEmpty(contact.process_number) ? "0031486-26.2025.8.26.0002" : contact.process_number;
     case "cpf": return isEmpty(contact.cpf) ? "Não informado" : contact.cpf;
     case "valor_da_causa": return contact.valor_da_causa ? `R$ ${Number(contact.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Não informado";
-    case "advogado": return extra?.phoneVerifiedName || "Advogado";
+    case "advogado": {
+      const raw = extra?.phoneVerifiedName || "Advogado";
+      return raw.split("|")[0].trim();
+    }
     default: return fieldKey;
   }
 }
