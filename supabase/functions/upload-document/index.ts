@@ -78,23 +78,64 @@ serve(async (req) => {
     const documentUrl = urlData.publicUrl;
     console.log("File uploaded successfully:", documentUrl, "isImage:", isImage);
 
-    // Determine which phone to use
+    // Get contact first — we need dispatched_phone_number_id
+    const { data: contact, error: contactError } = await supabase
+      .from("contacts").select("*").eq("id", contactId).single();
+
+    if (contactError || !contact) {
+      return new Response(
+        JSON.stringify({ error: "Contato não encontrado" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const effectiveUserId = contact.user_id || null;
+
+    // Determine which phone to use — prioritize dispatched_phone_number_id
     let phoneNumberId: string | null = null;
     let accessToken: string | null = null;
 
-    if (selectedPhoneNumberId) {
-      // Look up the WABA phone
-      const { data: wabaPhone } = await supabase
+    if (contact.dispatched_phone_number_id) {
+      // Always reply from the same number used for dispatch
+      phoneNumberId = contact.dispatched_phone_number_id;
+      const { data: phoneWithApi } = await supabase
         .from("waba_phone_numbers")
-        .select("phone_number_id")
-        .eq("phone_number_id", selectedPhoneNumberId)
-        .single();
+        .select("api_config_id, is_active")
+        .eq("phone_number_id", contact.dispatched_phone_number_id)
+        .maybeSingle();
 
-      if (wabaPhone) {
-        phoneNumberId = wabaPhone.phone_number_id;
-        // Get shared config access token
-        const { data: config } = await supabase.from("whatsapp_config").select("access_token").limit(1).single();
-        accessToken = config?.access_token || null;
+      if (phoneWithApi?.is_active && phoneWithApi.api_config_id) {
+        const { data: apiCfg } = await supabase
+          .from("api_configs")
+          .select("access_token")
+          .eq("id", phoneWithApi.api_config_id)
+          .single();
+        if (apiCfg) accessToken = apiCfg.access_token;
+      }
+      // Fallback to shared config token
+      if (!accessToken) {
+        const { data: sharedCfg } = await supabase.from("whatsapp_config").select("access_token").limit(1).single();
+        accessToken = sharedCfg?.access_token || null;
+      }
+    } else if (selectedPhoneNumberId) {
+      phoneNumberId = selectedPhoneNumberId;
+      const { data: phoneWithApi } = await supabase
+        .from("waba_phone_numbers")
+        .select("api_config_id, is_active")
+        .eq("phone_number_id", selectedPhoneNumberId)
+        .maybeSingle();
+
+      if (phoneWithApi?.is_active && phoneWithApi.api_config_id) {
+        const { data: apiCfg } = await supabase
+          .from("api_configs")
+          .select("access_token")
+          .eq("id", phoneWithApi.api_config_id)
+          .single();
+        if (apiCfg) accessToken = apiCfg.access_token;
+      }
+      if (!accessToken) {
+        const { data: sharedCfg } = await supabase.from("whatsapp_config").select("access_token").limit(1).single();
+        accessToken = sharedCfg?.access_token || null;
       }
     }
 
@@ -110,17 +151,6 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ success: true, documentUrl, error: "WhatsApp não configurado. Arquivo salvo mas não enviado." }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Get contact
-    const { data: contact, error: contactError } = await supabase
-      .from("contacts").select("*").eq("id", contactId).single();
-
-    if (contactError || !contact) {
-      return new Response(
-        JSON.stringify({ error: "Contato não encontrado" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -180,9 +210,11 @@ serve(async (req) => {
     if (!conversation) {
       const { data: newConversation } = await supabase
         .from("conversations")
-        .insert({ contact_id: contactId, is_active: true, window_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() })
+        .insert({ contact_id: contactId, user_id: effectiveUserId, is_active: true, window_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() })
         .select().single();
       conversation = newConversation;
+    } else if (!conversation.user_id && effectiveUserId) {
+      await supabase.from("conversations").update({ user_id: effectiveUserId }).eq("id", conversation.id);
     }
 
     // Save message to database
@@ -190,6 +222,7 @@ serve(async (req) => {
     await supabase.from("messages").insert({
       conversation_id: conversation!.id,
       contact_id: contactId,
+      user_id: effectiveUserId,
       direction: "outgoing",
       message_type: messageType,
       content: caption || (isImage ? `[Imagem enviada]` : `[Documento: ${file.name}]`),
