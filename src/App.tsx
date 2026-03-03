@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { DispatchProvider } from "@/contexts/DispatchContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import Dashboard from "./pages/Dashboard";
@@ -16,6 +17,7 @@ import WebhookPage from "./pages/WebhookPage";
 import WhatsAppApiPage from "./pages/WhatsAppApiPage";
 import LoginPage from "./pages/LoginPage";
 import AdminPage from "./pages/AdminPage";
+import DisparosAndamentoPage from "./pages/DisparosAndamentoPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +29,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <DispatchProvider>
           <ScrollToTop />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -35,6 +38,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/disparos-andamento"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <DisparosAndamentoPage />
                 </ProtectedRoute>
               }
             />
@@ -104,6 +115,7 @@ const App = () => (
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </DispatchProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
