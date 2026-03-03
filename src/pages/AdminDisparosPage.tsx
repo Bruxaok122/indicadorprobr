@@ -194,7 +194,7 @@ export default function AdminDisparosPage() {
     supabase
       .from("contacts")
       .select("contact_list", { count: "exact", head: false })
-      .or(`user_id.is.null,user_id.eq.${user.id}`)
+      .is("user_id", null)
       .not("contact_list", "is", null)
       .limit(50000)
       .then(({ data }) => {
@@ -269,7 +269,7 @@ export default function AdminDisparosPage() {
       .from("contacts")
       .select("id")
       .eq("contact_list", selectedList)
-      .or(`user_id.is.null,user_id.eq.${user.id}`);
+      .is("user_id", null);
 
     if (error || !data || data.length === 0) {
       toast.error("Nenhum contato encontrado na lista selecionada", { duration: 8000 });
