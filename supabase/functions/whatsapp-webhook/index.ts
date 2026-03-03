@@ -78,7 +78,7 @@ serve(async (req) => {
                   .select("*")
                   .eq("phone", phone)
                   .not("status", "eq", "encerrado") // skip blocked contacts
-                  .order("last_message_at", { ascending: false, nullsFirst: true }) // most recent activity first
+                  .order("last_message_at", { ascending: false, nullsFirst: false }) // most recent activity first, nulls LAST
                   .order("created_at", { ascending: false });
 
                 let existingContact = contactsWithPhone?.[0] || null;
@@ -172,98 +172,78 @@ serve(async (req) => {
                 let messageType = "text";
                 let imageUrl: string | undefined;
 
+                // Fetch access token once — used for downloading any media
+                let accessToken: string | null = null;
+                try {
+                  const { data: activeApi } = await supabase
+                    .from("api_configs")
+                    .select("access_token")
+                    .eq("is_active", true)
+                    .limit(1)
+                    .single();
+                  if (activeApi?.access_token) {
+                    accessToken = activeApi.access_token;
+                  } else {
+                    const { data: sharedConfig } = await supabase
+                      .from("whatsapp_config")
+                      .select("access_token")
+                      .limit(1)
+                      .single();
+                    if (sharedConfig?.access_token) accessToken = sharedConfig.access_token;
+                  }
+                } catch (_) { /* no config */ }
+
                 if (message.type === "text") {
                   content = message.text?.body || "";
                 } else if (message.type === "image") {
                   messageType = "image";
                   content = message.image?.caption || "[Imagem recebida]";
                   
-                  // Try to download the image
                   try {
-                    // Get WhatsApp config for access token
-                    const { data: config } = await supabase
-                      .from("whatsapp_config")
-                      .select("access_token")
-                      .limit(1)
-                      .single();
-                    
-                    console.log("WhatsApp config found:", !!config, "has token:", !!config?.access_token);
-                    
-                    if (config?.access_token && message.image?.id) {
-                      const accessToken = config.access_token;
+                    if (accessToken && message.image?.id) {
                       const mediaId = message.image.id;
                       const mimeType = message.image.mime_type || "image/jpeg";
                       const ext = mimeType.split('/')[1] || 'jpg';
                       const fileName = `${Date.now()}-${mediaId}.${ext}`;
                       
-                      // Step 1: Get media download URL from WhatsApp Graph API
                       console.log(`Fetching media URL for ID: ${mediaId}`);
                       const mediaResponse = await fetch(
                         `https://graph.facebook.com/v21.0/${mediaId}`,
-                        {
-                          headers: { Authorization: `Bearer ${accessToken}` },
-                        }
+                        { headers: { Authorization: `Bearer ${accessToken}` } }
                       );
                       
-                      console.log("Media API response status:", mediaResponse.status);
-                      
                       let downloadUrl: string | null = null;
-                      
                       if (mediaResponse.ok) {
                         const mediaData = await mediaResponse.json();
                         downloadUrl = mediaData.url;
-                        console.log("Got media download URL from Graph API");
                       } else {
-                        const errorText = await mediaResponse.text();
-                        console.error("Media API error:", errorText);
-                        // Fallback: try the direct URL from webhook payload
-                        if (message.image.url) {
-                          downloadUrl = message.image.url;
-                          console.log("Using fallback URL from webhook payload");
-                        }
+                        console.error("Media API error:", await mediaResponse.text());
+                        if (message.image.url) downloadUrl = message.image.url;
                       }
                       
                       if (downloadUrl) {
-                        // Step 2: Download the actual image binary
-                        console.log("Downloading image from URL...");
                         const imageResponse = await fetch(downloadUrl, {
                           headers: { Authorization: `Bearer ${accessToken}` },
                         });
-                        
-                        console.log("Image download status:", imageResponse.status);
-                        
                         if (imageResponse.ok) {
                           const arrayBuffer = await imageResponse.arrayBuffer();
                           const uint8Array = new Uint8Array(arrayBuffer);
-                          console.log(`Image downloaded, size: ${uint8Array.length} bytes`);
-                          
-                          // Step 3: Upload to Supabase Storage
-                          const { data: uploadData, error: uploadError } = await supabase
-                            .storage
+                          const { error: uploadError } = await supabase.storage
                             .from("documents")
-                            .upload(`images/${fileName}`, uint8Array, {
-                              contentType: mimeType,
-                              upsert: false,
-                            });
-                          
+                            .upload(`images/${fileName}`, uint8Array, { contentType: mimeType, upsert: false });
                           if (uploadError) {
                             console.error("Storage upload error:", uploadError);
                           } else {
-                            const { data: urlData } = supabase.storage
-                              .from("documents")
-                              .getPublicUrl(`images/${fileName}`);
+                            const { data: urlData } = supabase.storage.from("documents").getPublicUrl(`images/${fileName}`);
                             imageUrl = urlData.publicUrl;
                             console.log("Image uploaded successfully, URL:", imageUrl);
                           }
                         } else {
-                          const errText = await imageResponse.text();
-                          console.error("Image download failed:", errText);
+                          console.error("Image download failed:", await imageResponse.text());
                         }
-                      } else {
-                        console.error("No download URL available for image");
                       }
                     } else {
-                      console.error("Missing config or image ID. Config:", !!config, "Image ID:", message.image?.id);
+                      console.error("Missing access token or image ID");
                     }
                   } catch (imgError) {
                     console.error("Error downloading image:", imgError);
@@ -274,16 +254,13 @@ serve(async (req) => {
                 } else if (message.type === "audio") {
                   content = "[Áudio recebido]";
                   messageType = "audio";
-                  // Download and store audio like images
                   try {
-                    if (config?.access_token && message.audio?.id) {
-                      const accessToken = config.access_token;
+                    if (accessToken && message.audio?.id) {
                       const mediaId = message.audio.id;
                       const mimeType = message.audio.mime_type || "audio/ogg";
                       const ext = mimeType.includes("ogg") ? "ogg" : mimeType.split('/')[1] || "ogg";
                       const fileName = `${Date.now()}-${mediaId}.${ext}`;
 
-                      console.log(`Fetching audio media URL for ID: ${mediaId}`);
                       const mediaResponse = await fetch(
                         `https://graph.facebook.com/v21.0/${mediaId}`,
                         { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -293,7 +270,6 @@ serve(async (req) => {
                       if (mediaResponse.ok) {
                         const mediaData = await mediaResponse.json();
                         downloadUrl = mediaData.url;
-                        console.log("Got audio download URL from Graph API");
                       } else {
                         console.error("Audio media API error:", await mediaResponse.text());
                       }
@@ -305,22 +281,13 @@ serve(async (req) => {
                         if (audioResponse.ok) {
                           const arrayBuffer = await audioResponse.arrayBuffer();
                           const uint8Array = new Uint8Array(arrayBuffer);
-                          console.log(`Audio downloaded, size: ${uint8Array.length} bytes`);
-
-                          const { error: uploadError } = await supabase
-                            .storage
+                          const { error: uploadError } = await supabase.storage
                             .from("documents")
-                            .upload(`audio/${fileName}`, uint8Array, {
-                              contentType: mimeType,
-                              upsert: false,
-                            });
-
+                            .upload(`audio/${fileName}`, uint8Array, { contentType: mimeType, upsert: false });
                           if (uploadError) {
                             console.error("Audio storage upload error:", uploadError);
                           } else {
-                            const { data: urlData } = supabase.storage
-                              .from("documents")
-                              .getPublicUrl(`audio/${fileName}`);
+                            const { data: urlData } = supabase.storage.from("documents").getPublicUrl(`audio/${fileName}`);
                             imageUrl = urlData.publicUrl;
                             console.log("Audio uploaded successfully, URL:", imageUrl);
                           }
