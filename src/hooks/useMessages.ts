@@ -14,7 +14,6 @@ export function useMessages(contactId: string | null) {
     queryFn: async () => {
       if (!contactId || !user?.id) return [];
 
-      // All users see messages linked to their user_id OR with null user_id
       const { data, error } = await supabase
         .from("messages")
         .select("*")
@@ -26,14 +25,34 @@ export function useMessages(contactId: string | null) {
       return data as Message[];
     },
     enabled: !!contactId && !!user?.id,
-    // Auto-refresh to ensure operator sees new incoming messages
     refetchInterval: 8000,
     refetchIntervalInBackground: false,
   });
 
-  // Check if conversation has any messages (to enforce template-first rule)
+  // Check conversation window to enforce 24h rule
+  const { data: activeConversation } = useQuery({
+    queryKey: ["conversation-window", contactId],
+    queryFn: async () => {
+      if (!contactId) return null;
+      const { data } = await supabase
+        .from("conversations")
+        .select("window_expires_at")
+        .eq("contact_id", contactId)
+        .eq("is_active", true)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!contactId,
+    refetchInterval: 8000,
+  });
+
   const hasMessages = messages.length > 0;
-  const canSendFreeText = messages.some(m => m.direction === "incoming");
+  const hasIncomingMessages = messages.some(m => m.direction === "incoming");
+  const isWindowOpen = activeConversation?.window_expires_at
+    ? new Date(activeConversation.window_expires_at) > new Date()
+    : false;
+  // Free text allowed only if client has replied AND 24h window is still open
+  const canSendFreeText = hasIncomingMessages && isWindowOpen;
 
   // Realtime subscription
   useEffect(() => {
