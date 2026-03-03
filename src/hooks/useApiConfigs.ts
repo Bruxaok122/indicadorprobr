@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -184,6 +185,54 @@ export function useApiConfigs() {
       toast.error("Erro ao validar", { description: error.message });
     },
   });
+
+  // Auto-revalidate invalidated APIs every 2 minutes
+  const autoRevalidateRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (autoRevalidateRef.current) clearInterval(autoRevalidateRef.current);
+
+    const invalidConfigs = configs.filter((c) => !c.is_validated);
+    if (invalidConfigs.length === 0) return;
+
+    const checkInvalid = async () => {
+      for (const config of invalidConfigs) {
+        try {
+          const phoneUrl = `https://graph.facebook.com/v18.0/${config.phone_number_id}`;
+          const phoneRes = await fetch(phoneUrl, {
+            headers: { Authorization: `Bearer ${config.access_token}` },
+          });
+
+          if (phoneRes.ok) {
+            const phoneData = await phoneRes.json();
+            const statusMessage = `✅ Sistema conectado com sucesso nessa API — ${phoneData.display_phone_number || config.name}`;
+
+            await supabase
+              .from("api_configs" as any)
+              .update({ is_validated: true, status_message: statusMessage } as any)
+              .eq("id", config.id);
+
+            toast.success(`🎉 API "${config.name}" desbloqueada!`, {
+              description: "A conexão foi restabelecida automaticamente.",
+              duration: 10000,
+            });
+
+            queryClient.invalidateQueries({ queryKey: ["api-configs"] });
+          }
+        } catch {
+          // Silently ignore - will retry next interval
+        }
+      }
+    };
+
+    // Check immediately once, then every 2 minutes
+    checkInvalid();
+    autoRevalidateRef.current = setInterval(checkInvalid, 2 * 60 * 1000);
+
+    return () => {
+      if (autoRevalidateRef.current) clearInterval(autoRevalidateRef.current);
+    };
+  }, [configs, queryClient]);
 
   return {
     configs,
