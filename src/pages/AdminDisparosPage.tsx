@@ -124,21 +124,15 @@ export default function AdminDisparosPage() {
     }
   }, [phones, selectedPhoneNumberId]);
 
-  // Load available lists (initial + every time step 3 is active)
+  // Load available lists — always refresh on step 3, and once on mount
   useEffect(() => {
-    if (currentStep !== 3 && availableLists.length > 0) return;
-
     refreshLists();
 
-    // Keep lists fresh while user is on step 3 (admin tabs may stay mounted)
     if (currentStep === 3) {
-      const interval = setInterval(() => {
-        refreshLists();
-      }, 5000);
-
+      const interval = setInterval(refreshLists, 5000);
       return () => clearInterval(interval);
     }
-  }, [currentStep, availableLists.length]);
+  }, [currentStep]);
 
   useEffect(() => {
     if (!selectedList) { setListContactCount(0); return; }
