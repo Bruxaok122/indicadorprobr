@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { useDispatchContext, ActiveDispatch } from "@/contexts/DispatchContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,23 +52,6 @@ interface ContactList {
 
 type DispatchMode = "batch" | "individual";
 
-interface ActiveDispatch {
-  id: string;
-  operatorName: string;
-  operatorId: string;
-  templateName: string;
-  listName: string;
-  mode: DispatchMode;
-  total: number;
-  sent: number;
-  failed: number;
-  current: number;
-  isPaused: boolean;
-  isCancelled: boolean;
-  isFinished: boolean;
-  errors: string[];
-}
-
 const STEPS = [
   { id: 1, label: "Número", icon: Phone },
   { id: 2, label: "Template", icon: FileText },
@@ -107,9 +91,8 @@ export default function AdminDisparosPage() {
   // Step 4: Responsible
   const [selectedUserId, setSelectedUserId] = useState<string>("");
 
-  // Multiple active dispatches
-  const [activeDispatches, setActiveDispatches] = useState<ActiveDispatch[]>([]);
-  const dispatchControlsRef = useRef<Record<string, { isPaused: boolean; isCancelled: boolean }>>({});
+  // Use shared dispatch context
+  const { activeDispatches, addDispatch, updateDispatch: ctxUpdateDispatch, removeDispatch, pauseDispatch: ctxPause, cancelDispatch: ctxCancel, getControls, setControls, clearControls } = useDispatchContext();
 
   // Phone data for advogado variable
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
@@ -215,7 +198,7 @@ export default function AdminDisparosPage() {
 
   // --- Dispatch logic ---
   const updateDispatch = (dispatchId: string, updates: Partial<ActiveDispatch>) => {
-    setActiveDispatches((prev) => prev.map((d) => (d.id === dispatchId ? { ...d, ...updates } : d)));
+    ctxUpdateDispatch(dispatchId, updates);
   };
 
   const getInvokeErrorMessage = async (sendError: any): Promise<string> => {
@@ -277,7 +260,7 @@ export default function AdminDisparosPage() {
     const dispatchId = crypto.randomUUID();
 
     // Save refs for this dispatch's controls
-    dispatchControlsRef.current[dispatchId] = { isPaused: false, isCancelled: false };
+    setControls(dispatchId, { isPaused: false, isCancelled: false });
 
     const newDispatch: ActiveDispatch = {
       id: dispatchId,
@@ -294,9 +277,11 @@ export default function AdminDisparosPage() {
       isCancelled: false,
       isFinished: false,
       errors: [],
+      startedAt: new Date().toISOString(),
+      phoneName: selectedPhoneData?.display_phone_number,
     };
 
-    setActiveDispatches((prev) => [newDispatch, ...prev]);
+    addDispatch(newDispatch);
 
     // Capture values for the async closure
     const capturedTemplate = selectedTemplate;
@@ -314,7 +299,7 @@ export default function AdminDisparosPage() {
       try {
         if (capturedMode === "individual") {
           for (let i = 0; i < contactIds.length; i++) {
-            const ctrl = dispatchControlsRef.current[dispatchId];
+            const ctrl = getControls(dispatchId);
             if (ctrl?.isCancelled) break;
 
             // Pause loop
@@ -368,7 +353,7 @@ export default function AdminDisparosPage() {
           // Batch mode
           const CHUNK = 50;
           for (let i = 0; i < contactIds.length; i += CHUNK) {
-            const ctrl = dispatchControlsRef.current[dispatchId];
+            const ctrl = getControls(dispatchId);
             if (ctrl?.isCancelled) break;
 
             while (ctrl?.isPaused && !ctrl?.isCancelled) {
@@ -422,7 +407,7 @@ export default function AdminDisparosPage() {
           }
         }
 
-        const ctrl = dispatchControlsRef.current[dispatchId];
+        const ctrl = getControls(dispatchId);
         if (ctrl?.isCancelled) {
           toast.warning(`${operatorProfile?.full_name}: Cancelado — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}`, duration: 10000 });
         } else if (results.failed > 0) {
@@ -434,7 +419,7 @@ export default function AdminDisparosPage() {
         toast.error(`Erro no disparo (${operatorProfile?.full_name})`, { description: err.message, duration: 15000 });
       } finally {
         updateDispatch(dispatchId, { isFinished: true });
-        delete dispatchControlsRef.current[dispatchId];
+        clearControls(dispatchId);
         refreshLists();
       }
     })();
@@ -444,22 +429,15 @@ export default function AdminDisparosPage() {
   };
 
   const handlePause = (dispatchId: string) => {
-    const ctrl = dispatchControlsRef.current[dispatchId];
-    if (!ctrl) return;
-    ctrl.isPaused = !ctrl.isPaused;
-    updateDispatch(dispatchId, { isPaused: ctrl.isPaused });
+    ctxPause(dispatchId);
   };
 
   const handleCancel = (dispatchId: string) => {
-    const ctrl = dispatchControlsRef.current[dispatchId];
-    if (!ctrl) return;
-    ctrl.isCancelled = true;
-    ctrl.isPaused = false;
-    updateDispatch(dispatchId, { isCancelled: true, isPaused: false });
+    ctxCancel(dispatchId);
   };
 
   const handleDismissDispatch = (dispatchId: string) => {
-    setActiveDispatches((prev) => prev.filter((d) => d.id !== dispatchId));
+    removeDispatch(dispatchId);
   };
 
   return (
