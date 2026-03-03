@@ -3,13 +3,15 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertBanner } from "@/components/ui/alert-banner";
-import { Copy, CheckCircle, ExternalLink, Webhook, Key, Link } from "lucide-react";
+import { Copy, CheckCircle, ExternalLink, Link, RefreshCw, Key } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function WebhookPage() {
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
+  const [isSubscribingApp, setIsSubscribingApp] = useState(false);
 
   // Get the Supabase project URL from environment
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
@@ -34,6 +36,28 @@ export default function WebhookPage() {
     }
   };
 
+  const handleSubscribeApp = async () => {
+    setIsSubscribingApp(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("subscribe-waba-webhook-app");
+      if (error) throw error;
+      if (!data?.success) {
+        throw new Error(data?.error || "Falha ao inscrever aplicativo no WABA");
+      }
+
+      const totalApps = Array.isArray(data.subscribedApps) ? data.subscribedApps.length : 0;
+      toast.success("App inscrito no WABA com sucesso!", {
+        description: totalApps > 0 ? `Apps inscritos detectados: ${totalApps}` : "Inscrição confirmada.",
+      });
+    } catch (err: any) {
+      toast.error("Não foi possível inscrever automaticamente", {
+        description: err?.message || "Tente novamente em alguns segundos.",
+      });
+    } finally {
+      setIsSubscribingApp(false);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="flex h-screen flex-col overflow-hidden">
@@ -48,6 +72,22 @@ export default function WebhookPage() {
               Seu webhook está pronto para receber mensagens do WhatsApp. Configure as
               informações abaixo no Meta Developers para ativar.
             </AlertBanner>
+
+            {/* Auto subscribe card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Correção automática de inscrição do App</CardTitle>
+                <CardDescription>
+                  Se o caminho no Meta mudou ou não aparece, clique abaixo para forçar a inscrição do app no WABA via API.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={handleSubscribeApp} disabled={isSubscribingApp}>
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isSubscribingApp ? "animate-spin" : ""}`} />
+                  {isSubscribingApp ? "Inscrevendo app..." : "Inscrever app automaticamente"}
+                </Button>
+              </CardContent>
+            </Card>
 
             {/* Webhook URL Card */}
             <Card>
