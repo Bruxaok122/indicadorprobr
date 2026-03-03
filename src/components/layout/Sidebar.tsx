@@ -17,7 +17,6 @@ import {
   Menu,
   X,
   Scale,
-  Zap,
 } from "lucide-react";
 import {
   Tooltip,
@@ -38,7 +37,6 @@ const adminNavItems = [
   { title: "Conversas", href: "/conversas", icon: MessagesSquare, description: "Chat com clientes" },
   { title: "Contatos", href: "/contatos", icon: ContactRound, description: "Gerenciar clientes" },
   { title: "Importar", href: "/importar", icon: FileUp, description: "Importar lista jurídica" },
-  { title: "Disparos", href: "/disparos-andamento", icon: Zap, description: "Disparos em andamento" },
   { title: "Templates", href: "/templates", icon: FileStack, description: "Modelos de mensagem" },
   { title: "Números", href: "/whatsapp-api", icon: Phone, description: "Gerenciar números e perfil" },
   { title: "Webhook", href: "/webhook", icon: Radio, description: "Informações do webhook" },

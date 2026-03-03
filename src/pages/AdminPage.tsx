@@ -25,15 +25,12 @@ import AdminDisparosPage from "@/pages/AdminDisparosPage";
 import AdminContatosPage from "@/pages/AdminContatosPage";
 import AdminAudioPage from "@/pages/AdminAudioPage";
 import { ApiConfigsSection } from "@/components/admin/ApiConfigsSection";
-import { useDispatchContext } from "@/contexts/DispatchContext";
 
 
 export default function AdminPage() {
   const navigate = useNavigate();
   const { signOut } = useAuthContext();
   const isMobile = useIsMobile();
-  const { activeDispatches } = useDispatchContext();
-  const activeCount = activeDispatches.filter(d => !d.isFinished).length;
   const {
     users,
     isLoadingUsers,
@@ -96,11 +93,6 @@ export default function AdminPage() {
             </TabsTrigger>
             <TabsTrigger value="disparos" className="gap-1.5">
               <Radio className="h-4 w-4" /> Disparos
-              {activeCount > 0 && (
-                <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white px-1 animate-pulse">
-                  {activeCount}
-                </span>
-              )}
             </TabsTrigger>
           </TabsList>
 
