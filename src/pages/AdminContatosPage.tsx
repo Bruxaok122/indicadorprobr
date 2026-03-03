@@ -240,8 +240,19 @@ export default function AdminContatosPage() {
       const ids = (allContacts as any[])
         .filter((c) => c.contact_list === listName)
         .map((c) => c.id);
-      if (ids.length > 0) {
-        const { error } = await supabase.from("contacts").delete().in("id", ids);
+      if (ids.length === 0) return;
+
+      const batchSize = 100;
+      // Delete related messages and conversations first (foreign keys)
+      for (let i = 0; i < ids.length; i += batchSize) {
+        const batch = ids.slice(i, i + batchSize);
+        await supabase.from("messages").delete().in("contact_id", batch);
+        await supabase.from("conversations").delete().in("contact_id", batch);
+      }
+      // Then delete contacts in batches
+      for (let i = 0; i < ids.length; i += batchSize) {
+        const batch = ids.slice(i, i + batchSize);
+        const { error } = await supabase.from("contacts").delete().in("id", batch);
         if (error) throw error;
       }
     },
