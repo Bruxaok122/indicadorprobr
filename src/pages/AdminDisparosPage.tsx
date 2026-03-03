@@ -193,9 +193,10 @@ export default function AdminDisparosPage() {
     setLoadingLists(true);
     supabase
       .from("contacts")
-      .select("contact_list,user_id")
+      .select("contact_list", { count: "exact", head: false })
       .or(`user_id.is.null,user_id.eq.${user.id}`)
       .not("contact_list", "is", null)
+      .limit(50000)
       .then(({ data }) => {
         if (!data) {
           setLoadingLists(false);
