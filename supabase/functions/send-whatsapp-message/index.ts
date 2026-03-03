@@ -140,36 +140,41 @@ serve(async (req) => {
     const effectiveUserId = contact.user_id || userId || null;
 
     // Determine which phone_number_id to use
-    // Priority: selectedPhoneNumberId > contact.dispatched_phone_number_id > config.phone_number_id
+    // Regra crítica: quando o contato já tem número de disparo vinculado,
+    // TODAS as respostas devem sair por esse mesmo número para manter a janela correta.
     let finalPhoneNumberId = config.phone_number_id;
 
-    // If the contact was previously dispatched from a specific number, reply from the same one
-    if (!selectedPhoneNumberId && contact.dispatched_phone_number_id) {
-      console.log(`Using contact's dispatched phone: ${contact.dispatched_phone_number_id}`);
+    if (contact.dispatched_phone_number_id) {
       finalPhoneNumberId = contact.dispatched_phone_number_id;
 
-      // Try to get access_token from the api_config linked to that phone number
       const { data: phoneWithApi } = await supabase
         .from("waba_phone_numbers")
-        .select("api_config_id")
+        .select("api_config_id, is_active")
         .eq("phone_number_id", contact.dispatched_phone_number_id)
-        .eq("is_active", true)
         .maybeSingle();
 
-      if (phoneWithApi?.api_config_id) {
+      if (!phoneWithApi || !phoneWithApi.is_active) {
+        return new Response(
+          JSON.stringify({
+            error: "O número original deste atendimento está inativo. Reative o número para responder este cliente sem quebrar a janela de conversa.",
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (phoneWithApi.api_config_id) {
         const { data: apiConfig } = await supabase
           .from("api_configs")
           .select("access_token")
           .eq("id", phoneWithApi.api_config_id)
           .single();
+
         if (apiConfig?.access_token) {
           config = { ...config, access_token: apiConfig.access_token };
         }
       }
-    }
-
-    if (selectedPhoneNumberId) {
-      // Validate the selected phone number exists and is active
+    } else if (selectedPhoneNumberId) {
+      // Sem vínculo prévio, permite seleção manual no primeiro envio
       const { data: phoneRecord } = await supabase
         .from("waba_phone_numbers")
         .select("id")
