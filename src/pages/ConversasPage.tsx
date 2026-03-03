@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { useContacts } from "@/hooks/useContacts";
 import { useMessages } from "@/hooks/useMessages";
@@ -58,10 +58,27 @@ export default function ConversasPage() {
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
 
-  // Get operator's active phone and lawyer
+  // Fetch dispatched phone info directly from DB when not in operator's phones list
+  const dispatchedPhoneId = selectedContact?.dispatched_phone_number_id;
+  const { data: dispatchedPhoneInfo } = useQuery({
+    queryKey: ["dispatched-phone-info", dispatchedPhoneId],
+    queryFn: async () => {
+      if (!dispatchedPhoneId) return null;
+      const { data } = await supabase
+        .from("waba_phone_numbers")
+        .select("phone_number_id, display_phone_number, verified_name, lawyer_name")
+        .eq("phone_number_id", dispatchedPhoneId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!dispatchedPhoneId,
+    staleTime: 60000,
+  });
+
+  // Get operator's active phone and lawyer — prioritize dispatched phone info
   const activePhone = phones.find((p) => p.phone_number_id === selectedPhoneNumberId) || phones[0];
-  const operatorPhone = activePhone?.display_phone_number;
-  const operatorLawyer = activePhone?.verified_name || activePhone?.lawyer_name;
+  const operatorPhone = dispatchedPhoneInfo?.display_phone_number || activePhone?.display_phone_number;
+  const operatorLawyer = dispatchedPhoneInfo?.verified_name || dispatchedPhoneInfo?.lawyer_name || activePhone?.verified_name || activePhone?.lawyer_name;
 
   // Auto-select the dispatched phone number for this contact, or fallback to first available
   useEffect(() => {
