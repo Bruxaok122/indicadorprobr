@@ -84,9 +84,7 @@ serve(async (req) => {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ override_callback_uri: false }),
     });
 
     const subscribeResult = await subscribeResponse.json();
