@@ -184,22 +184,38 @@ export default function AdminDisparosPage() {
   const handleBack = () => { if (currentStep > 1) goToStep(currentStep - 1); };
 
   function refreshLists() {
-    setLoadingLists(true);
-    supabase.from("contacts").select("*").is("user_id", null).then(({ data }) => {
-      if (!data) {
-        setLoadingLists(false);
-        return;
-      }
-      const map: Record<string, number> = {};
-      (data as any[]).forEach((c) => {
-        const listName = c.contact_list;
-        if (!listName) return;
-        map[listName] = (map[listName] || 0) + 1;
-      });
-      const lists = Object.entries(map).map(([name, count]) => ({ name, count }));
-      setAvailableLists(lists);
+    if (!user?.id) {
+      setAvailableLists([]);
       setLoadingLists(false);
-    });
+      return;
+    }
+
+    setLoadingLists(true);
+    supabase
+      .from("contacts")
+      .select("contact_list,user_id")
+      .or(`user_id.is.null,user_id.eq.${user.id}`)
+      .not("contact_list", "is", null)
+      .then(({ data }) => {
+        if (!data) {
+          setLoadingLists(false);
+          return;
+        }
+
+        const map: Record<string, number> = {};
+        (data as any[]).forEach((c) => {
+          const listName = c.contact_list;
+          if (!listName) return;
+          map[listName] = (map[listName] || 0) + 1;
+        });
+
+        const lists = Object.entries(map)
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        setAvailableLists(lists);
+        setLoadingLists(false);
+      });
   }
 
   // --- Dispatch logic ---
@@ -239,6 +255,10 @@ export default function AdminDisparosPage() {
 
   const handleSend = async () => {
     if (!selectedTemplate || !selectedList || !selectedUserId) return;
+    if (!user?.id) {
+      toast.error("Sessão inválida, faça login novamente.", { duration: 8000 });
+      return;
+    }
     if (phones.length > 0 && !selectedPhoneNumberId) {
       toast.error("Selecione um número de disparo", { duration: 8000 });
       return;
@@ -247,8 +267,8 @@ export default function AdminDisparosPage() {
     const { data, error } = await (supabase as any)
       .from("contacts")
       .select("id")
-      .is("user_id", null)
-      .eq("contact_list", selectedList);
+      .eq("contact_list", selectedList)
+      .or(`user_id.is.null,user_id.eq.${user.id}`);
 
     if (error || !data || data.length === 0) {
       toast.error("Nenhum contato encontrado na lista selecionada", { duration: 8000 });
