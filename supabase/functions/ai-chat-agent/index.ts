@@ -41,7 +41,7 @@ function buildSystemPrompt(
 10. Se o cliente já forneceu dados parciais, peça apenas o que falta.
 
 ## DADOS DO CLIENTE:
-- Nome: ${contactName}
+- Nome: ${contactName} (USE APENAS O PRIMEIRO NOME ao se dirigir ao cliente, nunca nome completo)
 - CPF: ${cpf || "não informado"}
 - Processo: ${processNumber || "não informado"}
 - Valor da Causa: R$ ${valorCausa || "não informado"}
@@ -233,8 +233,12 @@ serve(async (req) => {
       ? Number(contact.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 })
       : "não informado";
 
+    // Use only first name in Title Case
+    const firstName = (contact.name || "").split(/\s+/)[0];
+    const firstNameFormatted = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+
     const systemPrompt = buildSystemPrompt(
-      contact.name,
+      firstNameFormatted,
       contact.lawyer_name || "Silva",
       contact.process_number || "",
       contact.cpf || "",
