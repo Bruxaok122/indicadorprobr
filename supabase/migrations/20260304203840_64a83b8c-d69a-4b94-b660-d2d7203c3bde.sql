@@ -1,0 +1,5 @@
+
+ALTER TABLE public.contacts 
+ADD COLUMN IF NOT EXISTS ai_enabled boolean NOT NULL DEFAULT false,
+ADD COLUMN IF NOT EXISTS ai_stage text DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS bank_data jsonb DEFAULT NULL;

@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.auto-register-number]
 verify_jwt = false
+
+[functions.ai-chat-agent]
+verify_jwt = false

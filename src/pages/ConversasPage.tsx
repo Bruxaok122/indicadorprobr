@@ -53,6 +53,7 @@ export default function ConversasPage() {
   const [selectedTemplateName, setSelectedTemplateName] = useState("");
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
+  const [isTogglingAI, setIsTogglingAI] = useState(false);
   const prevIncomingCountRef = useRef<number | null>(null);
 
   const {
@@ -116,6 +117,26 @@ export default function ConversasPage() {
     }
     prevIncomingCountRef.current = respondidoCount;
   }, [contacts, playNotification]);
+
+  const handleToggleAI = async (contactId: string, enabled: boolean) => {
+    setIsTogglingAI(true);
+    try {
+      const { error } = await supabase
+        .from("contacts")
+        .update({ 
+          ai_enabled: enabled, 
+          ai_stage: enabled ? "aguardando_confirmacao_doc" : null 
+        } as any)
+        .eq("id", contactId);
+      if (error) throw error;
+      toast.success(enabled ? "🤖 IA ativada! Monitorando e respondendo." : "IA desativada. Modo manual.");
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+    } catch (err: any) {
+      toast.error("Erro ao alternar IA", { description: err.message });
+    } finally {
+      setIsTogglingAI(false);
+    }
+  };
 
   const handleSendMessage = () => {
     if (!messageText.trim() || !selectedContactId) return;
@@ -227,6 +248,10 @@ export default function ConversasPage() {
                   onTogglePriority={(contactId, isPriority) => togglePriority({ contactId, isPriority })}
                   isTogglingPriority={isTogglingPriority}
                   lawyerName={operatorLawyer}
+                  aiEnabled={(selectedContact as any).ai_enabled}
+                  aiStage={(selectedContact as any).ai_stage}
+                  onToggleAI={handleToggleAI}
+                  isTogglingAI={isTogglingAI}
                   onTransferDone={() => {
                     setSelectedContactId(null);
                     if (isMobile) setMobileShowChat(false);

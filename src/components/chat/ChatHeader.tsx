@@ -1,7 +1,7 @@
 import { Contact } from "@/types/juriszap";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, Phone, Lock, LockOpen, ArrowRightLeft, ClipboardCopy, Info, Star } from "lucide-react";
+import { ArrowLeft, Phone, Lock, LockOpen, ArrowRightLeft, ClipboardCopy, Info, Star, Bot, BotOff } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +22,10 @@ interface ChatHeaderProps {
   onTogglePriority?: (contactId: string, isPriority: boolean) => void;
   isTogglingPriority?: boolean;
   lawyerName?: string;
+  aiEnabled?: boolean;
+  onToggleAI?: (contactId: string, enabled: boolean) => void;
+  isTogglingAI?: boolean;
+  aiStage?: string | null;
 }
 
 function formatCurrency(value?: number): string {
@@ -66,7 +70,7 @@ function getStatusLabel(status: string) {
   }
 }
 
-export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglingBlock, onOpenProfile, onTransferDone, onTogglePriority, isTogglingPriority, lawyerName }: ChatHeaderProps) {
+export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglingBlock, onOpenProfile, onTransferDone, onTogglePriority, isTogglingPriority, lawyerName, aiEnabled, onToggleAI, isTogglingAI, aiStage }: ChatHeaderProps) {
   const { user, isAdmin } = useAuthContext();
   const queryClient = useQueryClient();
   const isBlocked = contact.status === "encerrado";
@@ -156,6 +160,33 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
       </div>
 
       <div className="flex items-center gap-0.5 shrink-0">
+        {/* AI Toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onToggleAI?.(contact.id, !aiEnabled)}
+              disabled={isTogglingAI}
+              className={cn(
+                "h-8 w-8 rounded-lg transition-all",
+                aiEnabled
+                  ? "text-green-500 bg-green-50 hover:bg-green-100 dark:bg-green-900/30 dark:hover:bg-green-900/50"
+                  : "text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-800"
+              )}
+            >
+              {isTogglingAI ? <LoadingSpinner size="sm" /> : aiEnabled ? <Bot className="h-4 w-4" /> : <BotOff className="h-4 w-4" />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="text-xs">
+            {aiEnabled ? `IA Ativa · ${aiStage || "monitorando"}` : "Iniciar IA"}
+          </TooltipContent>
+        </Tooltip>
+        {aiEnabled && (
+          <span className="hidden md:inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:text-green-400 animate-pulse">
+            <Bot className="h-3 w-3" /> IA
+          </span>
+        )}
         <ActionBtn
           icon={Star}
           label={contact.is_priority ? "Remover prioridade" : "Prioridade"}
