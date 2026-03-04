@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Users, UserPlus, Radio, Mic, HeartPulse, Zap, Activity, FileText } from "lucide-react";
+import { Users, UserPlus, Radio, Mic, HeartPulse, Zap, Activity, FileText, BotMessageSquare } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -28,6 +28,7 @@ import AdminAudioPage from "@/pages/AdminAudioPage";
 import { ApiConfigsSection } from "@/components/admin/ApiConfigsSection";
 import { DispatchMonitor } from "@/components/admin/DispatchMonitor";
 import { AdminFichasPanel } from "@/components/admin/AdminFichasPanel";
+import { AITestPanel } from "@/components/admin/AITestPanel";
 
 function AdminPageInner() {
   const navigate = useNavigate();
@@ -101,6 +102,9 @@ function AdminPageInner() {
             </TabsTrigger>
             <TabsTrigger value="fichas" className="gap-1.5">
               <FileText className="h-4 w-4" /> Fichas
+            </TabsTrigger>
+            <TabsTrigger value="teste-ia" className="gap-1.5">
+              <BotMessageSquare className="h-4 w-4" /> Teste IA
             </TabsTrigger>
           </TabsList>
 
@@ -198,6 +202,10 @@ function AdminPageInner() {
 
           <TabsContent value="fichas" className="mt-4">
             <AdminFichasPanel />
+          </TabsContent>
+
+          <TabsContent value="teste-ia" className="mt-4">
+            <AITestPanel />
           </TabsContent>
 
 
