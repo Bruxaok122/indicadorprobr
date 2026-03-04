@@ -24,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, CheckCircle2, XCircle, RefreshCw, Radio, Zap } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, XCircle, RefreshCw, Radio, Zap, Signal, SignalHigh, SignalMedium, SignalLow } from "lucide-react";
 
 export function ApiConfigsSection() {
   const {
@@ -160,7 +160,7 @@ export function ApiConfigsSection() {
                 </div>
               </CardHeader>
               <CardContent className="pt-0 space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge
                     variant="outline"
                     className={
@@ -176,6 +176,24 @@ export function ApiConfigsSection() {
                     )}
                     {config.is_validated ? "Conectada" : "Bloqueada / Offline"}
                   </Badge>
+                  {/* Real Meta Quality Rating */}
+                  {config.status_message && (() => {
+                    const qMatch = config.status_message.match(/Qualidade:\s*(GREEN|YELLOW|RED|LOW|MEDIUM|HIGH|N\/A)/i);
+                    const quality = qMatch?.[1]?.toUpperCase();
+                    if (!quality || quality === "N/A") return null;
+                    const qConfig = quality === "GREEN" || quality === "HIGH"
+                      ? { label: "Quality: Alta", className: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30", icon: SignalHigh }
+                      : quality === "YELLOW" || quality === "MEDIUM"
+                        ? { label: "Quality: Média", className: "bg-amber-500/10 text-amber-500 border-amber-500/30", icon: SignalMedium }
+                        : { label: "Quality: Baixa", className: "bg-destructive/10 text-destructive border-destructive/30", icon: SignalLow };
+                    const QIcon = qConfig.icon;
+                    return (
+                      <Badge variant="outline" className={`${qConfig.className} gap-1`}>
+                        <QIcon className="h-3.5 w-3.5" />
+                        {qConfig.label}
+                      </Badge>
+                    );
+                  })()}
                 </div>
                 {config.status_message && (
                   <p className="text-xs text-muted-foreground leading-relaxed">
