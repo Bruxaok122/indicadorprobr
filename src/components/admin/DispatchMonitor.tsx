@@ -59,10 +59,10 @@ export function DispatchMonitor() {
       </div>
 
       {/* Anti-ban protection info */}
-      <div className="flex items-center gap-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20 px-3 py-2">
+      <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
         <Shield className="h-4 w-4 text-emerald-500" />
         <span className="text-xs text-emerald-600 dark:text-emerald-400">
-          Proteção Anti-Ban ativa: blocos de 20 | 10min respiro | horário 10-17h | delay aleatório
+          Anti-Ban v2: blocos ~20 (jitter) | 10-12min respiro | seg-sex 10-17h | delay progressivo | limite 500/sessão
         </span>
       </div>
 

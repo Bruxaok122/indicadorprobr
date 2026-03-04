@@ -15,9 +15,12 @@ import { Label } from "@/components/ui/label";
 import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText } from "lucide-react";
+import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // --- Types & helpers ---
 
@@ -82,6 +85,9 @@ const ANTI_BAN_BLOCK_SIZE = 20; // Messages per breathing block
 const ANTI_BAN_BREATHING_MS = 10 * 60 * 1000; // 10 minutes between blocks
 const ANTI_BAN_MIN_DELAY_MS = 3000; // 3s min delay between individual sends
 const ANTI_BAN_MAX_DELAY_MS = 8000; // 8s max delay between individual sends
+const ANTI_BAN_DAILY_LIMIT = 500; // Max messages per day per dispatch session
+const ANTI_BAN_PROGRESSIVE_FACTOR = 1.15; // Delay increases 15% per block
+const ANTI_BAN_BLOCK_JITTER = 4; // Block size varies ±4 (16-24 instead of always 20)
 
 function randomBetween(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -97,10 +103,24 @@ function getBrtHour(): number {
   return (now.getUTCHours() - 3 + 24) % 24;
 }
 
-/** Check if current time is within allowed dispatch hours (10:00-17:00 BRT) */
+/** Check if current time is within allowed dispatch hours (10:00-17:00 BRT) and not weekend */
 function isWithinDispatchHours(): boolean {
   const hour = getBrtHour();
+  const now = new Date();
+  const brtDay = new Date(now.getTime() - 3 * 60 * 60 * 1000).getUTCDay(); // 0=Sun, 6=Sat
+  if (brtDay === 0 || brtDay === 6) return false; // No weekends
   return hour >= 10 && hour < 17;
+}
+
+/** Get jittered block size (16-24 instead of always 20) */
+function getJitteredBlockSize(): number {
+  return ANTI_BAN_BLOCK_SIZE + randomBetween(-ANTI_BAN_BLOCK_JITTER, ANTI_BAN_BLOCK_JITTER);
+}
+
+/** Get progressive delay multiplier based on blocks completed */
+function getProgressiveDelay(blocksCompleted: number, baseMin: number, baseMax: number): [number, number] {
+  const factor = Math.pow(ANTI_BAN_PROGRESSIVE_FACTOR, blocksCompleted);
+  return [Math.round(baseMin * factor), Math.round(baseMax * factor)];
 }
 
 /** Calculate ms until next dispatch window opens (10:00 BRT) */
@@ -203,6 +223,11 @@ export default function AdminDisparosPage() {
   const [intervalSeconds, setIntervalSeconds] = useState(5);
   // Step 4: Responsible
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  // Scheduling
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
+  const [scheduledHour, setScheduledHour] = useState("10");
+  const [scheduledMinute, setScheduledMinute] = useState("00");
 
   // Phone data for advogado variable
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
@@ -346,15 +371,67 @@ export default function AdminDisparosPage() {
       return;
     }
 
-    // Anti-ban: Check dispatch hours (10:00-17:00 BRT)
+    // Handle scheduling
+    if (isScheduled && scheduledDate) {
+      const schedHour = parseInt(scheduledHour);
+      const schedMin = parseInt(scheduledMinute);
+      
+      if (schedHour < 10 || schedHour >= 17) {
+        toast.error("⏰ Horário agendado deve ser entre 10:00 e 17:00 (BRT)", { duration: 8000 });
+        return;
+      }
+
+      // Calculate delay until scheduled time (BRT = UTC-3)
+      const now = new Date();
+      const brtOffset = -3 * 60 * 60 * 1000;
+      const brtNowMs = now.getTime() + brtOffset;
+      const scheduledBrt = new Date(scheduledDate);
+      scheduledBrt.setHours(schedHour, schedMin, 0, 0);
+      const delayMs = scheduledBrt.getTime() - brtNowMs;
+      
+      if (delayMs < 0) {
+        toast.error("⏰ O horário agendado já passou!", { duration: 8000 });
+        return;
+      }
+      
+      const dayOfWeek = scheduledBrt.getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        toast.error("🚫 Não é possível agendar para finais de semana!", { duration: 8000 });
+        return;
+      }
+      
+      toast.success(`📅 Disparo agendado para ${format(scheduledDate, "dd/MM/yyyy")} às ${scheduledHour}:${scheduledMinute} (BRT)`, { duration: 10000 });
+      
+      setTimeout(() => {
+        if (!isWithinDispatchHours()) {
+          toast.error("⏰ Fora do horário permitido no momento do agendamento.", { duration: 10000 });
+          return;
+        }
+        executeDispatch();
+      }, delayMs);
+      return;
+    }
+
+    // Anti-ban: Check dispatch hours (10:00-17:00 BRT, no weekends)
     if (!isWithinDispatchHours()) {
       const brtHour = getBrtHour();
+      const now = new Date();
+      const brtDay = new Date(now.getTime() - 3 * 60 * 60 * 1000).getUTCDay();
+      const isWeekend = brtDay === 0 || brtDay === 6;
       toast.error(
-        `⏰ Fora do horário de disparo! Horário atual: ${brtHour}h (BRT). Disparos só são permitidos entre 10:00 e 17:00.`,
+        isWeekend
+          ? `🚫 Disparos não são permitidos aos finais de semana! Agende para segunda-feira.`
+          : `⏰ Fora do horário de disparo! ${brtHour}h (BRT). Só entre 10:00 e 17:00.`,
         { duration: 10000 }
       );
       return;
     }
+
+    executeDispatch();
+  };
+
+  const executeDispatch = async () => {
+    if (!selectedTemplate || !selectedList || !selectedUserId || !user?.id) return;
 
     // Fetch remaining contacts from the list (real-time, only pool contacts)
     const contactIds = await fetchRemainingContactIds(
@@ -367,10 +444,15 @@ export default function AdminDisparosPage() {
       return;
     }
 
+    // 🛡️ Anti-ban: Daily limit check
+    if (contactIds.length > ANTI_BAN_DAILY_LIMIT) {
+      toast.warning(`⚠️ Limite diário: máximo ${ANTI_BAN_DAILY_LIMIT} mensagens por sessão. Limitando automaticamente.`, { duration: 10000 });
+      contactIds.splice(ANTI_BAN_DAILY_LIMIT);
+    }
+
     const operatorProfile = users.find((u) => u.user_id === selectedUserId);
     const dispatchId = crypto.randomUUID();
 
-    // Save refs for this dispatch's controls
     dispatchControlsRef.current[dispatchId] = { isPaused: false, isCancelled: false };
 
     const newDispatch: ActiveDispatch = {
@@ -408,7 +490,10 @@ export default function AdminDisparosPage() {
     (async () => {
       const results = { sent: 0, failed: 0, errors: [] as string[] };
       let remainingIds = [...contactIds];
-      let blockMessageCount = 0; // Counter for breathing blocks
+      let blockMessageCount = 0;
+      let currentBlockSize = getJitteredBlockSize();
+      let blocksCompleted = 0;
+      let consecutiveErrors = 0; // Track consecutive errors for rate limit detection
 
       try {
         if (capturedMode === "individual") {
@@ -443,17 +528,21 @@ export default function AdminDisparosPage() {
               toast.success("✅ Janela de disparo aberta! Retomando...", { id: `dispatch-window-${dispatchId}`, duration: 5000 });
             }
 
-            // 🛡️ Anti-ban: Breathing pause after every BLOCK_SIZE messages
-            if (blockMessageCount >= ANTI_BAN_BLOCK_SIZE && i < remainingIds.length) {
-              const blocksCompleted = Math.floor((results.sent + results.failed) / ANTI_BAN_BLOCK_SIZE);
+            // 🛡️ Anti-ban: Breathing pause with jittered block size
+            if (blockMessageCount >= currentBlockSize && i < remainingIds.length) {
+              blocksCompleted++;
               updateDispatch(dispatchId, { blocksSent: blocksCompleted });
-              toast.info(`☕ Bloco de ${ANTI_BAN_BLOCK_SIZE} enviado. Respirando por 10 minutos...`, { id: `dispatch-breathing-${dispatchId}`, duration: 10000 });
-              await breathingWait(dispatchId, ANTI_BAN_BREATHING_MS, updateDispatch, dispatchControlsRef);
+              
+              // Progressive breathing: increase breathing time slightly each block
+              const breathingMs = ANTI_BAN_BREATHING_MS + randomBetween(0, 2 * 60 * 1000); // 10-12 min
+              toast.info(`☕ Bloco de ${currentBlockSize} enviado (${blocksCompleted}º). Respirando...`, { id: `dispatch-breathing-${dispatchId}`, duration: 10000 });
+              await breathingWait(dispatchId, breathingMs, updateDispatch, dispatchControlsRef);
               const ctrl2 = dispatchControlsRef.current[dispatchId];
               if (ctrl2?.isCancelled) break;
               blockMessageCount = 0;
+              currentBlockSize = getJitteredBlockSize(); // New jittered size for next block
+              consecutiveErrors = 0; // Reset error counter after breathing
 
-              // Re-check time window after breathing
               if (!isWithinDispatchHours()) {
                 const canContinue = await waitForDispatchWindow(dispatchId, updateDispatch, dispatchControlsRef);
                 if (!canContinue) break;
@@ -498,9 +587,20 @@ export default function AdminDisparosPage() {
                 toast.error("🛑 Conta Business bloqueada! Parando disparo imediatamente.", { duration: 30000 });
                 break;
               }
+              consecutiveErrors = 0;
             } else {
               results.failed++;
+              consecutiveErrors++;
               if (sendError) results.errors.push(await getInvokeErrorMessage(sendError));
+              
+              // 🛡️ Anti-ban: Rate limit detection - if 3+ consecutive errors, emergency cooldown
+              if (consecutiveErrors >= 3) {
+                toast.warning("🚨 3 erros consecutivos! Cooldown de emergência (5 min)...", { duration: 15000 });
+                await breathingWait(dispatchId, 5 * 60 * 1000, updateDispatch, dispatchControlsRef);
+                consecutiveErrors = 0;
+                const ctrl3 = dispatchControlsRef.current[dispatchId];
+                if (ctrl3?.isCancelled) break;
+              }
             }
 
             blockMessageCount++;
@@ -515,9 +615,10 @@ export default function AdminDisparosPage() {
 
             i++;
 
-            // 🛡️ Anti-ban: Randomized human-like delay (3-8 seconds) instead of fixed interval
+            // 🛡️ Anti-ban: Progressive randomized delay (increases with each block)
             if (i < remainingIds.length && !ctrl?.isCancelled) {
-              const delayMs = randomBetween(ANTI_BAN_MIN_DELAY_MS, ANTI_BAN_MAX_DELAY_MS);
+              const [pMin, pMax] = getProgressiveDelay(blocksCompleted, ANTI_BAN_MIN_DELAY_MS, ANTI_BAN_MAX_DELAY_MS);
+              const delayMs = randomBetween(pMin, Math.min(pMax, 15000)); // Cap at 15s
               for (let s = 0; s < Math.ceil(delayMs / 500); s++) {
                 const c = dispatchControlsRef.current[dispatchId];
                 if (c?.isCancelled || c?.isPaused) break;
@@ -526,10 +627,11 @@ export default function AdminDisparosPage() {
             }
           }
         } else {
-          // Batch mode — chunks of ANTI_BAN_BLOCK_SIZE (20) with breathing
-          const CHUNK = ANTI_BAN_BLOCK_SIZE;
+          // Batch mode — chunks with jittered size and progressive breathing
+          let batchBlockSize = getJitteredBlockSize();
           let i = 0;
           let chunkIndex = 0;
+          let batchConsecutiveErrors = 0;
           while (i < remainingIds.length) {
             const ctrl = dispatchControlsRef.current[dispatchId];
             if (ctrl?.isCancelled) break;
@@ -548,21 +650,24 @@ export default function AdminDisparosPage() {
               continue;
             }
 
-            // 🛡️ Anti-ban: Check time window
+            // 🛡️ Anti-ban: Check time window + weekends
             if (!isWithinDispatchHours()) {
-              toast.info("⏰ Fora do horário (10-17h BRT). Aguardando próxima janela...", { id: `dispatch-window-${dispatchId}`, duration: 15000 });
+              toast.info("⏰ Fora do horário (10-17h BRT, seg-sex). Aguardando...", { id: `dispatch-window-${dispatchId}`, duration: 15000 });
               const canContinue = await waitForDispatchWindow(dispatchId, updateDispatch, dispatchControlsRef);
               if (!canContinue) break;
               toast.success("✅ Janela de disparo aberta! Retomando...", { id: `dispatch-window-${dispatchId}`, duration: 5000 });
             }
 
-            // 🛡️ Anti-ban: Breathing pause between chunks (skip first chunk)
+            // 🛡️ Anti-ban: Breathing with progressive timing between chunks (skip first)
             if (chunkIndex > 0) {
               updateDispatch(dispatchId, { blocksSent: chunkIndex });
-              toast.info(`☕ Bloco ${chunkIndex} de ${CHUNK} enviado. Respirando por 10 minutos...`, { id: `dispatch-breathing-${dispatchId}`, duration: 10000 });
-              await breathingWait(dispatchId, ANTI_BAN_BREATHING_MS, updateDispatch, dispatchControlsRef);
+              const breathingMs = ANTI_BAN_BREATHING_MS + randomBetween(0, 2 * 60 * 1000);
+              toast.info(`☕ Bloco ${chunkIndex} de ${batchBlockSize} enviado. Respirando...`, { id: `dispatch-breathing-${dispatchId}`, duration: 10000 });
+              await breathingWait(dispatchId, breathingMs, updateDispatch, dispatchControlsRef);
               const ctrl2 = dispatchControlsRef.current[dispatchId];
               if (ctrl2?.isCancelled) break;
+              batchBlockSize = getJitteredBlockSize();
+              batchConsecutiveErrors = 0;
 
               if (!isWithinDispatchHours()) {
                 const canContinue = await waitForDispatchWindow(dispatchId, updateDispatch, dispatchControlsRef);
@@ -570,7 +675,7 @@ export default function AdminDisparosPage() {
               }
             }
 
-            const chunk = remainingIds.slice(i, i + CHUNK);
+            const chunk = remainingIds.slice(i, i + batchBlockSize);
 
             const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
               body: {
@@ -619,7 +724,7 @@ export default function AdminDisparosPage() {
               blocksSent: chunkIndex + 1,
             });
 
-            i += CHUNK;
+            i += batchBlockSize;
             chunkIndex++;
           }
         }
@@ -976,6 +1081,71 @@ export default function AdminDisparosPage() {
                     </SelectContent>
                   </Select>
 
+                  {/* 📅 Scheduling */}
+                  <div className="rounded-lg border border-border p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="schedule-toggle" className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
+                          <CalendarClock className="h-3.5 w-3.5 text-primary" />
+                          Agendar disparo
+                        </Label>
+                        <p className="text-[10px] text-muted-foreground">Programe para enviar em outro horário</p>
+                      </div>
+                      <Switch id="schedule-toggle" checked={isScheduled} onCheckedChange={setIsScheduled} />
+                    </div>
+
+                    {isScheduled && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Data (BRT)</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-start text-left text-sm font-normal">
+                                <CalendarClock className="mr-2 h-4 w-4" />
+                                {scheduledDate ? format(scheduledDate, "dd/MM/yyyy") : "Selecione a data..."}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={scheduledDate}
+                                onSelect={setScheduledDate}
+                                disabled={(date) => {
+                                  const day = date.getDay();
+                                  return date < new Date(new Date().setHours(0,0,0,0)) || day === 0 || day === 6;
+                                }}
+                                initialFocus
+                                className="p-3 pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs text-muted-foreground whitespace-nowrap">Horário:</Label>
+                          <Select value={scheduledHour} onValueChange={setScheduledHour}>
+                            <SelectTrigger className="h-8 w-20 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 7 }, (_, i) => i + 10).map((h) => (
+                                <SelectItem key={h} value={String(h)} className="text-xs">{String(h).padStart(2, "0")}h</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <span className="text-xs text-muted-foreground">:</span>
+                          <Select value={scheduledMinute} onValueChange={setScheduledMinute}>
+                            <SelectTrigger className="h-8 w-20 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {["00", "15", "30", "45"].map((m) => (
+                                <SelectItem key={m} value={m} className="text-xs">{m}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <span className="text-xs text-muted-foreground">(BRT)</span>
+                        </div>
+                        <p className="text-[10px] text-amber-500">⚠️ Apenas seg-sex, entre 10:00 e 17:00 (BRT)</p>
+                      </motion.div>
+                    )}
+                  </div>
+
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg bg-muted p-4 space-y-2">
                     <p className="text-xs font-semibold mb-2">Resumo do disparo</p>
                     {[
@@ -983,8 +1153,9 @@ export default function AdminDisparosPage() {
                       { label: "Template", value: selectedTemplate?.name || "—" },
                       { label: "Lista", value: selectedList || "—" },
                       { label: "Contatos", value: batchMode ? `${Math.min(batchSize, listContactCount)} de ${listContactCount}` : String(listContactCount) },
-                      { label: "Modo", value: dispatchMode === "individual" ? "Individual (3-8s aleatório)" : "Lote (blocos de 20)" },
+                      { label: "Modo", value: dispatchMode === "individual" ? "Individual (progressivo)" : "Lote (blocos variáveis ~20)" },
                       { label: "Responsável", value: users.find(u => u.user_id === selectedUserId)?.full_name || "—" },
+                      ...(isScheduled && scheduledDate ? [{ label: "📅 Agendado", value: `${format(scheduledDate, "dd/MM/yyyy")} às ${scheduledHour}:${scheduledMinute} BRT` }] : []),
                     ].map((row) => (
                       <div key={row.label} className="flex justify-between text-xs">
                         <span className="text-muted-foreground">{row.label}:</span>
@@ -995,22 +1166,25 @@ export default function AdminDisparosPage() {
 
                   {/* Anti-ban protection summary */}
                   <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                    className="rounded-lg bg-emerald-500/5 border border-emerald-500/20 p-3 space-y-1.5">
-                    <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                      🛡️ Proteções Anti-Ban Ativas
+                    className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-1.5">
+                    <p className="text-xs font-semibold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                      🛡️ Proteções Anti-Ban v2
                     </p>
                     <div className="text-[10px] text-muted-foreground space-y-0.5">
-                      <p>• Blocos de 20 mensagens com 10 min de respiro</p>
-                      <p>• Delay aleatório entre envios (3-8s individual / 2-5s no lote)</p>
-                      <p>• Horário restrito: 10:00 - 17:00 (BRT)</p>
+                      <p>• Blocos variáveis (16-24 msgs) com respiro 10-12 min</p>
+                      <p>• Delay progressivo (aumenta 15% por bloco, máx 15s)</p>
+                      <p>• Horário restrito: seg-sex 10:00-17:00 (BRT)</p>
+                      <p>• Limite diário: {ANTI_BAN_DAILY_LIMIT} mensagens por sessão</p>
+                      <p>• Cooldown de emergência (3 erros consecutivos = 5 min)</p>
                       <p>• Auto-bloqueio de respostas negativas</p>
                       <p>• Circuit breaker em caso de bloqueio da Meta</p>
                     </div>
                   </motion.div>
 
                   <Button className="w-full gap-2" size="lg" onClick={handleSend}
-                    disabled={!selectedTemplate || !selectedList || !selectedUserId || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId)}>
-                    <Send className="h-4 w-4" /> Disparar para {effectiveCount} contato{effectiveCount !== 1 ? "s" : ""}
+                    disabled={!selectedTemplate || !selectedList || !selectedUserId || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId) || (isScheduled && !scheduledDate)}>
+                    {isScheduled ? <CalendarClock className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+                    {isScheduled ? `Agendar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}` : `Disparar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}`}
                   </Button>
                 </CardContent>
               </Card>
