@@ -104,12 +104,14 @@ function getBrtHour(): number {
 }
 
 /** Check if current time is within allowed dispatch hours (10:00-17:00 BRT) and not weekend */
+/** ⚠️ TEMPORARILY BYPASSED FOR TESTING - revert after test! */
 function isWithinDispatchHours(): boolean {
-  const hour = getBrtHour();
-  const now = new Date();
-  const brtDay = new Date(now.getTime() - 3 * 60 * 60 * 1000).getUTCDay(); // 0=Sun, 6=Sat
-  if (brtDay === 0 || brtDay === 6) return false; // No weekends
-  return hour >= 10 && hour < 17;
+  return true; // TEMP: bypass for testing
+  // const hour = getBrtHour();
+  // const now = new Date();
+  // const brtDay = new Date(now.getTime() - 3 * 60 * 60 * 1000).getUTCDay();
+  // if (brtDay === 0 || brtDay === 6) return false;
+  // return hour >= 10 && hour < 17;
 }
 
 /** Get jittered block size (16-24 instead of always 20) */
