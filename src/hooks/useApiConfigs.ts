@@ -42,22 +42,41 @@ export function useApiConfigs() {
       phone_number_id: string;
       setActive?: boolean;
     }) => {
-      // Validate with Meta API first
-      const phoneUrl = `https://graph.facebook.com/v18.0/${params.phone_number_id}`;
-      const phoneRes = await fetch(phoneUrl, {
-        headers: { Authorization: `Bearer ${params.access_token}` },
-      });
+      // Validate with Meta API - check both phone and WABA account status
+      const [phoneRes, wabaRes] = await Promise.all([
+        fetch(`https://graph.facebook.com/v18.0/${params.phone_number_id}?fields=display_phone_number,quality_rating,status,account_mode`, {
+          headers: { Authorization: `Bearer ${params.access_token}` },
+        }),
+        fetch(`https://graph.facebook.com/v18.0/${params.waba_id}?fields=name,account_review_status`, {
+          headers: { Authorization: `Bearer ${params.access_token}` },
+        }),
+      ]);
 
       let statusMessage = "";
       let isValidated = false;
 
-      if (phoneRes.ok) {
-        const phoneData = await phoneRes.json();
-        statusMessage = `✅ Sistema conectado com sucesso nessa API — ${phoneData.display_phone_number || params.name}`;
-        isValidated = true;
+      if (!phoneRes.ok) {
+        const errData = await phoneRes.json().catch(() => ({}));
+        statusMessage = `❌ Falha na conexão: ${(errData as any).error?.message || "Erro desconhecido"}`;
       } else {
-        const errData = await phoneRes.json();
-        statusMessage = `❌ Falha na conexão: ${errData.error?.message || "Erro desconhecido"}`;
+        const phoneData = await phoneRes.json();
+        const wabaData = wabaRes.ok ? await wabaRes.json() : null;
+        const accountStatus = wabaData?.account_review_status;
+        const phoneStatus = phoneData.status;
+
+        if (accountStatus === "DISABLED" || accountStatus === "PENDING_DELETION") {
+          statusMessage = `❌ Conta desativada pela Meta — ${wabaData?.name || params.name}. Status da conta: ${accountStatus}`;
+        } else if (phoneStatus === "BANNED" || phoneStatus === "RESTRICTED") {
+          statusMessage = `❌ Número ${phoneStatus === "BANNED" ? "banido" : "restrito"} — ${phoneData.display_phone_number || params.name}. Envio bloqueado.`;
+        } else if (phoneStatus === "FLAGGED") {
+          statusMessage = `⚠️ Número sinalizado (FLAGGED) — ${phoneData.display_phone_number || params.name}. Qualidade: ${phoneData.quality_rating || "N/A"}`;
+          isValidated = true; // Flagged can still send
+        } else if (phoneStatus === "RATE_LIMITED") {
+          statusMessage = `⚠️ Número com limite de taxa — ${phoneData.display_phone_number || params.name}`;
+        } else {
+          statusMessage = `✅ Conectada — ${phoneData.display_phone_number || params.name} | Conta: ${accountStatus || "OK"} | Qualidade: ${phoneData.quality_rating || "N/A"}`;
+          isValidated = true;
+        }
       }
 
       const { data, error } = await supabase
@@ -148,21 +167,40 @@ export function useApiConfigs() {
       const config = configs.find((c) => c.id === configId);
       if (!config) throw new Error("Configuração não encontrada");
 
-      const phoneUrl = `https://graph.facebook.com/v18.0/${config.phone_number_id}`;
-      const phoneRes = await fetch(phoneUrl, {
-        headers: { Authorization: `Bearer ${config.access_token}` },
-      });
+      const [phoneRes, wabaRes] = await Promise.all([
+        fetch(`https://graph.facebook.com/v18.0/${config.phone_number_id}?fields=display_phone_number,quality_rating,status,account_mode`, {
+          headers: { Authorization: `Bearer ${config.access_token}` },
+        }),
+        fetch(`https://graph.facebook.com/v18.0/${config.waba_id}?fields=name,account_review_status`, {
+          headers: { Authorization: `Bearer ${config.access_token}` },
+        }),
+      ]);
 
       let statusMessage = "";
       let isValidated = false;
 
-      if (phoneRes.ok) {
-        const phoneData = await phoneRes.json();
-        statusMessage = `✅ Sistema conectado com sucesso nessa API — ${phoneData.display_phone_number || config.name}`;
-        isValidated = true;
+      if (!phoneRes.ok) {
+        const errData = await phoneRes.json().catch(() => ({}));
+        statusMessage = `❌ Falha na conexão: ${(errData as any).error?.message || "Erro desconhecido"}`;
       } else {
-        const errData = await phoneRes.json();
-        statusMessage = `❌ Falha na conexão: ${errData.error?.message || "Erro desconhecido"}`;
+        const phoneData = await phoneRes.json();
+        const wabaData = wabaRes.ok ? await wabaRes.json() : null;
+        const accountStatus = wabaData?.account_review_status;
+        const phoneStatus = phoneData.status;
+
+        if (accountStatus === "DISABLED" || accountStatus === "PENDING_DELETION") {
+          statusMessage = `❌ Conta desativada pela Meta — ${wabaData?.name || config.name}. Status da conta: ${accountStatus}`;
+        } else if (phoneStatus === "BANNED" || phoneStatus === "RESTRICTED") {
+          statusMessage = `❌ Número ${phoneStatus === "BANNED" ? "banido" : "restrito"} — ${phoneData.display_phone_number || config.name}. Envio bloqueado.`;
+        } else if (phoneStatus === "FLAGGED") {
+          statusMessage = `⚠️ Número sinalizado (FLAGGED) — ${phoneData.display_phone_number || config.name}. Qualidade: ${phoneData.quality_rating || "N/A"}`;
+          isValidated = true;
+        } else if (phoneStatus === "RATE_LIMITED") {
+          statusMessage = `⚠️ Número com limite de taxa — ${phoneData.display_phone_number || config.name}`;
+        } else {
+          statusMessage = `✅ Conectada — ${phoneData.display_phone_number || config.name} | Conta: ${accountStatus || "OK"} | Qualidade: ${phoneData.quality_rating || "N/A"}`;
+          isValidated = true;
+        }
       }
 
       const { error } = await supabase
@@ -198,26 +236,52 @@ export function useApiConfigs() {
     const checkInvalid = async () => {
       for (const config of invalidConfigs) {
         try {
-          const phoneUrl = `https://graph.facebook.com/v18.0/${config.phone_number_id}`;
-          const phoneRes = await fetch(phoneUrl, {
-            headers: { Authorization: `Bearer ${config.access_token}` },
-          });
+          const [phoneRes, wabaRes] = await Promise.all([
+            fetch(`https://graph.facebook.com/v18.0/${config.phone_number_id}?fields=display_phone_number,quality_rating,status`, {
+              headers: { Authorization: `Bearer ${config.access_token}` },
+            }),
+            fetch(`https://graph.facebook.com/v18.0/${config.waba_id}?fields=name,account_review_status`, {
+              headers: { Authorization: `Bearer ${config.access_token}` },
+            }),
+          ]);
 
           if (phoneRes.ok) {
             const phoneData = await phoneRes.json();
-            const statusMessage = `✅ Sistema conectado com sucesso nessa API — ${phoneData.display_phone_number || config.name}`;
+            const wabaData = wabaRes.ok ? await wabaRes.json() : null;
+            const accountStatus = wabaData?.account_review_status;
+            const phoneStatus = phoneData.status;
 
-            await supabase
-              .from("api_configs" as any)
-              .update({ is_validated: true, status_message: statusMessage } as any)
-              .eq("id", config.id);
+            // Only mark as recovered if truly healthy
+            const isDisabled = accountStatus === "DISABLED" || accountStatus === "PENDING_DELETION";
+            const isBanned = phoneStatus === "BANNED" || phoneStatus === "RESTRICTED" || phoneStatus === "RATE_LIMITED";
 
-            toast.success(`🎉 API "${config.name}" desbloqueada!`, {
-              description: "A conexão foi restabelecida automaticamente.",
-              duration: 10000,
-            });
+            if (!isDisabled && !isBanned) {
+              const statusMessage = `✅ Conectada — ${phoneData.display_phone_number || config.name} | Conta: ${accountStatus || "OK"} | Qualidade: ${phoneData.quality_rating || "N/A"}`;
 
-            queryClient.invalidateQueries({ queryKey: ["api-configs"] });
+              await supabase
+                .from("api_configs" as any)
+                .update({ is_validated: true, status_message: statusMessage } as any)
+                .eq("id", config.id);
+
+              toast.success(`🎉 API "${config.name}" desbloqueada!`, {
+                description: statusMessage,
+                duration: 10000,
+              });
+
+              queryClient.invalidateQueries({ queryKey: ["api-configs"] });
+            } else {
+              // Update status message to reflect current problem
+              const statusMessage = isDisabled
+                ? `❌ Conta desativada pela Meta — ${wabaData?.name || config.name}. Status: ${accountStatus}`
+                : `❌ Número ${phoneStatus?.toLowerCase()} — ${phoneData.display_phone_number || config.name}`;
+
+              await supabase
+                .from("api_configs" as any)
+                .update({ status_message: statusMessage } as any)
+                .eq("id", config.id);
+
+              queryClient.invalidateQueries({ queryKey: ["api-configs"] });
+            }
           }
         } catch {
           // Silently ignore - will retry next interval
