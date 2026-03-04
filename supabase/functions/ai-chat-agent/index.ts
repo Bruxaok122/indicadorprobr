@@ -106,10 +106,32 @@ Se o cliente fez uma objeção/pergunta que não está no script base, marque:
 Isso ajuda o sistema a aprender novas respostas.`;
 }
 
-// Human-like delay: 15-45 seconds
+// Human-like delay: 5-15 seconds (fast but not instant)
 function randomDelay(): Promise<void> {
-  const ms = Math.floor(Math.random() * 30000) + 15000;
+  const ms = Math.floor(Math.random() * 10000) + 5000;
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Send "typing" indicator via WhatsApp API
+async function sendTypingIndicator(phoneNumberId: string, accessToken: string, recipientPhone: string): Promise<void> {
+  try {
+    await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: recipientPhone,
+        type: "reaction",
+        status: "typing",
+      }),
+    });
+  } catch (e) {
+    console.warn("Typing indicator failed (non-critical):", e);
+  }
 }
 
 serve(async (req) => {
@@ -223,7 +245,55 @@ serve(async (req) => {
       conversionStats,
     );
 
-    // === HUMAN DELAY: Wait 15-45s before responding ===
+    // === Resolve WhatsApp API config EARLY (needed for typing indicator) ===
+    let accessToken: string | null = null;
+    let phoneNumberId: string | null = null;
+
+    if (contact.dispatched_phone_number_id) {
+      phoneNumberId = contact.dispatched_phone_number_id;
+      const { data: phoneWithApi } = await supabase
+        .from("waba_phone_numbers")
+        .select("api_config_id")
+        .eq("phone_number_id", contact.dispatched_phone_number_id)
+        .maybeSingle();
+      if (phoneWithApi?.api_config_id) {
+        const { data: apiConfig } = await supabase
+          .from("api_configs")
+          .select("access_token")
+          .eq("id", phoneWithApi.api_config_id)
+          .single();
+        accessToken = apiConfig?.access_token || null;
+      }
+    }
+    if (!accessToken) {
+      const { data: activeApi } = await supabase
+        .from("api_configs")
+        .select("access_token, phone_number_id")
+        .eq("is_active", true)
+        .limit(1)
+        .single();
+      if (activeApi) {
+        accessToken = activeApi.access_token;
+        if (!phoneNumberId) phoneNumberId = activeApi.phone_number_id;
+      }
+    }
+    if (!accessToken || !phoneNumberId) {
+      const { data: sharedConfig } = await supabase
+        .from("whatsapp_config")
+        .select("access_token, phone_number_id")
+        .limit(1)
+        .single();
+      if (sharedConfig) {
+        accessToken = sharedConfig.access_token;
+        if (!phoneNumberId) phoneNumberId = sharedConfig.phone_number_id;
+      }
+    }
+    if (!accessToken || !phoneNumberId) throw new Error("No WhatsApp API config available");
+
+    // === Send "typing..." indicator to client ===
+    await sendTypingIndicator(phoneNumberId, accessToken, contact.phone);
+
+    // === HUMAN DELAY: Wait 5-15s before responding ===
     await randomDelay();
 
     // Re-check ai_enabled after delay (operator may have turned it off)
@@ -371,55 +441,7 @@ serve(async (req) => {
       await supabase.from("contacts").update(updateData).eq("id", contactId);
     }
 
-    // === Send WhatsApp message ===
-    let accessToken: string | null = null;
-    let phoneNumberId: string | null = null;
-
-    if (contact.dispatched_phone_number_id) {
-      phoneNumberId = contact.dispatched_phone_number_id;
-      const { data: phoneWithApi } = await supabase
-        .from("waba_phone_numbers")
-        .select("api_config_id")
-        .eq("phone_number_id", contact.dispatched_phone_number_id)
-        .maybeSingle();
-
-      if (phoneWithApi?.api_config_id) {
-        const { data: apiConfig } = await supabase
-          .from("api_configs")
-          .select("access_token")
-          .eq("id", phoneWithApi.api_config_id)
-          .single();
-        accessToken = apiConfig?.access_token || null;
-      }
-    }
-
-    if (!accessToken) {
-      const { data: activeApi } = await supabase
-        .from("api_configs")
-        .select("access_token, phone_number_id")
-        .eq("is_active", true)
-        .limit(1)
-        .single();
-      if (activeApi) {
-        accessToken = activeApi.access_token;
-        if (!phoneNumberId) phoneNumberId = activeApi.phone_number_id;
-      }
-    }
-
-    if (!accessToken || !phoneNumberId) {
-      const { data: sharedConfig } = await supabase
-        .from("whatsapp_config")
-        .select("access_token, phone_number_id")
-        .limit(1)
-        .single();
-      if (sharedConfig) {
-        accessToken = sharedConfig.access_token;
-        if (!phoneNumberId) phoneNumberId = sharedConfig.phone_number_id;
-      }
-    }
-
-    if (!accessToken || !phoneNumberId) throw new Error("No WhatsApp API config available");
-
+    // === Send WhatsApp message (reuse accessToken/phoneNumberId resolved earlier) ===
     const whatsappUrl = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
     const waResponse = await fetch(whatsappUrl, {
       method: "POST",
