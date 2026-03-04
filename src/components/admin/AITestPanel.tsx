@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, Send, RotateCcw, User, Sparkles, AlertTriangle, BookmarkPlus, BookmarkCheck, Brain } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Bot, Send, RotateCcw, User, Sparkles, AlertTriangle, BookmarkPlus, BookmarkCheck, Brain, MessageSquarePlus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,10 @@ export function AITestPanel() {
   const [configOpen, setConfigOpen] = useState(true);
   const [learnedPatterns, setLearnedPatterns] = useState("");
   const [historicalExamples, setHistoricalExamples] = useState("");
+  const [adminInstructions, setAdminInstructions] = useState<Array<{ id: string; client_message: string; ai_response: string }>>([]);
+  const [newRuleTrigger, setNewRuleTrigger] = useState("");
+  const [newRuleResponse, setNewRuleResponse] = useState("");
+  const [instructionsOpen, setInstructionsOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,6 +63,7 @@ export function AITestPanel() {
   useEffect(() => {
     loadLearnedPatterns();
     loadHistoricalExamples();
+    loadAdminInstructions();
   }, [learnedCount]);
 
   async function loadLearnedPatterns() {
@@ -79,47 +85,95 @@ export function AITestPanel() {
   }
 
   async function loadHistoricalExamples() {
-    // Fetch contacts that successfully completed the funnel
+    // Fetch contacts that advanced past initial stage (successful + near-successful)
     const { data: successContacts } = await supabase
       .from("contacts")
-      .select("id, name")
+      .select("id, name, ai_stage, contact_list")
       .in("ai_stage", [
+        "aguardando_dados_bancarios",
+        "aguardando_confirmacao_chamada",
         "pronto_para_compliance",
         "compliance_confirmado",
-        "aguardando_confirmacao_chamada",
       ])
-      .not("bank_data", "is", null)
       .order("updated_at", { ascending: false })
-      .limit(3);
+      .limit(10);
 
     if (!successContacts || successContacts.length === 0) {
       setHistoricalExamples("");
       return;
     }
 
+    // Sort by stage advancement (more advanced = more useful)
+    const stageOrder = ["aguardando_dados_bancarios", "aguardando_confirmacao_chamada", "pronto_para_compliance", "compliance_confirmado"];
+    const sorted = [...successContacts].sort((a, b) => {
+      return stageOrder.indexOf(b.ai_stage || "") - stageOrder.indexOf(a.ai_stage || "");
+    });
+
     const examples: string[] = [];
-    for (const sc of successContacts) {
+    for (const sc of sorted) {
       const { data: convMsgs } = await supabase
         .from("messages")
         .select("direction, content, message_type")
         .eq("contact_id", sc.id)
         .order("created_at", { ascending: true })
-        .limit(20);
+        .limit(25);
 
-      if (!convMsgs || convMsgs.length < 4) continue;
+      if (!convMsgs || convMsgs.length < 3) continue;
 
       const excerpt = convMsgs
         .filter(m => m.content && m.message_type !== "template")
-        .map(m => `${m.direction === "incoming" ? "CLIENTE" : "ADVOGADO"}: ${m.content!.substring(0, 200)}`)
+        .map(m => `${m.direction === "incoming" ? "CLIENTE" : "ADVOGADO"}: ${m.content!.substring(0, 250)}`)
         .join("\n");
 
       if (excerpt.length > 50) {
-        examples.push(`--- Conversa bem-sucedida (cliente "${sc.name?.split(/\s+/)[0]}") ---\n${excerpt}`);
+        const label = sc.ai_stage?.includes("compliance") || sc.ai_stage?.includes("pronto")
+          ? "✅ BEM-SUCEDIDA"
+          : "🔶 QUASE CONVERTEU";
+        examples.push(`--- ${label} (lista: ${sc.contact_list || "?"}) ---\n${excerpt}`);
       }
-      if (examples.length >= 3) break;
+      if (examples.length >= 4) break;
     }
 
     setHistoricalExamples(examples.length > 0 ? examples.join("\n\n") : "");
+  }
+
+  async function loadAdminInstructions() {
+    const { data } = await supabase
+      .from("ai_learning")
+      .select("id, client_message, ai_response")
+      .eq("category", "admin_instruction")
+      .eq("approved", true)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setAdminInstructions(data || []);
+  }
+
+  async function saveAdminInstruction() {
+    if (!newRuleTrigger.trim() || !newRuleResponse.trim()) {
+      toast.error("Preencha o gatilho e a resposta");
+      return;
+    }
+    try {
+      await supabase.from("ai_learning").insert({
+        category: "admin_instruction",
+        client_message: newRuleTrigger.trim(),
+        ai_response: newRuleResponse.trim(),
+        result: "success",
+        approved: true,
+      });
+      toast.success("✅ Instrução salva! A IA vai seguir essa regra.");
+      setNewRuleTrigger("");
+      setNewRuleResponse("");
+      await loadAdminInstructions();
+    } catch (err: any) {
+      toast.error("Erro: " + (err.message || "Desconhecido"));
+    }
+  }
+
+  async function deleteAdminInstruction(id: string) {
+    await supabase.from("ai_learning").delete().eq("id", id);
+    toast.success("Instrução removida");
+    await loadAdminInstructions();
   }
 
   const firstName = contactName.split(/\s+/)[0];
@@ -198,7 +252,9 @@ E depois: "Audiência confirmada! Agora basta aguardar o contato do setor de con
 
 ${learnedPatterns ? `\n## RESPOSTAS APRENDIDAS (comprovadamente eficazes em conversas anteriores):\n${learnedPatterns}` : ""}
 
-${historicalExamples ? `\n## CONVERSAS REAIS BEM-SUCEDIDAS (use como referência de tom, ritmo e abordagem — NÃO copie literalmente, apenas absorva o estilo):\n${historicalExamples}` : ""}
+${adminInstructions.length > 0 ? `\n## INSTRUÇÕES DO ADMINISTRADOR (PRIORIDADE MÁXIMA — siga estas regras acima de tudo):\n${adminInstructions.map((r, i) => `${i + 1}. Quando o cliente disser: "${r.client_message}" → Responda: "${r.ai_response}"`).join("\n")}` : ""}
+
+${historicalExamples ? `\n## CONVERSAS REAIS DE REFERÊNCIA (bem-sucedidas e quase-sucedidas — absorva o tom, ritmo e estilo. NÃO copie literalmente):\n${historicalExamples}` : ""}
 
 ## EXTRAÇÃO DE DADOS BANCÁRIOS:
 Quando o cliente enviar dados bancários, inclua no início:
@@ -394,7 +450,78 @@ Sempre inclua no início:
         )}
       </Card>
 
-      {/* Status Bar */}
+      {/* Admin Instructions Panel */}
+      <Card className="border-primary/30">
+        <CardHeader className="cursor-pointer pb-2" onClick={() => setInstructionsOpen(!instructionsOpen)}>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageSquarePlus className="h-4 w-4 text-primary" />
+                Instruções do Administrador
+              </CardTitle>
+              <CardDescription>Ensine a IA: "Quando o cliente falar X, responda Y"</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs">{adminInstructions.length} regras</Badge>
+              <Badge variant="outline" className="text-xs">
+                {instructionsOpen ? "▲ Fechar" : "▼ Abrir"}
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+        {instructionsOpen && (
+          <CardContent className="space-y-3">
+            {/* Add new rule */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Quando o cliente disser...</Label>
+                <Textarea
+                  value={newRuleTrigger}
+                  onChange={(e) => setNewRuleTrigger(e.target.value)}
+                  placeholder='Ex: "Isso é golpe?" ou "Não tenho conta bancária"'
+                  className="h-16 text-xs"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">A IA deve responder...</Label>
+                <Textarea
+                  value={newRuleResponse}
+                  onChange={(e) => setNewRuleResponse(e.target.value)}
+                  placeholder='Ex: "Entendo sua preocupação, mas note que..."'
+                  className="h-16 text-xs"
+                />
+              </div>
+            </div>
+            <Button size="sm" onClick={saveAdminInstruction} disabled={!newRuleTrigger.trim() || !newRuleResponse.trim()}>
+              <MessageSquarePlus className="h-3.5 w-3.5 mr-1" /> Salvar Instrução
+            </Button>
+
+            {/* Existing rules */}
+            {adminInstructions.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-border">
+                <Label className="text-xs text-muted-foreground">Regras ativas:</Label>
+                {adminInstructions.map((rule) => (
+                  <div key={rule.id} className="flex items-start gap-2 p-2 rounded-lg bg-muted/50 text-xs">
+                    <div className="flex-1 space-y-1">
+                      <p><span className="text-muted-foreground">Cliente:</span> "{rule.client_message}"</p>
+                      <p><span className="text-muted-foreground">IA:</span> "{rule.ai_response}"</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                      onClick={() => deleteAdminInstruction(rule.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary" className="gap-1">
           📍 Estágio: {AI_STAGES[currentStage] || currentStage}
