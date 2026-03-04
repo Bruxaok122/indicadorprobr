@@ -3,11 +3,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { User, Pause, Play, XCircle, Activity } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { User, Pause, Play, XCircle, Activity, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function DispatchMonitor() {
-  const { activeDispatches, handlePause, handleCancel, dismissDispatch } = useDispatchContext();
+  const { activeDispatches, handlePause, handleCancel, dismissDispatch, dispatchControlsRef, loadingFromDb } = useDispatchContext();
 
   const activeOnes = activeDispatches.filter((d) => !d.isFinished);
   const finishedOnes = activeDispatches.filter((d) => d.isFinished);
@@ -24,7 +25,13 @@ export function DispatchMonitor() {
         </p>
       </div>
 
-      {activeDispatches.length === 0 && (
+      {loadingFromDb && (
+        <div className="flex justify-center py-8">
+          <LoadingSpinner size="sm" text="Carregando disparos..." />
+        </div>
+      )}
+
+      {!loadingFromDb && activeDispatches.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <Activity className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
@@ -46,15 +53,19 @@ export function DispatchMonitor() {
             Em andamento ({activeOnes.length})
           </h3>
           <div className="space-y-3">
-            {activeOnes.map((dispatch) => (
-              <DispatchCard
-                key={dispatch.id}
-                dispatch={dispatch}
-                onPause={() => handlePause(dispatch.id)}
-                onCancel={() => handleCancel(dispatch.id)}
-                onDismiss={() => dismissDispatch(dispatch.id)}
-              />
-            ))}
+            {activeOnes.map((dispatch) => {
+              const isLocallyControlled = !!dispatchControlsRef.current[dispatch.id];
+              return (
+                <DispatchCard
+                  key={dispatch.id}
+                  dispatch={dispatch}
+                  isOrphaned={!isLocallyControlled}
+                  onPause={() => handlePause(dispatch.id)}
+                  onCancel={() => handleCancel(dispatch.id)}
+                  onDismiss={() => dismissDispatch(dispatch.id)}
+                />
+              );
+            })}
           </div>
         </div>
       )}
@@ -83,11 +94,13 @@ export function DispatchMonitor() {
 
 function DispatchCard({
   dispatch,
+  isOrphaned = false,
   onPause,
   onCancel,
   onDismiss,
 }: {
   dispatch: ReturnType<typeof useDispatchContext>["activeDispatches"][0];
+  isOrphaned?: boolean;
   onPause: () => void;
   onCancel: () => void;
   onDismiss: () => void;
@@ -113,18 +126,29 @@ function DispatchCard({
               </Badge>
             </div>
             {!dispatch.isFinished ? (
-              <div className="flex gap-1.5 shrink-0">
-                <Button size="sm" variant="outline" onClick={onPause} className="gap-1 h-7 text-xs">
-                  {dispatch.isPaused ? (
-                    <><Play className="h-3 w-3" /> Retomar</>
-                  ) : (
-                    <><Pause className="h-3 w-3" /> Pausar</>
-                  )}
-                </Button>
-                <Button size="sm" variant="destructive" onClick={onCancel} className="gap-1 h-7 text-xs">
-                  <XCircle className="h-3 w-3" /> Cancelar
-                </Button>
-              </div>
+              isOrphaned ? (
+                <div className="flex items-center gap-2 shrink-0">
+                  <Badge variant="outline" className="text-[10px] gap-1 text-yellow-500 border-yellow-500/30">
+                    <AlertTriangle className="h-3 w-3" /> Sessão perdida
+                  </Badge>
+                  <Button size="sm" variant="ghost" onClick={onDismiss} className="h-7 text-xs text-muted-foreground">
+                    Remover
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-1.5 shrink-0">
+                  <Button size="sm" variant="outline" onClick={onPause} className="gap-1 h-7 text-xs">
+                    {dispatch.isPaused ? (
+                      <><Play className="h-3 w-3" /> Retomar</>
+                    ) : (
+                      <><Pause className="h-3 w-3" /> Pausar</>
+                    )}
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={onCancel} className="gap-1 h-7 text-xs">
+                    <XCircle className="h-3 w-3" /> Cancelar
+                  </Button>
+                </div>
+              )
             ) : (
               <Button size="sm" variant="ghost" onClick={onDismiss} className="h-7 text-xs text-muted-foreground">
                 Fechar
