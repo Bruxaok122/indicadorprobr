@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Users, UserPlus, Radio, Mic, HeartPulse, Zap, Activity } from "lucide-react";
+import { Users, UserPlus, Radio, Mic, HeartPulse, Zap, Activity, FileText } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -27,6 +27,7 @@ import AdminContatosPage from "@/pages/AdminContatosPage";
 import AdminAudioPage from "@/pages/AdminAudioPage";
 import { ApiConfigsSection } from "@/components/admin/ApiConfigsSection";
 import { DispatchMonitor } from "@/components/admin/DispatchMonitor";
+import { AdminFichasPanel } from "@/components/admin/AdminFichasPanel";
 
 function AdminPageInner() {
   const navigate = useNavigate();
@@ -97,6 +98,9 @@ function AdminPageInner() {
             </TabsTrigger>
             <TabsTrigger value="acompanhamento" className="gap-1.5">
               <Activity className="h-4 w-4" /> Acompanhamento
+            </TabsTrigger>
+            <TabsTrigger value="fichas" className="gap-1.5">
+              <FileText className="h-4 w-4" /> Fichas
             </TabsTrigger>
           </TabsList>
 
@@ -191,6 +195,11 @@ function AdminPageInner() {
           <TabsContent value="acompanhamento" className="mt-4">
             <DispatchMonitor />
           </TabsContent>
+
+          <TabsContent value="fichas" className="mt-4">
+            <AdminFichasPanel />
+          </TabsContent>
+
 
         </Tabs>
 
