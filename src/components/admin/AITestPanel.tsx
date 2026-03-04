@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, Send, RotateCcw, User, Sparkles, AlertTriangle } from "lucide-react";
+import { Bot, Send, RotateCcw, User, Sparkles, AlertTriangle, BookmarkPlus, BookmarkCheck, Brain } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,8 @@ interface SimMessage {
   stage?: string;
   bankData?: Record<string, string>;
   timestamp: Date;
+  saved?: boolean;
+  previousUserMessage?: string;
 }
 
 const AI_STAGES: Record<string, string> = {
@@ -33,6 +35,7 @@ export function AITestPanel() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentStage, setCurrentStage] = useState("aguardando_confirmacao_doc");
   const [bankData, setBankData] = useState<Record<string, string> | null>(null);
+  const [learnedCount, setLearnedCount] = useState(0);
 
   // Simulated contact config
   const [contactName, setContactName] = useState("João Carlos Silva");
@@ -41,6 +44,7 @@ export function AITestPanel() {
   const [cpf, setCpf] = useState("123.456.789-00");
   const [valorCausa, setValorCausa] = useState("15000.00");
   const [configOpen, setConfigOpen] = useState(true);
+  const [learnedPatterns, setLearnedPatterns] = useState("");
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -49,6 +53,29 @@ export function AITestPanel() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Load learned patterns on mount and when count changes
+  useEffect(() => {
+    loadLearnedPatterns();
+  }, [learnedCount]);
+
+  async function loadLearnedPatterns() {
+    const { data } = await supabase
+      .from("ai_learning")
+      .select("category, client_message, ai_response, from_stage, times_used")
+      .eq("approved", true)
+      .eq("result", "success")
+      .order("times_used", { ascending: false })
+      .limit(20);
+
+    if (data && data.length > 0) {
+      const patterns = data.map((p, i) => 
+        `${i + 1}. [${p.category}] Estágio: ${p.from_stage || "qualquer"} | Usado ${p.times_used}x\n   Cliente: "${p.client_message}"\n   Resposta eficaz: "${p.ai_response}"`
+      ).join("\n\n");
+      setLearnedPatterns(patterns);
+      setLearnedCount(data.length);
+    }
+  }
 
   const firstName = contactName.split(/\s+/)[0];
   const firstNameFormatted = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
@@ -124,6 +151,8 @@ E depois: "Audiência confirmada! Agora basta aguardar o contato do setor de con
 **"Pode ser amanhã?"**
 → "Pode sim. Mas o lote de pagamentos do Tribunal fecha às 18hrs. Se não confirmarmos agora, o valor retorna para a conta judicial e o novo agendamento pode levar de 7 a 15 dias úteis. Consegue 10 minutinhos agora?"
 
+${learnedPatterns ? `\n## RESPOSTAS APRENDIDAS (comprovadamente eficazes em conversas anteriores):\n${learnedPatterns}` : ""}
+
 ## EXTRAÇÃO DE DADOS BANCÁRIOS:
 Quando o cliente enviar dados bancários, inclua no início:
 ##BANK_DATA:{"banco":"nome","agencia":"numero","conta":"numero","tipo":"corrente ou poupanca"}##
@@ -135,6 +164,54 @@ Se o cliente mencionar um valor monetário que ainda não estava nos dados:
 ## DETECÇÃO DE ESTÁGIO:
 Sempre inclua no início:
 ##STAGE:nome_do_estagio##`;
+  }
+
+  async function saveAsLearning(aiMsg: SimMessage, index: number) {
+    // Find the user message right before this AI response
+    const prevUserMsg = messages.slice(0, index).reverse().find(m => m.role === "user");
+    if (!prevUserMsg) {
+      toast.error("Não encontrou a mensagem do cliente anterior");
+      return;
+    }
+
+    try {
+      // Check if similar pattern already exists
+      const { data: existing } = await supabase
+        .from("ai_learning")
+        .select("id, times_used")
+        .eq("client_message", prevUserMsg.content.substring(0, 500))
+        .eq("from_stage", aiMsg.stage || currentStage)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from("ai_learning")
+          .update({ 
+            times_used: (existing.times_used || 1) + 1, 
+            ai_response: aiMsg.content.substring(0, 500),
+            updated_at: new Date().toISOString() 
+          })
+          .eq("id", existing.id);
+        toast.success("Padrão atualizado (+1 uso)");
+      } else {
+        await supabase.from("ai_learning").insert({
+          category: "trained_response",
+          client_message: prevUserMsg.content.substring(0, 500),
+          ai_response: aiMsg.content.substring(0, 500),
+          result: "success",
+          from_stage: aiMsg.stage || currentStage,
+          approved: true,
+        });
+        toast.success("✅ Resposta salva como padrão aprovado!");
+      }
+
+      // Mark as saved in UI
+      setMessages(prev => prev.map((m, i) => i === index ? { ...m, saved: true } : m));
+      
+      // Reload patterns
+      await loadLearnedPatterns();
+    } catch (err: any) {
+      toast.error("Erro ao salvar: " + (err.message || "Desconhecido"));
+    }
   }
 
   async function sendMessage() {
@@ -280,6 +357,10 @@ Sempre inclua no início:
             🏦 {bankData.banco || "?"} | Ag: {bankData.agencia || "?"} | Cc: {bankData.conta || "?"}
           </Badge>
         )}
+        <Badge variant="outline" className="gap-1">
+          <Brain className="h-3 w-3" />
+          {learnedCount} padrões aprendidos
+        </Badge>
         <div className="ml-auto">
           <Button variant="outline" size="sm" onClick={resetConversation}>
             <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reiniciar
@@ -308,18 +389,41 @@ Sempre inclua no início:
                       </div>
                     </div>
                   )}
-                  <div
-                    className={cn(
-                      "max-w-[75%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
-                      msg.role === "assistant"
-                        ? "bg-muted text-foreground rounded-tl-sm"
-                        : "bg-accent text-accent-foreground rounded-tr-sm"
+                  <div className="flex flex-col gap-1 max-w-[75%]">
+                    <div
+                      className={cn(
+                        "rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
+                        msg.role === "assistant"
+                          ? "bg-muted text-foreground rounded-tl-sm"
+                          : "bg-accent text-accent-foreground rounded-tr-sm"
+                      )}
+                    >
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      <p className="text-[10px] opacity-50 mt-1 text-right">
+                        {msg.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                    {/* Save as learning button for AI messages */}
+                    {msg.role === "assistant" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                          "h-6 text-[10px] px-2 w-fit gap-1 self-start",
+                          msg.saved 
+                            ? "text-green-500 hover:text-green-500" 
+                            : "text-muted-foreground hover:text-accent"
+                        )}
+                        onClick={() => saveAsLearning(msg, i)}
+                        disabled={msg.saved}
+                      >
+                        {msg.saved ? (
+                          <><BookmarkCheck className="h-3 w-3" /> Salvo</>
+                        ) : (
+                          <><BookmarkPlus className="h-3 w-3" /> Salvar como padrão</>
+                        )}
+                      </Button>
                     )}
-                  >
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
-                    <p className="text-[10px] opacity-50 mt-1 text-right">
-                      {msg.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                    </p>
                   </div>
                   {msg.role === "user" && (
                     <div className="flex-shrink-0 mt-1">
@@ -366,11 +470,12 @@ Sempre inclua no início:
         </CardContent>
       </Card>
 
-      <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-        <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+      <div className="flex items-start gap-2 p-3 rounded-lg bg-accent/10 border border-accent/20">
+        <Brain className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
         <p className="text-xs text-muted-foreground">
-          Este é um ambiente de simulação local. Nenhuma mensagem é enviada via WhatsApp. 
-          Use para testar e refinar as respostas da IA antes de ativar em contatos reais.
+          <strong>Treinamento ativo:</strong> Clique em "Salvar como padrão" nas respostas que considerar boas. 
+          Elas serão incorporadas ao prompt da IA em conversas reais e futuras simulações. 
+          Quanto mais padrões aprovados, mais inteligente a IA fica.
         </p>
       </div>
     </div>
