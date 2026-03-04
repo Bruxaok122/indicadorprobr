@@ -159,17 +159,32 @@ export function ApiConfigsSection() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex items-center gap-2 text-sm">
-                  {config.is_validated ? (
-                    <CheckCircle2 className="h-4 w-4 text-primary" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-destructive" />
-                  )}
-                  <span className={config.is_validated ? "text-primary" : "text-destructive"}>
-                    {config.status_message || (config.is_validated ? "Conectada" : "Não validada")}
-                  </span>
+              <CardContent className="pt-0 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={
+                      config.is_validated
+                        ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30 gap-1.5"
+                        : "bg-destructive/10 text-destructive border-destructive/30 gap-1.5"
+                    }
+                  >
+                    {config.is_validated ? (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5" />
+                    )}
+                    {config.is_validated ? "Conectada" : "Bloqueada / Offline"}
+                  </Badge>
                 </div>
+                {config.status_message && (
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {config.status_message}
+                  </p>
+                )}
+                <p className="text-[10px] text-muted-foreground/60">
+                  Atualizado: {new Date(config.updated_at).toLocaleString("pt-BR")}
+                </p>
               </CardContent>
             </Card>
           ))}
