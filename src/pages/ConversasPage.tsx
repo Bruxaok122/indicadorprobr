@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { useContacts } from "@/hooks/useContacts";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useNotificationSound } from "@/hooks/useNotificationSound";
 import { MessageSquare, Send, Upload, FileText, FileImage } from "lucide-react";
 
 import { ChatContactList } from "@/components/chat/ChatContactList";
@@ -38,6 +39,7 @@ export default function ConversasPage() {
   const { templates } = useMetaTemplates();
   const { phones } = useWabaPhones();
   const isMobile = useIsMobile();
+  const { enabled: notificationEnabled, toggle: toggleNotification, play: playNotification } = useNotificationSound();
 
   const [search, setSearch] = useState("");
   const [selectedContactId, setSelectedContactId] = useState<string | null>(searchParams.get("contact"));
@@ -51,6 +53,7 @@ export default function ConversasPage() {
   const [selectedTemplateName, setSelectedTemplateName] = useState("");
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
+  const prevIncomingCountRef = useRef<number | null>(null);
 
   const {
     messages, isLoading: messagesLoading, sendMessage, isSending, canSendFreeText, hasMessages, sendAudio, isSendingAudio,
@@ -104,6 +107,15 @@ export default function ConversasPage() {
     else setSearchParams({}, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContactId]);
+
+  // Play notification sound on new incoming messages
+  useEffect(() => {
+    const incomingCount = contacts.filter(c => c.status === "aguardando").length;
+    if (prevIncomingCountRef.current !== null && incomingCount > prevIncomingCountRef.current) {
+      playNotification();
+    }
+    prevIncomingCountRef.current = incomingCount;
+  }, [contacts, playNotification]);
 
   const handleSendMessage = () => {
     if (!messageText.trim() || !selectedContactId) return;
@@ -192,6 +204,8 @@ export default function ConversasPage() {
               onLogout={!isAdmin ? signOut : undefined}
               onClearAll={() => { setSelectedContactId(null); clearAllContacts(); }}
               isClearingAll={isClearingAll}
+              notificationEnabled={notificationEnabled}
+              onToggleNotification={toggleNotification}
             />
           </div>
 

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2 } from "lucide-react";
+import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -39,6 +39,8 @@ interface ChatContactListProps {
   onLogout?: () => void;
   onClearAll?: () => void;
   isClearingAll?: boolean;
+  notificationEnabled?: boolean;
+  onToggleNotification?: () => void;
 }
 
 function formatMessageTime(dateStr: string): string {
@@ -97,6 +99,8 @@ export function ChatContactList({
   onLogout,
   onClearAll,
   isClearingAll,
+  notificationEnabled,
+  onToggleNotification,
 }: ChatContactListProps) {
   const [activeTab, setActiveTab] = useState<TabFilter>("todos");
 
@@ -161,6 +165,15 @@ export function ChatContactList({
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
+              {onToggleNotification && (
+                <button
+                  onClick={onToggleNotification}
+                  className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+                  title={notificationEnabled ? "Desativar som de notificação" : "Ativar som de notificação"}
+                >
+                  {notificationEnabled ? <Volume2 className="h-3.5 w-3.5 text-green-500" /> : <VolumeOff className="h-3.5 w-3.5 text-muted-foreground" />}
+                </button>
+              )}
               {onToggleTheme && (
                 <button
                   onClick={onToggleTheme}
