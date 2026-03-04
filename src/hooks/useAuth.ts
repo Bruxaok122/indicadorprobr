@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { Profile, UserRole } from "@/types/juriszap";
-import { generateDeviceFingerprint, getDeviceInfo, clearCachedFingerprint } from "@/lib/deviceFingerprint";
+import { generateDeviceFingerprint, getDeviceInfo } from "@/lib/deviceFingerprint";
 import { toast } from "sonner";
 
 interface AuthState {
@@ -445,9 +445,6 @@ export function useAuth() {
     } catch (error) {
       console.error("Error deactivating device session:", error);
     }
-
-    // Clear cached fingerprint so next login recalculates
-    clearCachedFingerprint();
 
     await supabase.auth.signOut();
   };
