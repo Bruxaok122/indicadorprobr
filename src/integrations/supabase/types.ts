@@ -98,6 +98,86 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_conversion_logs: {
+        Row: {
+          contact_id: string
+          created_at: string
+          from_stage: string
+          id: string
+          messages_in_stage: number | null
+          response_time_seconds: number | null
+          to_stage: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          from_stage: string
+          id?: string
+          messages_in_stage?: number | null
+          response_time_seconds?: number | null
+          to_stage: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          from_stage?: string
+          id?: string
+          messages_in_stage?: number | null
+          response_time_seconds?: number | null
+          to_stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_conversion_logs_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_learning: {
+        Row: {
+          ai_response: string
+          approved: boolean
+          category: string
+          client_message: string
+          created_at: string
+          from_stage: string | null
+          id: string
+          result: string
+          times_used: number
+          to_stage: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_response: string
+          approved?: boolean
+          category?: string
+          client_message: string
+          created_at?: string
+          from_stage?: string | null
+          id?: string
+          result?: string
+          times_used?: number
+          to_stage?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_response?: string
+          approved?: boolean
+          category?: string
+          client_message?: string
+          created_at?: string
+          from_stage?: string | null
+          id?: string
+          result?: string
+          times_used?: number
+          to_stage?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       api_configs: {
         Row: {
           access_token: string
