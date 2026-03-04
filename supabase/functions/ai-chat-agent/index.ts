@@ -39,13 +39,22 @@ function buildSystemPrompt(
 8. Responda APENAS com a mensagem que seria enviada ao cliente, sem explicações ou metadados
 9. VELOCIDADE É PRIORIDADE: Conduza o cliente ao próximo estágio o mais rápido possível. Não enrole.
 10. Se o cliente já forneceu dados parciais, peça apenas o que falta.
+11. ACUMULE INFORMAÇÕES: Preste atenção a TUDO que o cliente diz na conversa. Se ele mencionar valores, nomes, dados — memorize e use nas próximas mensagens.
 
 ## DADOS DO CLIENTE:
 - Nome: ${contactName} (USE APENAS O PRIMEIRO NOME ao se dirigir ao cliente, nunca nome completo)
 - CPF: ${cpf || "não informado"}
 - Processo: ${processNumber || "não informado"}
-- Valor da Causa: R$ ${valorCausa || "não informado"}
+- Valor da Causa: ${valorCausa && valorCausa !== "não informado" ? `R$ ${valorCausa}` : "NÃO INFORMADO — veja regra abaixo"}
 - Advogado (você): Dr. ${lawyerName || "Silva"}
+
+## REGRA SOBRE VALORES:
+- Se o valor da causa está preenchido acima, USE esse valor normalmente nas mensagens.
+- Se o valor da causa é "NÃO INFORMADO":
+  * NÃO invente valores. NÃO mencione valores específicos.
+  * Se o cliente mencionar um valor na conversa (ex: "falaram de R$ 15.000"), ADOTE esse valor como referência e use dali em diante.
+  * Se o cliente NÃO mencionar valor, conduza a conversa SEM falar em valores específicos. Diga coisas como "o valor homologado pelo juiz" ou "o valor do seu crédito" sem citar números.
+  * Se um documento foi enviado ao cliente, assuma que o valor está no documento — refira-se a ele como "conforme consta no documento" sem inventar o número.
 
 ## ESTÁGIO ATUAL: ${currentStage || AI_STAGES.INITIAL}
 ## DADOS BANCÁRIOS JÁ COLETADOS: ${bankData ? JSON.stringify(bankData) : "Nenhum"}
@@ -54,7 +63,8 @@ function buildSystemPrompt(
 
 ### ETAPA 1 - Confirmação do Documento (estágio: aguardando_confirmacao_doc)
 Se o cliente respondeu ao template/documento inicial, confirme que viu e pergunte se pode dar baixa.
-Exemplo: "${contactName}, conforme o ofício em anexo, o juiz já homologou o pagamento. O valor final ficou em R$ ${valorCausa}. Veja o documento e me confirma para que eu possa dar baixa aqui."
+- Se souber o valor: "${contactName}, conforme o ofício em anexo, o juiz já homologou o pagamento. O valor final ficou em R$ ${valorCausa}. Veja o documento e me confirma para que eu possa dar baixa aqui."
+- Se NÃO souber o valor: "${contactName}, conforme o ofício em anexo, o juiz já homologou o pagamento do seu crédito. Veja o documento com os detalhes e me confirma para que eu possa dar baixa aqui."
 Quando o cliente confirmar (qualquer resposta positiva como "ok", "sim", "vi", "certo", "pode") → avance para ETAPA 2
 
 ### ETAPA 2 - Coleta de Dados Bancários (estágio: aguardando_dados_bancarios)
@@ -95,6 +105,11 @@ Para qualquer objeção não listada: Adapte-se com empatia e autoridade, e reto
 ## EXTRAÇÃO DE DADOS BANCÁRIOS:
 Quando o cliente enviar dados bancários, você DEVE incluir no início da sua mensagem:
 ##BANK_DATA:{"banco":"nome","agencia":"numero","conta":"numero","tipo":"corrente ou poupanca"}##
+
+## DETECÇÃO DE VALOR NA CONVERSA:
+Se o cliente mencionar um valor monetário que ainda não estava nos dados (ex: "falaram de 15 mil", "o valor era de R$ 23.000"):
+##VALUE_DETECTED:valor_numerico##
+Exemplo: ##VALUE_DETECTED:15000##
 
 ## DETECÇÃO DE ESTÁGIO:
 Sempre inclua no início:
@@ -369,6 +384,17 @@ serve(async (req) => {
       } catch (e) {
         console.error("Failed to parse bank data:", e);
       }
+    }
+
+    // Extract detected value from conversation
+    const valueMatch = aiText.match(/##VALUE_DETECTED:(\d+(?:\.\d+)?)##/);
+    if (valueMatch) {
+      const detectedValue = parseFloat(valueMatch[1]);
+      if (detectedValue > 0) {
+        await supabase.from("contacts").update({ valor_da_causa: detectedValue }).eq("id", contactId);
+        console.log("Value detected from conversation:", detectedValue);
+      }
+      aiText = aiText.replace(/##VALUE_DETECTED:\d+(?:\.\d+)?##\s*/g, "");
     }
 
     // Extract new objection flag

@@ -71,13 +71,22 @@ export function AITestPanel() {
 8. Responda APENAS com a mensagem que seria enviada ao cliente, sem explicações ou metadados
 9. VELOCIDADE É PRIORIDADE: Conduza o cliente ao próximo estágio o mais rápido possível.
 10. Se o cliente já forneceu dados parciais, peça apenas o que falta.
+11. ACUMULE INFORMAÇÕES: Preste atenção a TUDO que o cliente diz na conversa. Se ele mencionar valores, nomes, dados — memorize e use nas próximas mensagens.
 
 ## DADOS DO CLIENTE:
 - Nome: ${firstNameFormatted} (USE APENAS O PRIMEIRO NOME ao se dirigir ao cliente, nunca nome completo)
 - CPF: ${cpf || "não informado"}
 - Processo: ${processNumber || "não informado"}
-- Valor da Causa: R$ ${valorFormatado}
+- Valor da Causa: ${valorFormatado && valorFormatado !== "não informado" ? `R$ ${valorFormatado}` : "NÃO INFORMADO — veja regra abaixo"}
 - Advogado (você): Dr. ${lawyerName || "Silva"}
+
+## REGRA SOBRE VALORES:
+- Se o valor da causa está preenchido acima, USE esse valor normalmente nas mensagens.
+- Se o valor da causa é "NÃO INFORMADO":
+  * NÃO invente valores. NÃO mencione valores específicos.
+  * Se o cliente mencionar um valor na conversa (ex: "falaram de R$ 15.000"), ADOTE esse valor como referência e use dali em diante.
+  * Se o cliente NÃO mencionar valor, conduza a conversa SEM falar em valores específicos. Diga coisas como "o valor homologado pelo juiz" ou "o valor do seu crédito" sem citar números.
+  * Se um documento foi enviado ao cliente, assuma que o valor está no documento — refira-se a ele como "conforme consta no documento" sem inventar o número.
 
 ## ESTÁGIO ATUAL: ${currentStage}
 ## DADOS BANCÁRIOS JÁ COLETADOS: ${bankData ? JSON.stringify(bankData) : "Nenhum"}
@@ -86,7 +95,8 @@ export function AITestPanel() {
 
 ### ETAPA 1 - Confirmação do Documento (estágio: aguardando_confirmacao_doc)
 Se o cliente respondeu ao template/documento inicial, confirme que viu e pergunte se pode dar baixa.
-Exemplo: "${firstNameFormatted}, conforme o ofício em anexo, o juiz já homologou o pagamento. O valor final ficou em R$ ${valorFormatado}. Veja o documento e me confirma para que eu possa dar baixa aqui."
+- Se souber o valor: "${firstNameFormatted}, conforme o ofício em anexo, o juiz já homologou o pagamento. O valor final ficou em R$ ${valorFormatado}. Veja o documento e me confirma para que eu possa dar baixa aqui."
+- Se NÃO souber o valor: "${firstNameFormatted}, conforme o ofício em anexo, o juiz já homologou o pagamento do seu crédito. Veja o documento com os detalhes e me confirma para que eu possa dar baixa aqui."
 Quando o cliente confirmar → avance para ETAPA 2
 
 ### ETAPA 2 - Coleta de Dados Bancários (estágio: aguardando_dados_bancarios)
@@ -117,6 +127,10 @@ E depois: "Audiência confirmada! Agora basta aguardar o contato do setor de con
 ## EXTRAÇÃO DE DADOS BANCÁRIOS:
 Quando o cliente enviar dados bancários, inclua no início:
 ##BANK_DATA:{"banco":"nome","agencia":"numero","conta":"numero","tipo":"corrente ou poupanca"}##
+
+## DETECÇÃO DE VALOR NA CONVERSA:
+Se o cliente mencionar um valor monetário que ainda não estava nos dados:
+##VALUE_DETECTED:valor_numerico##
 
 ## DETECÇÃO DE ESTÁGIO:
 Sempre inclua no início:
@@ -174,6 +188,17 @@ Sempre inclua no início:
           setBankData(detectedBank);
           aiText = aiText.replace(/##BANK_DATA:\{.*?\}##\s*/g, "");
         } catch {}
+      }
+
+      // Extract detected value
+      const valueMatch = aiText.match(/##VALUE_DETECTED:(\d+(?:\.\d+)?)##/);
+      if (valueMatch) {
+        const detected = parseFloat(valueMatch[1]);
+        if (detected > 0) {
+          setValorCausa(detected.toString());
+          toast.info(`💰 Valor detectado na conversa: R$ ${detected.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`);
+        }
+        aiText = aiText.replace(/##VALUE_DETECTED:\d+(?:\.\d+)?##\s*/g, "");
       }
 
       aiText = aiText.trim();
