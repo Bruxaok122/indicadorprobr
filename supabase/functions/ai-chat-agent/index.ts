@@ -127,9 +127,9 @@ Se o cliente fez uma objeção/pergunta que não está no script base, marque:
 Isso ajuda o sistema a aprender novas respostas.`;
 }
 
-// Human-like delay: 5-15 seconds (fast but not instant)
+// Human-like delay: 3-7 seconds (fast and natural)
 function randomDelay(): Promise<void> {
-  const ms = Math.floor(Math.random() * 10000) + 5000;
+  const ms = Math.floor(Math.random() * 4000) + 3000;
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
