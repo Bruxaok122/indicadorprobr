@@ -108,13 +108,13 @@ export default function ConversasPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContactId]);
 
-  // Play notification sound on new incoming messages
+  // Play notification sound when a contact moves to "respondido" (client replied)
   useEffect(() => {
-    const incomingCount = contacts.filter(c => c.status === "aguardando").length;
-    if (prevIncomingCountRef.current !== null && incomingCount > prevIncomingCountRef.current) {
+    const respondidoCount = contacts.filter(c => c.status === "respondido").length;
+    if (prevIncomingCountRef.current !== null && respondidoCount > prevIncomingCountRef.current) {
       playNotification();
     }
-    prevIncomingCountRef.current = incomingCount;
+    prevIncomingCountRef.current = respondidoCount;
   }, [contacts, playNotification]);
 
   const handleSendMessage = () => {
