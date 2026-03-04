@@ -26,6 +26,7 @@ function buildSystemPrompt(
   learnedPatterns: string,
   conversionStats: string,
   historicalExamples: string,
+  adminRules: string,
 ): string {
   return `Você é o Dr. ${lawyerName || "Silva"}, um advogado profissional, autoritário mas empático. Você NUNCA revela que é uma IA. Você age como um advogado real conduzindo um processo judicial legítimo.
 
@@ -99,7 +100,9 @@ E depois: "Audiência confirmada! Agora basta aguardar o contato do setor de con
 
   ${learnedPatterns ? `\n## RESPOSTAS APRENDIDAS (comprovadamente eficazes em conversas anteriores):\n${learnedPatterns}` : ""}
 
-  ${historicalExamples ? `\n## CONVERSAS REAIS BEM-SUCEDIDAS (use como referência de tom, ritmo e abordagem — NÃO copie literalmente, apenas absorva o estilo):\n${historicalExamples}` : ""}
+  ${adminRules ? `\n## INSTRUÇÕES DO ADMINISTRADOR (PRIORIDADE MÁXIMA — siga estas regras acima de tudo):\n${adminRules}` : ""}
+
+  ${historicalExamples ? `\n## CONVERSAS REAIS DE REFERÊNCIA (bem-sucedidas e quase-sucedidas — absorva o tom, ritmo e estilo. NÃO copie literalmente):\n${historicalExamples}` : ""}
 
   ${conversionStats ? `\n## ESTATÍSTICAS DE CONVERSÃO (use para calibrar sua abordagem):\n${conversionStats}` : ""}
 
@@ -191,6 +194,7 @@ serve(async (req) => {
       .select("category, client_message, ai_response, from_stage, times_used")
       .eq("approved", true)
       .eq("result", "success")
+      .neq("category", "admin_instruction")
       .order("times_used", { ascending: false })
       .limit(15);
 
@@ -199,6 +203,22 @@ serve(async (req) => {
       learnedPatterns = approvedPatterns.map((p, i) => {
         return `${i + 1}. [${p.category}] Estágio: ${p.from_stage || "qualquer"} | Usado ${p.times_used}x\n   Cliente: "${p.client_message}"\n   Resposta eficaz: "${p.ai_response}"`;
       }).join("\n\n");
+    }
+
+    // === LEARNING: Fetch admin custom instructions ===
+    const { data: adminInstructions } = await supabase
+      .from("ai_learning")
+      .select("client_message, ai_response")
+      .eq("category", "admin_instruction")
+      .eq("approved", true)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    let adminRules = "";
+    if (adminInstructions && adminInstructions.length > 0) {
+      adminRules = adminInstructions.map((r, i) => 
+        `${i + 1}. Quando o cliente disser: "${r.client_message}" → Responda: "${r.ai_response}"`
+      ).join("\n");
     }
 
     // === LEARNING: Fetch conversion stats ===
@@ -223,47 +243,59 @@ serve(async (req) => {
       }).join("\n");
     }
 
-    // === LEARNING: Fetch REAL successful conversations as examples ===
-    // Find contacts that reached compliance/bank data stages (successful funnels)
+    // === LEARNING: Fetch REAL conversations as examples (successful + near-successful) ===
+    // Priority: contacts from active lists, then any that advanced past initial stage
+    const advancedStages = [
+      AI_STAGES.AGUARDANDO_DADOS,
+      AI_STAGES.AGUARDANDO_CONFIRMACAO_CHAMADA,
+      AI_STAGES.PRONTO_PARA_COMPLIANCE,
+      AI_STAGES.COMPLIANCE_CONFIRMADO,
+    ];
+
     const { data: successContacts } = await supabase
       .from("contacts")
-      .select("id, name")
-      .in("ai_stage", [
-        AI_STAGES.PRONTO_PARA_COMPLIANCE,
-        AI_STAGES.COMPLIANCE_CONFIRMADO,
-        AI_STAGES.AGUARDANDO_CONFIRMACAO_CHAMADA,
-      ])
-      .not("bank_data", "is", null)
+      .select("id, name, ai_stage, contact_list")
+      .in("ai_stage", advancedStages)
       .order("updated_at", { ascending: false })
-      .limit(5);
+      .limit(15);
 
     let historicalExamples = "";
     if (successContacts && successContacts.length > 0) {
+      // Sort: prioritize contacts with bank_data and from known lists
+      const sorted = successContacts
+        .filter(sc => sc.id !== contactId)
+        .sort((a, b) => {
+          const stageOrder = advancedStages;
+          const aIdx = stageOrder.indexOf(a.ai_stage || "");
+          const bIdx = stageOrder.indexOf(b.ai_stage || "");
+          return bIdx - aIdx; // higher stage first
+        });
+
       const exampleConversations: string[] = [];
       
-      for (const sc of successContacts) {
-        // Skip self
-        if (sc.id === contactId) continue;
-        
+      for (const sc of sorted) {
         const { data: convMsgs } = await supabase
           .from("messages")
           .select("direction, content, message_type")
           .eq("contact_id", sc.id)
           .order("created_at", { ascending: true })
-          .limit(20);
+          .limit(25);
 
-        if (!convMsgs || convMsgs.length < 4) continue;
+        if (!convMsgs || convMsgs.length < 3) continue;
 
         const excerpt = convMsgs
           .filter(m => m.content && m.message_type !== "template")
-          .map(m => `${m.direction === "incoming" ? "CLIENTE" : "ADVOGADO"}: ${m.content!.substring(0, 200)}`)
+          .map(m => `${m.direction === "incoming" ? "CLIENTE" : "ADVOGADO"}: ${m.content!.substring(0, 250)}`)
           .join("\n");
 
         if (excerpt.length > 50) {
-          exampleConversations.push(`--- Conversa bem-sucedida (cliente "${sc.name?.split(/\s+/)[0]}") ---\n${excerpt}`);
+          const label = sc.ai_stage?.includes("compliance") || sc.ai_stage?.includes("pronto")
+            ? "✅ BEM-SUCEDIDA" 
+            : "🔶 QUASE CONVERTEU";
+          exampleConversations.push(`--- ${label} (lista: ${sc.contact_list || "?"}) ---\n${excerpt}`);
         }
         
-        if (exampleConversations.length >= 3) break;
+        if (exampleConversations.length >= 4) break;
       }
 
       if (exampleConversations.length > 0) {
@@ -314,6 +346,7 @@ serve(async (req) => {
       learnedPatterns,
       conversionStats,
       historicalExamples,
+      adminRules,
     );
 
     // === Resolve WhatsApp API config EARLY (needed for typing indicator) ===
