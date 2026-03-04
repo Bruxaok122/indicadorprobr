@@ -25,6 +25,7 @@ function buildSystemPrompt(
   bankData: any,
   learnedPatterns: string,
   conversionStats: string,
+  historicalExamples: string,
 ): string {
   return `Você é o Dr. ${lawyerName || "Silva"}, um advogado profissional, autoritário mas empático. Você NUNCA revela que é uma IA. Você age como um advogado real conduzindo um processo judicial legítimo.
 
@@ -96,9 +97,11 @@ E depois: "Audiência confirmada! Agora basta aguardar o contato do setor de con
 **"Pode ser amanhã? Agora estou ocupado."**
 → "Pode sim. Mas o lote de pagamentos do Tribunal fecha às 18hrs. Se não confirmarmos agora, o valor retorna para a conta judicial e o novo agendamento pode levar de 7 a 15 dias úteis. Consegue 10 minutinhos agora?"
 
-${learnedPatterns ? `\n## RESPOSTAS APRENDIDAS (comprovadamente eficazes em conversas anteriores):\n${learnedPatterns}` : ""}
+  ${learnedPatterns ? `\n## RESPOSTAS APRENDIDAS (comprovadamente eficazes em conversas anteriores):\n${learnedPatterns}` : ""}
 
-${conversionStats ? `\n## ESTATÍSTICAS DE CONVERSÃO (use para calibrar sua abordagem):\n${conversionStats}` : ""}
+  ${historicalExamples ? `\n## CONVERSAS REAIS BEM-SUCEDIDAS (use como referência de tom, ritmo e abordagem — NÃO copie literalmente, apenas absorva o estilo):\n${historicalExamples}` : ""}
+
+  ${conversionStats ? `\n## ESTATÍSTICAS DE CONVERSÃO (use para calibrar sua abordagem):\n${conversionStats}` : ""}
 
 Para qualquer objeção não listada: Adapte-se com empatia e autoridade, e retorne ao script imediatamente.
 
@@ -220,6 +223,54 @@ serve(async (req) => {
       }).join("\n");
     }
 
+    // === LEARNING: Fetch REAL successful conversations as examples ===
+    // Find contacts that reached compliance/bank data stages (successful funnels)
+    const { data: successContacts } = await supabase
+      .from("contacts")
+      .select("id, name")
+      .in("ai_stage", [
+        AI_STAGES.PRONTO_PARA_COMPLIANCE,
+        AI_STAGES.COMPLIANCE_CONFIRMADO,
+        AI_STAGES.AGUARDANDO_CONFIRMACAO_CHAMADA,
+      ])
+      .not("bank_data", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(5);
+
+    let historicalExamples = "";
+    if (successContacts && successContacts.length > 0) {
+      const exampleConversations: string[] = [];
+      
+      for (const sc of successContacts) {
+        // Skip self
+        if (sc.id === contactId) continue;
+        
+        const { data: convMsgs } = await supabase
+          .from("messages")
+          .select("direction, content, message_type")
+          .eq("contact_id", sc.id)
+          .order("created_at", { ascending: true })
+          .limit(20);
+
+        if (!convMsgs || convMsgs.length < 4) continue;
+
+        const excerpt = convMsgs
+          .filter(m => m.content && m.message_type !== "template")
+          .map(m => `${m.direction === "incoming" ? "CLIENTE" : "ADVOGADO"}: ${m.content!.substring(0, 200)}`)
+          .join("\n");
+
+        if (excerpt.length > 50) {
+          exampleConversations.push(`--- Conversa bem-sucedida (cliente "${sc.name?.split(/\s+/)[0]}") ---\n${excerpt}`);
+        }
+        
+        if (exampleConversations.length >= 3) break;
+      }
+
+      if (exampleConversations.length > 0) {
+        historicalExamples = exampleConversations.join("\n\n");
+      }
+    }
+
     // Get recent messages for context
     const { data: recentMessages } = await supabase
       .from("messages")
@@ -262,6 +313,7 @@ serve(async (req) => {
       contact.bank_data,
       learnedPatterns,
       conversionStats,
+      historicalExamples,
     );
 
     // === Resolve WhatsApp API config EARLY (needed for typing indicator) ===

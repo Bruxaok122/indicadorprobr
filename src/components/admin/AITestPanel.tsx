@@ -45,7 +45,7 @@ export function AITestPanel() {
   const [valorCausa, setValorCausa] = useState("15000.00");
   const [configOpen, setConfigOpen] = useState(true);
   const [learnedPatterns, setLearnedPatterns] = useState("");
-
+  const [historicalExamples, setHistoricalExamples] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,6 +57,7 @@ export function AITestPanel() {
   // Load learned patterns on mount and when count changes
   useEffect(() => {
     loadLearnedPatterns();
+    loadHistoricalExamples();
   }, [learnedCount]);
 
   async function loadLearnedPatterns() {
@@ -75,6 +76,50 @@ export function AITestPanel() {
       setLearnedPatterns(patterns);
       setLearnedCount(data.length);
     }
+  }
+
+  async function loadHistoricalExamples() {
+    // Fetch contacts that successfully completed the funnel
+    const { data: successContacts } = await supabase
+      .from("contacts")
+      .select("id, name")
+      .in("ai_stage", [
+        "pronto_para_compliance",
+        "compliance_confirmado",
+        "aguardando_confirmacao_chamada",
+      ])
+      .not("bank_data", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(3);
+
+    if (!successContacts || successContacts.length === 0) {
+      setHistoricalExamples("");
+      return;
+    }
+
+    const examples: string[] = [];
+    for (const sc of successContacts) {
+      const { data: convMsgs } = await supabase
+        .from("messages")
+        .select("direction, content, message_type")
+        .eq("contact_id", sc.id)
+        .order("created_at", { ascending: true })
+        .limit(20);
+
+      if (!convMsgs || convMsgs.length < 4) continue;
+
+      const excerpt = convMsgs
+        .filter(m => m.content && m.message_type !== "template")
+        .map(m => `${m.direction === "incoming" ? "CLIENTE" : "ADVOGADO"}: ${m.content!.substring(0, 200)}`)
+        .join("\n");
+
+      if (excerpt.length > 50) {
+        examples.push(`--- Conversa bem-sucedida (cliente "${sc.name?.split(/\s+/)[0]}") ---\n${excerpt}`);
+      }
+      if (examples.length >= 3) break;
+    }
+
+    setHistoricalExamples(examples.length > 0 ? examples.join("\n\n") : "");
   }
 
   const firstName = contactName.split(/\s+/)[0];
@@ -152,6 +197,8 @@ E depois: "Audiência confirmada! Agora basta aguardar o contato do setor de con
 → "Pode sim. Mas o lote de pagamentos do Tribunal fecha às 18hrs. Se não confirmarmos agora, o valor retorna para a conta judicial e o novo agendamento pode levar de 7 a 15 dias úteis. Consegue 10 minutinhos agora?"
 
 ${learnedPatterns ? `\n## RESPOSTAS APRENDIDAS (comprovadamente eficazes em conversas anteriores):\n${learnedPatterns}` : ""}
+
+${historicalExamples ? `\n## CONVERSAS REAIS BEM-SUCEDIDAS (use como referência de tom, ritmo e abordagem — NÃO copie literalmente, apenas absorva o estilo):\n${historicalExamples}` : ""}
 
 ## EXTRAÇÃO DE DADOS BANCÁRIOS:
 Quando o cliente enviar dados bancários, inclua no início:
@@ -361,6 +408,11 @@ Sempre inclua no início:
           <Brain className="h-3 w-3" />
           {learnedCount} padrões aprendidos
         </Badge>
+        {historicalExamples && (
+          <Badge variant="outline" className="gap-1 border-accent/50 text-accent">
+            📚 Conversas reais carregadas
+          </Badge>
+        )}
         <div className="ml-auto">
           <Button variant="outline" size="sm" onClick={resetConversation}>
             <RotateCcw className="h-3.5 w-3.5 mr-1" /> Reiniciar
