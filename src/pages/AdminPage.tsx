@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Users, UserPlus, Radio, Mic, HeartPulse, Zap } from "lucide-react";
+import { Users, UserPlus, Radio, Mic, HeartPulse, Zap, Activity } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -21,13 +21,14 @@ import { AdminChatMonitor } from "@/components/admin/AdminChatMonitor";
 import { ApiHealthMonitor } from "@/components/admin/ApiHealthMonitor";
 import { Profile } from "@/types/juriszap";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DispatchProvider, useDispatchContext } from "@/contexts/DispatchContext";
 import AdminDisparosPage from "@/pages/AdminDisparosPage";
 import AdminContatosPage from "@/pages/AdminContatosPage";
 import AdminAudioPage from "@/pages/AdminAudioPage";
 import { ApiConfigsSection } from "@/components/admin/ApiConfigsSection";
+import { DispatchMonitor } from "@/components/admin/DispatchMonitor";
 
-
-export default function AdminPage() {
+function AdminPageInner() {
   const navigate = useNavigate();
   const { signOut } = useAuthContext();
   const isMobile = useIsMobile();
@@ -93,6 +94,9 @@ export default function AdminPage() {
             </TabsTrigger>
             <TabsTrigger value="disparos" className="gap-1.5">
               <Radio className="h-4 w-4" /> Disparos
+            </TabsTrigger>
+            <TabsTrigger value="acompanhamento" className="gap-1.5">
+              <Activity className="h-4 w-4" /> Acompanhamento
             </TabsTrigger>
           </TabsList>
 
@@ -184,6 +188,10 @@ export default function AdminPage() {
             <AdminDisparosPage />
           </TabsContent>
 
+          <TabsContent value="acompanhamento" className="mt-4">
+            <DispatchMonitor />
+          </TabsContent>
+
         </Tabs>
 
         <div className="text-center py-4">
@@ -244,5 +252,13 @@ export default function AdminPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <DispatchProvider>
+      <AdminPageInner />
+    </DispatchProvider>
   );
 }

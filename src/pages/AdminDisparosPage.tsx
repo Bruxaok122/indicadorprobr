@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { useDispatchContext, ActiveDispatch, DispatchMode } from "@/contexts/DispatchContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,25 +50,6 @@ interface ContactList {
   count: number;
 }
 
-type DispatchMode = "batch" | "individual";
-
-interface ActiveDispatch {
-  id: string;
-  operatorName: string;
-  operatorId: string;
-  templateName: string;
-  listName: string;
-  mode: DispatchMode;
-  total: number;
-  sent: number;
-  failed: number;
-  current: number;
-  isPaused: boolean;
-  isCancelled: boolean;
-  isFinished: boolean;
-  errors: string[];
-}
-
 const STEPS = [
   { id: 1, label: "Número", icon: Phone },
   { id: 2, label: "Template", icon: FileText },
@@ -81,11 +63,34 @@ const slideVariants = {
   exit: (direction: number) => ({ x: direction < 0 ? 300 : -300, opacity: 0 }),
 };
 
+/** Helper to re-fetch remaining contact IDs from a list (only pool contacts with user_id=null) */
+async function fetchRemainingContactIds(listName: string, limit?: number): Promise<string[]> {
+  const query = supabase
+    .from("contacts")
+    .select("id")
+    .eq("contact_list", listName)
+    .is("user_id", null);
+
+  if (limit) query.limit(limit);
+
+  const { data } = await query;
+  return (data || []).map((c: any) => c.id);
+}
+
 export default function AdminDisparosPage() {
   const { users } = useAdmin();
   const { allTemplates } = useMetaTemplates();
   const { phones } = useWabaPhones();
   const { user } = useAuthContext();
+  const {
+    activeDispatches,
+    addDispatch,
+    updateDispatch,
+    dismissDispatch,
+    handlePause,
+    handleCancel,
+    dispatchControlsRef,
+  } = useDispatchContext();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(0);
@@ -107,15 +112,9 @@ export default function AdminDisparosPage() {
   // Step 4: Responsible
   const [selectedUserId, setSelectedUserId] = useState<string>("");
 
-  // Multiple active dispatches
-  const [activeDispatches, setActiveDispatches] = useState<ActiveDispatch[]>([]);
-  const dispatchControlsRef = useRef<Record<string, { isPaused: boolean; isCancelled: boolean }>>({});
-
   // Phone data for advogado variable
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
   const phoneVerifiedName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
-
-  const hasActiveDispatch = activeDispatches.some(d => !d.isFinished);
 
   // Auto-select phone
   useEffect(() => {
@@ -214,10 +213,6 @@ export default function AdminDisparosPage() {
   }
 
   // --- Dispatch logic ---
-  const updateDispatch = (dispatchId: string, updates: Partial<ActiveDispatch>) => {
-    setActiveDispatches((prev) => prev.map((d) => (d.id === dispatchId ? { ...d, ...updates } : d)));
-  };
-
   const getInvokeErrorMessage = async (sendError: any): Promise<string> => {
     const fallback = sendError?.message || "Falha ao chamar função de disparo";
     const statusCode = sendError?.context?.status;
@@ -259,19 +254,16 @@ export default function AdminDisparosPage() {
       return;
     }
 
-    const { data, error } = await (supabase as any)
-      .from("contacts")
-      .select("id")
-      .eq("contact_list", selectedList)
-      .is("user_id", null);
+    // Fetch remaining contacts from the list (real-time, only pool contacts)
+    const contactIds = await fetchRemainingContactIds(
+      selectedList,
+      batchMode ? batchSize : undefined
+    );
 
-    if (error || !data || data.length === 0) {
-      toast.error("Nenhum contato encontrado na lista selecionada", { duration: 8000 });
+    if (contactIds.length === 0) {
+      toast.error("Nenhum contato disponível na lista selecionada", { duration: 8000 });
       return;
     }
-
-    let contactIds = (data as any[]).map((c) => c.id);
-    if (batchMode) contactIds = contactIds.slice(0, batchSize);
 
     const operatorProfile = users.find((u) => u.user_id === selectedUserId);
     const dispatchId = crypto.randomUUID();
@@ -296,7 +288,7 @@ export default function AdminDisparosPage() {
       errors: [],
     };
 
-    setActiveDispatches((prev) => [newDispatch, ...prev]);
+    addDispatch(newDispatch);
 
     // Capture values for the async closure
     const capturedTemplate = selectedTemplate;
@@ -306,26 +298,60 @@ export default function AdminDisparosPage() {
     const capturedPhoneVerifiedName = phoneVerifiedName;
     const capturedMode = dispatchMode;
     const capturedInterval = intervalSeconds;
+    const capturedListName = selectedList;
+    const capturedBatchMode = batchMode;
+    const capturedBatchSize = batchSize;
 
     // Run dispatch in background
     (async () => {
       const results = { sent: 0, failed: 0, errors: [] as string[] };
+      let remainingIds = [...contactIds];
 
       try {
         if (capturedMode === "individual") {
-          for (let i = 0; i < contactIds.length; i++) {
+          let i = 0;
+          while (i < remainingIds.length) {
             const ctrl = dispatchControlsRef.current[dispatchId];
             if (ctrl?.isCancelled) break;
 
-            // Pause loop
-            while (ctrl?.isPaused && !ctrl?.isCancelled) {
-              await new Promise((r) => setTimeout(r, 500));
+            // Pause loop — on resume, re-fetch remaining contacts
+            if (ctrl?.isPaused) {
+              while (ctrl?.isPaused && !ctrl?.isCancelled) {
+                await new Promise((r) => setTimeout(r, 500));
+              }
+              if (ctrl?.isCancelled) break;
+
+              // Re-fetch remaining contacts from the list after resume
+              const freshIds = await fetchRemainingContactIds(
+                capturedListName,
+                capturedBatchMode ? Math.max(capturedBatchSize - results.sent, 1) : undefined
+              );
+              remainingIds = freshIds;
+              i = 0; // restart index on fresh list
+              updateDispatch(dispatchId, { total: results.sent + results.failed + remainingIds.length });
+              if (remainingIds.length === 0) break;
+              continue;
             }
-            if (ctrl?.isCancelled) break;
+
+            const contactId = remainingIds[i];
+
+            // Double-check this contact is still in the pool (user_id = null)
+            const { data: checkContact } = await supabase
+              .from("contacts")
+              .select("id, user_id")
+              .eq("id", contactId)
+              .maybeSingle();
+
+            if (!checkContact || checkContact.user_id !== null) {
+              // Contact already assigned — skip silently
+              i++;
+              updateDispatch(dispatchId, { current: results.sent + results.failed + 1 });
+              continue;
+            }
 
             const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
               body: {
-                contactIds: [contactIds[i]],
+                contactIds: [contactId],
                 templateName: capturedTemplate.name,
                 templateLanguage: capturedTemplate.language,
                 userId: user?.id,
@@ -346,20 +372,19 @@ export default function AdminDisparosPage() {
             }
 
             updateDispatch(dispatchId, {
-              current: i + 1,
+              current: results.sent + results.failed,
               sent: results.sent,
               failed: results.failed,
               errors: [...results.errors],
             });
 
+            i++;
+
             // Interval between sends
-            if (i < contactIds.length - 1 && !ctrl?.isCancelled) {
+            if (i < remainingIds.length && !ctrl?.isCancelled) {
               for (let s = 0; s < capturedInterval * 2; s++) {
                 if (ctrl?.isCancelled) break;
-                while (ctrl?.isPaused && !ctrl?.isCancelled) {
-                  await new Promise((r) => setTimeout(r, 500));
-                }
-                if (ctrl?.isCancelled) break;
+                if (ctrl?.isPaused) break; // will re-fetch on next iteration
                 await new Promise((r) => setTimeout(r, 500));
               }
             }
@@ -367,16 +392,27 @@ export default function AdminDisparosPage() {
         } else {
           // Batch mode
           const CHUNK = 50;
-          for (let i = 0; i < contactIds.length; i += CHUNK) {
+          let i = 0;
+          while (i < remainingIds.length) {
             const ctrl = dispatchControlsRef.current[dispatchId];
             if (ctrl?.isCancelled) break;
 
-            while (ctrl?.isPaused && !ctrl?.isCancelled) {
-              await new Promise((r) => setTimeout(r, 500));
-            }
-            if (ctrl?.isCancelled) break;
+            if (ctrl?.isPaused) {
+              while (ctrl?.isPaused && !ctrl?.isCancelled) {
+                await new Promise((r) => setTimeout(r, 500));
+              }
+              if (ctrl?.isCancelled) break;
 
-            const chunk = contactIds.slice(i, i + CHUNK);
+              // Re-fetch remaining contacts after resume
+              const freshIds = await fetchRemainingContactIds(capturedListName);
+              remainingIds = freshIds;
+              i = 0;
+              updateDispatch(dispatchId, { total: results.sent + results.failed + remainingIds.length });
+              if (remainingIds.length === 0) break;
+              continue;
+            }
+
+            const chunk = remainingIds.slice(i, i + CHUNK);
 
             const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
               body: {
@@ -396,15 +432,13 @@ export default function AdminDisparosPage() {
               results.failed += result.results.failed || 0;
               if (result.results.errors) results.errors.push(...result.results.errors);
             } else {
-              // Em lote, se a chamada falhar, considera todo o chunk como falho
               results.failed += chunk.length;
               results.errors.push(await getInvokeErrorMessage(sendError));
 
-              // Erros de autorização/permissão não devem continuar processando
               const statusCode = (sendError as any)?.context?.status;
               if (statusCode === 401 || statusCode === 403) {
                 updateDispatch(dispatchId, {
-                  current: Math.min(i + CHUNK, contactIds.length),
+                  current: results.sent + results.failed,
                   sent: results.sent,
                   failed: results.failed,
                   errors: [...results.errors],
@@ -414,11 +448,13 @@ export default function AdminDisparosPage() {
             }
 
             updateDispatch(dispatchId, {
-              current: Math.min(i + CHUNK, contactIds.length),
+              current: results.sent + results.failed,
               sent: results.sent,
               failed: results.failed,
               errors: [...results.errors],
             });
+
+            i += CHUNK;
           }
         }
 
@@ -439,27 +475,7 @@ export default function AdminDisparosPage() {
       }
     })();
 
-    // Don't reset form — allow another dispatch immediately
     toast.info(`Disparo iniciado para ${operatorProfile?.full_name}`, { id: `dispatch-${dispatchId}`, duration: 5000 });
-  };
-
-  const handlePause = (dispatchId: string) => {
-    const ctrl = dispatchControlsRef.current[dispatchId];
-    if (!ctrl) return;
-    ctrl.isPaused = !ctrl.isPaused;
-    updateDispatch(dispatchId, { isPaused: ctrl.isPaused });
-  };
-
-  const handleCancel = (dispatchId: string) => {
-    const ctrl = dispatchControlsRef.current[dispatchId];
-    if (!ctrl) return;
-    ctrl.isCancelled = true;
-    ctrl.isPaused = false;
-    updateDispatch(dispatchId, { isCancelled: true, isPaused: false });
-  };
-
-  const handleDismissDispatch = (dispatchId: string) => {
-    setActiveDispatches((prev) => prev.filter((d) => d.id !== dispatchId));
   };
 
   return (
@@ -526,7 +542,7 @@ export default function AdminDisparosPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => handleDismissDispatch(dispatch.id)}
+                          onClick={() => dismissDispatch(dispatch.id)}
                           className="h-7 text-xs text-muted-foreground"
                         >
                           Fechar
