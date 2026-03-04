@@ -139,7 +139,10 @@ export type Database = {
       }
       contacts: {
         Row: {
+          ai_enabled: boolean
+          ai_stage: string | null
           api_config_id: string | null
+          bank_data: Json | null
           contact_list: string | null
           cpf: string | null
           created_at: string
@@ -159,7 +162,10 @@ export type Database = {
           valor_da_causa: number | null
         }
         Insert: {
+          ai_enabled?: boolean
+          ai_stage?: string | null
           api_config_id?: string | null
+          bank_data?: Json | null
           contact_list?: string | null
           cpf?: string | null
           created_at?: string
@@ -179,7 +185,10 @@ export type Database = {
           valor_da_causa?: number | null
         }
         Update: {
+          ai_enabled?: boolean
+          ai_stage?: string | null
           api_config_id?: string | null
+          bank_data?: Json | null
           contact_list?: string | null
           cpf?: string | null
           created_at?: string

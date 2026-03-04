@@ -358,6 +358,31 @@ serve(async (req) => {
                   }
                 }
 
+                // === AI Agent: Process message if ai_enabled ===
+                if (existingContact?.ai_enabled && message.type === "text" && content) {
+                  try {
+                    console.log(`🤖 Triggering AI agent for contact ${contactId}`);
+                    const aiResponse = await fetch(
+                      `${supabaseUrl}/functions/v1/ai-chat-agent`,
+                      {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${supabaseKey}`,
+                        },
+                        body: JSON.stringify({
+                          contactId,
+                          incomingMessage: content,
+                        }),
+                      }
+                    );
+                    const aiResult = await aiResponse.json();
+                    console.log("AI agent result:", JSON.stringify(aiResult));
+                  } catch (aiError) {
+                    console.error("AI agent invocation error:", aiError);
+                  }
+                }
+
                 console.log(`Message saved successfully from ${phone}`);
               }
 
