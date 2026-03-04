@@ -71,6 +71,8 @@ export function useMessages(contactId: string | null) {
         (payload) => {
           // Use exact query key to avoid double invalidation
           queryClient.invalidateQueries({ queryKey: ["messages", contactId, user?.id], exact: true });
+          // Also refresh conversation window so canSendFreeText unlocks immediately
+          queryClient.invalidateQueries({ queryKey: ["conversation-window", contactId], exact: true });
         }
       )
       .subscribe();

@@ -1,5 +1,14 @@
+const FINGERPRINT_CACHE_KEY = 'jz_device_fp';
+
 // Generate a unique device fingerprint using browser characteristics
+// Caches result in localStorage to avoid instability from canvas/WebGL fluctuations
 export async function generateDeviceFingerprint(): Promise<string> {
+  // Return cached fingerprint if available — ensures stability across sessions
+  const cached = localStorage.getItem(FINGERPRINT_CACHE_KEY);
+  if (cached && cached.length === 64) {
+    return cached;
+  }
+
   const components: string[] = [];
 
   // Screen info
@@ -20,8 +29,10 @@ export async function generateDeviceFingerprint(): Promise<string> {
   // Device memory (if available)
   components.push(String((navigator as any).deviceMemory || 0));
 
-  // User agent
-  components.push(navigator.userAgent);
+  // User agent - use only stable parts (browser family + OS), not full UA which changes on updates
+  const ua = navigator.userAgent;
+  const stableUA = ua.replace(/\b\d+\.\d+\.\d+\.\d+\b/g, 'X').replace(/\b\d+\.\d+\b/g, 'X');
+  components.push(stableUA);
 
   // Touch support
   components.push(String(navigator.maxTouchPoints || 0));
@@ -68,7 +79,15 @@ export async function generateDeviceFingerprint(): Promise<string> {
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
+  // Cache for stability
+  localStorage.setItem(FINGERPRINT_CACHE_KEY, hashHex);
+
   return hashHex;
+}
+
+// Clear cached fingerprint (call on explicit signOut so re-login recalculates)
+export function clearCachedFingerprint() {
+  localStorage.removeItem(FINGERPRINT_CACHE_KEY);
 }
 
 export function getDeviceInfo() {
