@@ -319,7 +319,9 @@ serve(async (req) => {
         }
 
         results.sent++;
-        await delay(100);
+        // Anti-ban: randomized human-like delay between sends (2-5 seconds)
+        const humanDelay = Math.floor(Math.random() * 3000) + 2000;
+        await delay(humanDelay);
       } catch (err) {
         results.failed++;
         const errMessage = err instanceof Error ? err.message : "Erro desconhecido";

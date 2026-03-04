@@ -327,6 +327,37 @@ serve(async (req) => {
                   console.error("Error saving message:", messageError);
                 }
 
+                // === Anti-ban: Auto-block contacts with negative responses ===
+                if (message.type === "text" && content) {
+                  const NEGATIVE_KEYWORDS = [
+                    "não é aqui", "nao e aqui", "numero errado", "número errado",
+                    "não conheço", "nao conheço", "engano", "pare de mandar",
+                    "não quero", "nao quero", "desconheço", "desconheco",
+                    "parar", "não me mande", "nao me mande", "errou",
+                    "telefone errado", "não tenho interesse", "nao tenho interesse",
+                    "me tire dessa lista", "sai dessa lista", "não autorizo", "nao autorizo",
+                    "denunciar", "vou denunciar", "bloquear", "quem é você",
+                    "quem e voce", "errado", "parar de mandar", "spam",
+                    "não solicitei", "nao solicitei", "golpe",
+                  ];
+                  
+                  const lowerContent = content.toLowerCase()
+                    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                  
+                  const isNegative = NEGATIVE_KEYWORDS.some(kw => {
+                    const normalizedKw = kw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    return lowerContent.includes(normalizedKw);
+                  });
+                  
+                  if (isNegative) {
+                    console.log(`🚫 Auto-blocking contact ${contactId} due to negative response: "${content}"`);
+                    await supabase
+                      .from("contacts")
+                      .update({ status: "encerrado" })
+                      .eq("id", contactId);
+                  }
+                }
+
                 console.log(`Message saved successfully from ${phone}`);
               }
 

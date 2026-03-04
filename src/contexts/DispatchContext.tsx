@@ -18,6 +18,8 @@ export interface ActiveDispatch {
   isCancelled: boolean;
   isFinished: boolean;
   errors: string[];
+  breathingUntil?: string; // ISO timestamp - transient UI state, not persisted
+  blocksSent?: number; // number of 20-message blocks completed
 }
 
 interface DispatchControls {
