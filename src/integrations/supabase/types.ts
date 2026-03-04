@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      active_dispatches: {
+        Row: {
+          created_at: string
+          current: number
+          errors: Json
+          failed: number
+          id: string
+          is_cancelled: boolean
+          is_finished: boolean
+          is_paused: boolean
+          list_name: string
+          mode: string
+          operator_id: string
+          operator_name: string
+          sent: number
+          template_name: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current?: number
+          errors?: Json
+          failed?: number
+          id: string
+          is_cancelled?: boolean
+          is_finished?: boolean
+          is_paused?: boolean
+          list_name: string
+          mode?: string
+          operator_id: string
+          operator_name: string
+          sent?: number
+          template_name: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current?: number
+          errors?: Json
+          failed?: number
+          id?: string
+          is_cancelled?: boolean
+          is_finished?: boolean
+          is_paused?: boolean
+          list_name?: string
+          mode?: string
+          operator_id?: string
+          operator_name?: string
+          sent?: number
+          template_name?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       admin_audio_config: {
         Row: {
           audio_name: string
