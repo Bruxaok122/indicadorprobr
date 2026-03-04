@@ -321,7 +321,7 @@ export function ChatContactList({
                   </div>
 
                   {/* Info */}
-                  <div className="min-w-0 flex-1 overflow-hidden">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                         {contact.name}
