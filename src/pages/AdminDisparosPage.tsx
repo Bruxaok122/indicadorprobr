@@ -77,6 +77,98 @@ async function fetchRemainingContactIds(listName: string, limit?: number): Promi
   return (data || []).map((c: any) => c.id);
 }
 
+// === Anti-ban protection constants ===
+const ANTI_BAN_BLOCK_SIZE = 20; // Messages per breathing block
+const ANTI_BAN_BREATHING_MS = 10 * 60 * 1000; // 10 minutes between blocks
+const ANTI_BAN_MIN_DELAY_MS = 3000; // 3s min delay between individual sends
+const ANTI_BAN_MAX_DELAY_MS = 8000; // 8s max delay between individual sends
+
+function randomBetween(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function antiBanDelay(min: number, max: number): Promise<void> {
+  return new Promise(r => setTimeout(r, randomBetween(min, max)));
+}
+
+/** Get current hour in BRT (UTC-3) */
+function getBrtHour(): number {
+  const now = new Date();
+  return (now.getUTCHours() - 3 + 24) % 24;
+}
+
+/** Check if current time is within allowed dispatch hours (10:00-17:00 BRT) */
+function isWithinDispatchHours(): boolean {
+  const hour = getBrtHour();
+  return hour >= 10 && hour < 17;
+}
+
+/** Calculate ms until next dispatch window opens (10:00 BRT) */
+function msUntilNextWindow(): number {
+  const now = new Date();
+  const brtHour = getBrtHour();
+  const brtMinute = now.getUTCMinutes();
+  
+  if (brtHour >= 17) {
+    // Wait until next day 10:00 BRT
+    const hoursUntil = 24 - brtHour + 10;
+    return (hoursUntil * 60 - brtMinute) * 60 * 1000;
+  }
+  if (brtHour < 10) {
+    const hoursUntil = 10 - brtHour;
+    return (hoursUntil * 60 - brtMinute) * 60 * 1000;
+  }
+  return 0;
+}
+
+/** Wait for breathing cooldown, checking for cancel every second */
+async function breathingWait(
+  dispatchId: string,
+  durationMs: number,
+  updateDispatch: (id: string, u: any) => void,
+  controlsRef: React.MutableRefObject<Record<string, { isPaused: boolean; isCancelled: boolean }>>,
+) {
+  const until = new Date(Date.now() + durationMs).toISOString();
+  updateDispatch(dispatchId, { breathingUntil: until });
+  
+  const endTime = Date.now() + durationMs;
+  while (Date.now() < endTime) {
+    const ctrl = controlsRef.current[dispatchId];
+    if (ctrl?.isCancelled) break;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  
+  updateDispatch(dispatchId, { breathingUntil: undefined });
+}
+
+/** Wait until dispatch hours if currently outside window */
+async function waitForDispatchWindow(
+  dispatchId: string,
+  updateDispatch: (id: string, u: any) => void,
+  controlsRef: React.MutableRefObject<Record<string, { isPaused: boolean; isCancelled: boolean }>>,
+): Promise<boolean> {
+  if (isWithinDispatchHours()) return true;
+  
+  const waitMs = msUntilNextWindow();
+  if (waitMs <= 0) return true;
+  
+  const until = new Date(Date.now() + waitMs).toISOString();
+  updateDispatch(dispatchId, { breathingUntil: until });
+  
+  // Wait in 30s increments, checking cancel and time
+  while (!isWithinDispatchHours()) {
+    const ctrl = controlsRef.current[dispatchId];
+    if (ctrl?.isCancelled) {
+      updateDispatch(dispatchId, { breathingUntil: undefined });
+      return false;
+    }
+    await new Promise(r => setTimeout(r, 30000));
+  }
+  
+  updateDispatch(dispatchId, { breathingUntil: undefined });
+  return true;
+}
+
 export default function AdminDisparosPage() {
   const { users } = useAdmin();
   const { allTemplates } = useMetaTemplates();
@@ -254,6 +346,16 @@ export default function AdminDisparosPage() {
       return;
     }
 
+    // Anti-ban: Check dispatch hours (10:00-17:00 BRT)
+    if (!isWithinDispatchHours()) {
+      const brtHour = getBrtHour();
+      toast.error(
+        `⏰ Fora do horário de disparo! Horário atual: ${brtHour}h (BRT). Disparos só são permitidos entre 10:00 e 17:00.`,
+        { duration: 10000 }
+      );
+      return;
+    }
+
     // Fetch remaining contacts from the list (real-time, only pool contacts)
     const contactIds = await fetchRemainingContactIds(
       selectedList,
@@ -302,10 +404,11 @@ export default function AdminDisparosPage() {
     const capturedBatchMode = batchMode;
     const capturedBatchSize = batchSize;
 
-    // Run dispatch in background
+    // Run dispatch in background with anti-ban protections
     (async () => {
       const results = { sent: 0, failed: 0, errors: [] as string[] };
       let remainingIds = [...contactIds];
+      let blockMessageCount = 0; // Counter for breathing blocks
 
       try {
         if (capturedMode === "individual") {
@@ -321,16 +424,40 @@ export default function AdminDisparosPage() {
               }
               if (ctrl?.isCancelled) break;
 
-              // Re-fetch remaining contacts from the list after resume
               const freshIds = await fetchRemainingContactIds(
                 capturedListName,
                 capturedBatchMode ? Math.max(capturedBatchSize - results.sent, 1) : undefined
               );
               remainingIds = freshIds;
-              i = 0; // restart index on fresh list
+              i = 0;
               updateDispatch(dispatchId, { total: results.sent + results.failed + remainingIds.length });
               if (remainingIds.length === 0) break;
               continue;
+            }
+
+            // 🛡️ Anti-ban: Check time window before each send
+            if (!isWithinDispatchHours()) {
+              toast.info("⏰ Fora do horário (10-17h BRT). Aguardando próxima janela...", { id: `dispatch-window-${dispatchId}`, duration: 15000 });
+              const canContinue = await waitForDispatchWindow(dispatchId, updateDispatch, dispatchControlsRef);
+              if (!canContinue) break;
+              toast.success("✅ Janela de disparo aberta! Retomando...", { id: `dispatch-window-${dispatchId}`, duration: 5000 });
+            }
+
+            // 🛡️ Anti-ban: Breathing pause after every BLOCK_SIZE messages
+            if (blockMessageCount >= ANTI_BAN_BLOCK_SIZE && i < remainingIds.length) {
+              const blocksCompleted = Math.floor((results.sent + results.failed) / ANTI_BAN_BLOCK_SIZE);
+              updateDispatch(dispatchId, { blocksSent: blocksCompleted });
+              toast.info(`☕ Bloco de ${ANTI_BAN_BLOCK_SIZE} enviado. Respirando por 10 minutos...`, { id: `dispatch-breathing-${dispatchId}`, duration: 10000 });
+              await breathingWait(dispatchId, ANTI_BAN_BREATHING_MS, updateDispatch, dispatchControlsRef);
+              const ctrl2 = dispatchControlsRef.current[dispatchId];
+              if (ctrl2?.isCancelled) break;
+              blockMessageCount = 0;
+
+              // Re-check time window after breathing
+              if (!isWithinDispatchHours()) {
+                const canContinue = await waitForDispatchWindow(dispatchId, updateDispatch, dispatchControlsRef);
+                if (!canContinue) break;
+              }
             }
 
             const contactId = remainingIds[i];
@@ -343,7 +470,6 @@ export default function AdminDisparosPage() {
               .maybeSingle();
 
             if (!checkContact || checkContact.user_id !== null) {
-              // Contact already assigned — skip silently
               i++;
               updateDispatch(dispatchId, { current: results.sent + results.failed + 1 });
               continue;
@@ -366,33 +492,44 @@ export default function AdminDisparosPage() {
               results.sent += result.results.sent || 0;
               results.failed += result.results.failed || 0;
               if (result.results.errors) results.errors.push(...result.results.errors);
+              
+              // 🛡️ Anti-ban: Circuit breaker - if business account blocked, stop everything
+              if (result.results.errors?.some((e: string) => e.includes("Conta Business bloqueada"))) {
+                toast.error("🛑 Conta Business bloqueada! Parando disparo imediatamente.", { duration: 30000 });
+                break;
+              }
             } else {
               results.failed++;
               if (sendError) results.errors.push(await getInvokeErrorMessage(sendError));
             }
+
+            blockMessageCount++;
 
             updateDispatch(dispatchId, {
               current: results.sent + results.failed,
               sent: results.sent,
               failed: results.failed,
               errors: [...results.errors],
+              blocksSent: Math.floor((results.sent + results.failed) / ANTI_BAN_BLOCK_SIZE),
             });
 
             i++;
 
-            // Interval between sends
+            // 🛡️ Anti-ban: Randomized human-like delay (3-8 seconds) instead of fixed interval
             if (i < remainingIds.length && !ctrl?.isCancelled) {
-              for (let s = 0; s < capturedInterval * 2; s++) {
-                if (ctrl?.isCancelled) break;
-                if (ctrl?.isPaused) break; // will re-fetch on next iteration
+              const delayMs = randomBetween(ANTI_BAN_MIN_DELAY_MS, ANTI_BAN_MAX_DELAY_MS);
+              for (let s = 0; s < Math.ceil(delayMs / 500); s++) {
+                const c = dispatchControlsRef.current[dispatchId];
+                if (c?.isCancelled || c?.isPaused) break;
                 await new Promise((r) => setTimeout(r, 500));
               }
             }
           }
         } else {
-          // Batch mode
-          const CHUNK = 50;
+          // Batch mode — chunks of ANTI_BAN_BLOCK_SIZE (20) with breathing
+          const CHUNK = ANTI_BAN_BLOCK_SIZE;
           let i = 0;
+          let chunkIndex = 0;
           while (i < remainingIds.length) {
             const ctrl = dispatchControlsRef.current[dispatchId];
             if (ctrl?.isCancelled) break;
@@ -403,13 +540,34 @@ export default function AdminDisparosPage() {
               }
               if (ctrl?.isCancelled) break;
 
-              // Re-fetch remaining contacts after resume
               const freshIds = await fetchRemainingContactIds(capturedListName);
               remainingIds = freshIds;
               i = 0;
               updateDispatch(dispatchId, { total: results.sent + results.failed + remainingIds.length });
               if (remainingIds.length === 0) break;
               continue;
+            }
+
+            // 🛡️ Anti-ban: Check time window
+            if (!isWithinDispatchHours()) {
+              toast.info("⏰ Fora do horário (10-17h BRT). Aguardando próxima janela...", { id: `dispatch-window-${dispatchId}`, duration: 15000 });
+              const canContinue = await waitForDispatchWindow(dispatchId, updateDispatch, dispatchControlsRef);
+              if (!canContinue) break;
+              toast.success("✅ Janela de disparo aberta! Retomando...", { id: `dispatch-window-${dispatchId}`, duration: 5000 });
+            }
+
+            // 🛡️ Anti-ban: Breathing pause between chunks (skip first chunk)
+            if (chunkIndex > 0) {
+              updateDispatch(dispatchId, { blocksSent: chunkIndex });
+              toast.info(`☕ Bloco ${chunkIndex} de ${CHUNK} enviado. Respirando por 10 minutos...`, { id: `dispatch-breathing-${dispatchId}`, duration: 10000 });
+              await breathingWait(dispatchId, ANTI_BAN_BREATHING_MS, updateDispatch, dispatchControlsRef);
+              const ctrl2 = dispatchControlsRef.current[dispatchId];
+              if (ctrl2?.isCancelled) break;
+
+              if (!isWithinDispatchHours()) {
+                const canContinue = await waitForDispatchWindow(dispatchId, updateDispatch, dispatchControlsRef);
+                if (!canContinue) break;
+              }
             }
 
             const chunk = remainingIds.slice(i, i + CHUNK);
@@ -431,6 +589,12 @@ export default function AdminDisparosPage() {
               results.sent += result.results.sent || 0;
               results.failed += result.results.failed || 0;
               if (result.results.errors) results.errors.push(...result.results.errors);
+
+              // 🛡️ Anti-ban: Circuit breaker
+              if (result.results.errors?.some((e: string) => e.includes("Conta Business bloqueada"))) {
+                toast.error("🛑 Conta Business bloqueada! Parando disparo imediatamente.", { duration: 30000 });
+                break;
+              }
             } else {
               results.failed += chunk.length;
               results.errors.push(await getInvokeErrorMessage(sendError));
@@ -452,9 +616,11 @@ export default function AdminDisparosPage() {
               sent: results.sent,
               failed: results.failed,
               errors: [...results.errors],
+              blocksSent: chunkIndex + 1,
             });
 
             i += CHUNK;
+            chunkIndex++;
           }
         }
 
@@ -469,7 +635,7 @@ export default function AdminDisparosPage() {
       } catch (err: any) {
         toast.error(`Erro no disparo (${operatorProfile?.full_name})`, { description: err.message, duration: 15000 });
       } finally {
-        updateDispatch(dispatchId, { isFinished: true });
+        updateDispatch(dispatchId, { isFinished: true, breathingUntil: undefined });
         delete dispatchControlsRef.current[dispatchId];
         refreshLists();
       }
@@ -817,7 +983,7 @@ export default function AdminDisparosPage() {
                       { label: "Template", value: selectedTemplate?.name || "—" },
                       { label: "Lista", value: selectedList || "—" },
                       { label: "Contatos", value: batchMode ? `${Math.min(batchSize, listContactCount)} de ${listContactCount}` : String(listContactCount) },
-                      { label: "Modo", value: dispatchMode === "individual" ? `Individual (${intervalSeconds}s)` : batchMode ? `Lote de ${batchSize}` : "Lote completo" },
+                      { label: "Modo", value: dispatchMode === "individual" ? "Individual (3-8s aleatório)" : "Lote (blocos de 20)" },
                       { label: "Responsável", value: users.find(u => u.user_id === selectedUserId)?.full_name || "—" },
                     ].map((row) => (
                       <div key={row.label} className="flex justify-between text-xs">
@@ -825,6 +991,21 @@ export default function AdminDisparosPage() {
                         <span className="font-medium truncate max-w-[200px]">{row.value}</span>
                       </div>
                     ))}
+                  </motion.div>
+
+                  {/* Anti-ban protection summary */}
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                    className="rounded-lg bg-emerald-500/5 border border-emerald-500/20 p-3 space-y-1.5">
+                    <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                      🛡️ Proteções Anti-Ban Ativas
+                    </p>
+                    <div className="text-[10px] text-muted-foreground space-y-0.5">
+                      <p>• Blocos de 20 mensagens com 10 min de respiro</p>
+                      <p>• Delay aleatório entre envios (3-8s individual / 2-5s no lote)</p>
+                      <p>• Horário restrito: 10:00 - 17:00 (BRT)</p>
+                      <p>• Auto-bloqueio de respostas negativas</p>
+                      <p>• Circuit breaker em caso de bloqueio da Meta</p>
+                    </div>
                   </motion.div>
 
                   <Button className="w-full gap-2" size="lg" onClick={handleSend}
