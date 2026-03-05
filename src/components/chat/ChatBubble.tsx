@@ -27,7 +27,7 @@ function getErrorLabel(errorCode?: string | null): string | null {
   switch (errorCode) {
     case "131051": return "🚫 Cliente bloqueou você";
     case "131026": return "📵 Número sem WhatsApp";
-    case "131049": return "⚠️ Limite de envio atingido";
+    case "131049": return "⚠️ Bloqueado pela Meta (engajamento baixo)";
     case "131047": return "⏰ Janela de 24h expirada";
     case "131021": return "⏰ Janela de 24h expirada";
     case "131053": return "📵 Número inválido";
