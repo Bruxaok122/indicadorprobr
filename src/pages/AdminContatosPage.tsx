@@ -21,7 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Upload, UserPlus, File, Plus, User, Phone, Scale,
   CheckCircle, Search, Trash2, ContactRound, List, AlertTriangle,
-  FileSpreadsheet, ShieldCheck, XCircle, DollarSign
+  FileSpreadsheet, ShieldCheck, XCircle, DollarSign, UserCheck, UserX, RotateCcw
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -638,18 +638,61 @@ export default function AdminContatosPage() {
               </Card>
 
               {/* Validate WhatsApp button for existing list */}
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() => {
-                  setExistingWhatsappEntries([]);
-                  setExistingFilterRenda(false);
-                  setShowExistingValidation(true);
-                }}
-              >
-                <ShieldCheck className="h-4 w-4" />
-                Validar WhatsApp desta lista (upload Excel)
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2"
+                  onClick={() => {
+                    setExistingWhatsappEntries([]);
+                    setExistingFilterRenda(false);
+                    setShowExistingValidation(true);
+                  }}
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Validar WhatsApp (Excel)
+                </Button>
+              </div>
+
+              {/* Name verification stats */}
+              {(() => {
+                const verified = displayedContacts.filter((c: any) => c.name_verified === true).length;
+                const mismatch = displayedContacts.filter((c: any) => c.name_verified === false).length;
+                const pending = displayedContacts.filter((c: any) => c.name_verified === null || c.name_verified === undefined).length;
+                if (verified === 0 && mismatch === 0) return null;
+                return (
+                  <Card className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <UserCheck className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium">Verificação de Nome</span>
+                        <div className="flex gap-2">
+                          {verified > 0 && <Badge variant="default" className="bg-green-500 text-white text-[10px]">✅ {verified} confirmados</Badge>}
+                          {mismatch > 0 && <Badge variant="destructive" className="text-[10px]">⚠️ {mismatch} divergentes</Badge>}
+                          {pending > 0 && <Badge variant="secondary" className="text-[10px]">⏳ {pending} pendentes</Badge>}
+                        </div>
+                      </div>
+                      {mismatch > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 text-xs"
+                          onClick={async () => {
+                            const mismatchIds = displayedContacts.filter((c: any) => c.name_verified === false).map((c: any) => c.id);
+                            for (let i = 0; i < mismatchIds.length; i += 100) {
+                              const batch = mismatchIds.slice(i, i + 100);
+                              await supabase.from("contacts").update({ name_verified: null } as any).in("id", batch);
+                            }
+                            queryClient.invalidateQueries({ queryKey: ["admin-contacts"] });
+                            toast.success("Verificação revertida para contatos divergentes");
+                          }}
+                        >
+                          <RotateCcw className="h-3 w-3" /> Reverter
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })()}
 
               {/* Contacts table */}
               <Card>
@@ -676,11 +719,11 @@ export default function AdminContatosPage() {
                   ) : (
                     <ScrollArea className="max-h-72">
                       <Table>
-                        <TableHeader>
+                         <TableHeader>
                           <TableRow>
                             <TableHead>Nome</TableHead>
                             <TableHead>Telefone</TableHead>
-                            <TableHead className="hidden md:table-cell">Parte Contrária</TableHead>
+                            <TableHead className="hidden md:table-cell">WA Nome</TableHead>
                             <TableHead className="hidden lg:table-cell">Processo</TableHead>
                             <TableHead className="w-10"></TableHead>
                           </TableRow>
@@ -688,9 +731,17 @@ export default function AdminContatosPage() {
                         <TableBody>
                           {displayedContacts.map((c: any) => (
                             <TableRow key={c.id}>
-                              <TableCell className="font-medium text-sm">{c.name}</TableCell>
+                              <TableCell className="font-medium text-sm">
+                                <div className="flex items-center gap-1.5">
+                                  {c.name_verified === true && <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />}
+                                  {c.name_verified === false && <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />}
+                                  <span>{c.name}</span>
+                                </div>
+                              </TableCell>
                               <TableCell className="font-mono text-xs">{c.phone}</TableCell>
-                              <TableCell className="hidden md:table-cell text-xs text-muted-foreground">{c.lawyer_name || "-"}</TableCell>
+                              <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                                {c.whatsapp_profile_name || <span className="opacity-40">—</span>}
+                              </TableCell>
                               <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">{c.process_number || "-"}</TableCell>
                               <TableCell>
                                 <Button
