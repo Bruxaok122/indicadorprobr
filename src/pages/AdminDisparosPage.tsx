@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock } from "lucide-react";
+import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -223,6 +223,7 @@ export default function AdminDisparosPage() {
   const [batchMode, setBatchMode] = useState(false);
   const [batchSize, setBatchSize] = useState(50);
   const [intervalSeconds, setIntervalSeconds] = useState(5);
+  const [turboLimit, setTurboLimit] = useState(100);
   // Step 4: Responsible
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   // Scheduling
@@ -276,7 +277,7 @@ export default function AdminDisparosPage() {
   const approvedTemplates = allTemplates.filter((t) => t.status === "APPROVED");
   const templateBody = selectedTemplate ? getTemplateBody(selectedTemplate) : "";
   const templateVars = extractVariables(templateBody);
-  const effectiveCount = batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
+  const effectiveCount = dispatchMode === "turbo" ? turboLimit : batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
 
   const isStep1Valid = phones.length === 0 || !!selectedPhoneNumberId;
   const isStep2Valid = !!selectedTemplate;
@@ -417,8 +418,8 @@ export default function AdminDisparosPage() {
       return;
     }
 
-    // Anti-ban: Check dispatch hours (10:00-17:00 BRT, no weekends)
-    if (!isWithinDispatchHours()) {
+    // Anti-ban: Check dispatch hours (10:00-17:00 BRT, no weekends) — skip for turbo mode
+    if (dispatchMode !== "turbo" && !isWithinDispatchHours()) {
       const brtHour = getBrtHour();
       const now = new Date();
       const brtDay = new Date(now.getTime() - 3 * 60 * 60 * 1000).getUTCDay();
@@ -439,9 +440,10 @@ export default function AdminDisparosPage() {
     if (!selectedTemplate || !selectedList || !selectedUserId || !user?.id) return;
 
     // Fetch remaining contacts from the list (real-time, only pool contacts)
+    const isTurbo = dispatchMode === "turbo";
     const contactIds = await fetchRemainingContactIds(
       selectedList,
-      batchMode ? batchSize : undefined
+      isTurbo ? turboLimit : batchMode ? batchSize : undefined
     );
 
     if (contactIds.length === 0) {
@@ -449,8 +451,8 @@ export default function AdminDisparosPage() {
       return;
     }
 
-    // 🛡️ Anti-ban: Daily limit check
-    if (contactIds.length > ANTI_BAN_DAILY_LIMIT) {
+    // 🛡️ Anti-ban: Daily limit check (skip for turbo mode — user controls limit)
+    if (!isTurbo && contactIds.length > ANTI_BAN_DAILY_LIMIT) {
       toast.warning(`⚠️ Limite diário: máximo ${ANTI_BAN_DAILY_LIMIT} mensagens por sessão. Limitando automaticamente.`, { duration: 10000 });
       contactIds.splice(ANTI_BAN_DAILY_LIMIT);
     }
@@ -490,6 +492,8 @@ export default function AdminDisparosPage() {
     const capturedListName = selectedList;
     const capturedBatchMode = batchMode;
     const capturedBatchSize = batchSize;
+    const capturedTurboLimit = turboLimit;
+    const capturedIsTurbo = isTurbo;
 
     // Run dispatch in background with anti-ban protections
     (async () => {
@@ -501,7 +505,93 @@ export default function AdminDisparosPage() {
       let consecutiveErrors = 0; // Track consecutive errors for rate limit detection
 
       try {
-        if (capturedMode === "individual") {
+        if (capturedIsTurbo) {
+          // ⚡ TURBO MODE: No anti-ban, stop immediately on any error
+          let i = 0;
+          while (i < remainingIds.length) {
+            const ctrl = dispatchControlsRef.current[dispatchId];
+            if (ctrl?.isCancelled) break;
+
+            if (ctrl?.isPaused) {
+              while (ctrl?.isPaused && !ctrl?.isCancelled) {
+                await new Promise((r) => setTimeout(r, 500));
+              }
+              if (ctrl?.isCancelled) break;
+            }
+
+            const contactId = remainingIds[i];
+
+            // Check contact still available
+            const { data: checkContact } = await supabase
+              .from("contacts")
+              .select("id, user_id")
+              .eq("id", contactId)
+              .maybeSingle();
+
+            if (!checkContact || checkContact.user_id !== null) {
+              results.skipped++;
+              i++;
+              updateDispatch(dispatchId, { current: results.sent + results.failed + results.skipped });
+              continue;
+            }
+
+            const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
+              body: {
+                contactIds: [contactId],
+                templateName: capturedTemplate.name,
+                templateLanguage: capturedTemplate.language,
+                userId: user?.id,
+                assignedUserId: capturedUserId,
+                selectedPhoneNumberId: capturedPhoneId || undefined,
+                variableMappings: capturedMappings,
+                phoneVerifiedName: capturedPhoneVerifiedName,
+              },
+            });
+
+            if (!sendError && result?.results) {
+              if (result.results.failed > 0) {
+                // ⚡ TURBO: Any API-level failure = stop immediately
+                results.failed += result.results.failed;
+                if (result.results.errors) results.errors.push(...result.results.errors);
+                updateDispatch(dispatchId, {
+                  current: results.sent + results.failed + results.skipped,
+                  sent: results.sent,
+                  failed: results.failed,
+                  errors: [...results.errors],
+                });
+                toast.error(`🛑 Turbo: Erro detectado, parando imediatamente.`, { duration: 15000 });
+                break;
+              }
+              results.sent += result.results.sent || 0;
+            } else {
+              // ⚡ TURBO: Edge function error = stop immediately
+              results.failed++;
+              if (sendError) results.errors.push(await getInvokeErrorMessage(sendError));
+              updateDispatch(dispatchId, {
+                current: results.sent + results.failed + results.skipped,
+                sent: results.sent,
+                failed: results.failed,
+                errors: [...results.errors],
+              });
+              toast.error(`🛑 Turbo: Erro na API, parando imediatamente.`, { duration: 15000 });
+              break;
+            }
+
+            updateDispatch(dispatchId, {
+              current: results.sent + results.failed + results.skipped,
+              sent: results.sent,
+              failed: results.failed,
+              errors: [...results.errors],
+            });
+
+            i++;
+
+            // Minimal delay (2s) to not hammer the API
+            if (i < remainingIds.length && !ctrl?.isCancelled) {
+              await new Promise((r) => setTimeout(r, 2000));
+            }
+          }
+        } else if (capturedMode === "individual") {
           let i = 0;
           while (i < remainingIds.length) {
             const ctrl = dispatchControlsRef.current[dispatchId];
@@ -837,7 +927,7 @@ export default function AdminDisparosPage() {
                       <Progress value={progress} className="h-2.5" />
                       <div className="flex flex-wrap gap-3 text-xs pt-0.5">
                         <span className="text-muted-foreground">{dispatch.current}/{dispatch.total} processados</span>
-                        <span className="text-muted-foreground">({dispatch.mode === "individual" ? "Individual" : "Lote"})</span>
+                        <span className="text-muted-foreground">({dispatch.mode === "turbo" ? "⚡ Turbo" : dispatch.mode === "individual" ? "Individual" : "Lote"})</span>
                         {dispatch.sent > 0 && <span className="text-success font-medium">✓ {dispatch.sent} enviados</span>}
                         {dispatch.failed > 0 && <span className="text-destructive font-medium">✗ {dispatch.failed} falhas</span>}
                       </div>
@@ -1043,6 +1133,10 @@ export default function AdminDisparosPage() {
                         className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "individual" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
                         <Timer className="h-4 w-4 mx-auto mb-1" /> Individual
                       </button>
+                      <button onClick={() => setDispatchMode("turbo")}
+                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "turbo" ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400" : "border-border hover:bg-muted"}`}>
+                        <Zap className="h-4 w-4 mx-auto mb-1" /> Turbo
+                      </button>
                     </div>
 
                     {dispatchMode === "individual" && (
@@ -1071,6 +1165,23 @@ export default function AdminDisparosPage() {
                           </motion.div>
                         )}
                       </>
+                    )}
+
+                    {dispatchMode === "turbo" && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="turbo-limit" className="text-xs text-muted-foreground whitespace-nowrap">Limite de envios:</Label>
+                          <Input id="turbo-limit" type="number" min={1} max={10000} value={turboLimit}
+                            onChange={(e) => setTurboLimit(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-24 text-sm" />
+                        </div>
+                        <div className="rounded border border-amber-500/30 bg-amber-500/5 p-2 text-[10px] text-amber-600 dark:text-amber-400 space-y-0.5">
+                          <p className="font-semibold">⚡ Modo Turbo — SEM proteções Anti-Ban</p>
+                          <p>• Envia continuamente sem pausas de respiro</p>
+                          <p>• Para IMEDIATAMENTE em qualquer erro da API</p>
+                          <p>• Delay mínimo de 2s entre mensagens</p>
+                          <p>• Use com responsabilidade</p>
+                        </div>
+                      </motion.div>
                     )}
                   </div>
                 </CardContent>
@@ -1168,7 +1279,7 @@ export default function AdminDisparosPage() {
                       { label: "Template", value: selectedTemplate?.name || "—" },
                       { label: "Lista", value: selectedList || "—" },
                       { label: "Contatos", value: batchMode ? `${Math.min(batchSize, listContactCount)} de ${listContactCount}` : String(listContactCount) },
-                      { label: "Modo", value: dispatchMode === "individual" ? "Individual (progressivo)" : "Lote (blocos variáveis ~20)" },
+                      { label: "Modo", value: dispatchMode === "turbo" ? `Turbo (limite: ${turboLimit})` : dispatchMode === "individual" ? "Individual (progressivo)" : "Lote (blocos variáveis ~20)" },
                       { label: "Responsável", value: users.find(u => u.user_id === selectedUserId)?.full_name || "—" },
                       ...(isScheduled && scheduledDate ? [{ label: "📅 Agendado", value: `${format(scheduledDate, "dd/MM/yyyy")} às ${scheduledHour}:${scheduledMinute} BRT` }] : []),
                     ].map((row) => (
