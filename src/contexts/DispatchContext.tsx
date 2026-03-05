@@ -131,17 +131,25 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
         if (data) {
           const mapped = (data as any[]).map(mapDbRowToDispatch);
           setActiveDispatches((prev) => {
-            // Merge: keep local state for dispatches owned by this browser (have controls),
-            // but update from DB for dispatches we don't control locally
             const localControlledIds = new Set(Object.keys(dispatchControlsRef.current));
+            const dbIds = new Set(mapped.map((d: ActiveDispatch) => d.id));
+
+            // Start with DB dispatches, keeping local state for locally-controlled ones
             const merged = mapped.map((dbDispatch) => {
               if (localControlledIds.has(dbDispatch.id)) {
-                // This dispatch is being run by this browser - keep local state
                 const local = prev.find((p) => p.id === dbDispatch.id);
                 return local || dbDispatch;
               }
               return dbDispatch;
             });
+
+            // Preserve locally-controlled dispatches not yet in DB (race condition guard)
+            for (const localDispatch of prev) {
+              if (localControlledIds.has(localDispatch.id) && !dbIds.has(localDispatch.id)) {
+                merged.push(localDispatch);
+              }
+            }
+
             return merged;
           });
         }

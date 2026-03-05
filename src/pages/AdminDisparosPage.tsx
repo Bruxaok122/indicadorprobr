@@ -493,7 +493,7 @@ export default function AdminDisparosPage() {
 
     // Run dispatch in background with anti-ban protections
     (async () => {
-      const results = { sent: 0, failed: 0, errors: [] as string[] };
+      const results = { sent: 0, failed: 0, skipped: 0, errors: [] as string[] };
       let remainingIds = [...contactIds];
       let blockMessageCount = 0;
       let currentBlockSize = getJitteredBlockSize();
@@ -520,7 +520,7 @@ export default function AdminDisparosPage() {
               );
               remainingIds = freshIds;
               i = 0;
-              updateDispatch(dispatchId, { total: results.sent + results.failed + remainingIds.length });
+              updateDispatch(dispatchId, { total: results.sent + results.failed + results.skipped + remainingIds.length });
               if (remainingIds.length === 0) break;
               continue;
             }
@@ -564,8 +564,9 @@ export default function AdminDisparosPage() {
               .maybeSingle();
 
             if (!checkContact || checkContact.user_id !== null) {
+              results.skipped++;
               i++;
-              updateDispatch(dispatchId, { current: results.sent + results.failed + 1 });
+              updateDispatch(dispatchId, { current: results.sent + results.failed + results.skipped });
               continue;
             }
 
@@ -611,7 +612,7 @@ export default function AdminDisparosPage() {
             blockMessageCount++;
 
             updateDispatch(dispatchId, {
-              current: results.sent + results.failed,
+              current: results.sent + results.failed + results.skipped,
               sent: results.sent,
               failed: results.failed,
               errors: [...results.errors],
@@ -650,7 +651,7 @@ export default function AdminDisparosPage() {
               const freshIds = await fetchRemainingContactIds(capturedListName);
               remainingIds = freshIds;
               i = 0;
-              updateDispatch(dispatchId, { total: results.sent + results.failed + remainingIds.length });
+              updateDispatch(dispatchId, { total: results.sent + results.failed + results.skipped + remainingIds.length });
               if (remainingIds.length === 0) break;
               continue;
             }
