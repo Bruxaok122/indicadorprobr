@@ -231,15 +231,18 @@ export default function AdminDisparosPage() {
   const [scheduledHour, setScheduledHour] = useState("10");
   const [scheduledMinute, setScheduledMinute] = useState("00");
 
-  // Phone data for advogado variable
+  // Phone data for advogado variable (editable override)
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
-  const phoneVerifiedName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
+  const defaultPhoneName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
+  const [customAdvogadoName, setCustomAdvogadoName] = useState<string>("");
+  const phoneVerifiedName = customAdvogadoName || defaultPhoneName;
 
-  // Auto-select phone
+  // Auto-select phone & reset custom name on phone change
   useEffect(() => {
     if (phones.length === 1 && !selectedPhoneNumberId) {
       setSelectedPhoneNumberId(phones[0].phone_number_id);
     }
+    setCustomAdvogadoName(""); // Reset override when phone changes
   }, [phones, selectedPhoneNumberId]);
 
   // Load available lists — always refresh on step 3, and once on mount
@@ -918,10 +921,19 @@ export default function AdminDisparosPage() {
                   {phones.length > 0 ? (
                     <div>
                       <PhoneNumberSelector phones={phones} selectedPhoneNumberId={selectedPhoneNumberId} onSelect={setSelectedPhoneNumberId} />
-                      {phoneVerifiedName && (
-                        <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-sm text-primary mt-3 flex items-center gap-2">
-                          👨‍⚖️ Advogado: <span className="font-semibold">{phoneVerifiedName}</span>
-                        </motion.p>
+                      {selectedPhoneNumberId && (
+                        <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="mt-3 space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">👨‍⚖️ Nome do Advogado (usado na variável do template)</Label>
+                          <Input
+                            value={customAdvogadoName || defaultPhoneName}
+                            onChange={(e) => setCustomAdvogadoName(e.target.value)}
+                            placeholder={defaultPhoneName || "Nome do advogado"}
+                            className="h-8 text-sm"
+                          />
+                          {customAdvogadoName && customAdvogadoName !== defaultPhoneName && (
+                            <p className="text-[10px] text-primary">✏️ Nome editado (original: {defaultPhoneName})</p>
+                          )}
+                        </motion.div>
                       )}
                     </div>
                   ) : (
