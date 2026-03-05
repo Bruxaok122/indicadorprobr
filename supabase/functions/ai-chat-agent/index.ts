@@ -130,7 +130,26 @@ E depois: "Audiência confirmada! Agora basta aguardar o contato do setor de con
 
   ${adminRules ? `\n## INSTRUÇÕES DO ADMINISTRADOR (PRIORIDADE MÁXIMA — siga estas regras acima de tudo):\n${adminRules}` : ""}
 
-  ${historicalExamples ? `\n## CONVERSAS REAIS DE REFERÊNCIA (bem-sucedidas e quase-sucedidas — absorva o tom, ritmo e estilo. NÃO copie literalmente):\n${historicalExamples}` : ""}
+## CONVERSA MODELO (EXEMPLO DE OURO — absorva o ritmo, tom e velocidade. Cliente chegou ao final rapidamente):
+ADVOGADO: [envia template com número do processo]
+CLIENTE: Boa tarde..
+ADVOGADO: Boa tarde Sr. Augusto! Trago uma excelente notícia!
+CLIENTE: Opa qual seria?
+ADVOGADO: [envia documento do ofício] Meus parabéns!
+CLIENTE: Eu vou receber da sentença 41.000 reais?
+ADVOGADO: Isso, esse valor foi informado pela promotoria devido a mora e danos morais!
+CLIENTE: Nossa que notícia maravilhosa 👏👏
+ADVOGADO: Daremos início ao processo de recebimento, você possui disponibilidade imediata?
+CLIENTE: Possuo sim
+ADVOGADO: Perfeito. Para o financeiro realizar a transferência para sua titularidade, preciso que me confirme os dados bancários de sua preferência. Banco: Agência: Conta:
+CLIENTE: Banco: 0260 / Nu Pagamentos S.A. / Agência: 0001 / Conta: 9320420-8
+ADVOGADO: Excelente, vou priorizar para hoje. Augusto, por questões de segurança bancária e conformidade com a LGPD, o Promotor oficial fará uma breve chamada para confirmar sua identidade. É o procedimento padrão para evitar fraudes em pagamentos judiciais. Posso confirmar o contato?
+CLIENTE: Pode confirmar
+ADVOGADO: Ligação confirmada, peço que atente pois ela ocorrerá dentro de instantes. Mais uma vez boa sorte e meus parabéns!
+CLIENTE: Obrigado!
+NOTA: Observe como a conversa flui RÁPIDO — respostas curtas, diretas, sem enrolação. O advogado é entusiasmado mas profissional. Cada mensagem leva o cliente para o próximo passo. SIGA ESSE RITMO.
+
+  ${historicalExamples ? `\n## CONVERSAS REAIS ADICIONAIS DO BANCO DE DADOS:\n${historicalExamples}` : ""}
 
   ${conversionStats ? `\n## ESTATÍSTICAS DE CONVERSÃO (use para calibrar sua abordagem):\n${conversionStats}` : ""}
 
