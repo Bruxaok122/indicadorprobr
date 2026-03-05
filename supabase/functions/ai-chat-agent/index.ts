@@ -174,9 +174,20 @@ Se o cliente fez uma objeção/pergunta que não está no script base, marque:
 Isso ajuda o sistema a aprender novas respostas.`;
 }
 
-// Human-like delay: 3-7 seconds (fast and natural)
+// Human-like delay: base 3-5s before AI processes
 function randomDelay(): Promise<void> {
-  const ms = Math.floor(Math.random() * 4000) + 3000;
+  const ms = Math.floor(Math.random() * 2000) + 3000;
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Typing simulation delay based on message length (longer messages = more "typing" time)
+function typingDelay(text: string): Promise<void> {
+  const charCount = text.length;
+  // ~30 chars/sec typing speed + random variance
+  const baseMs = Math.min(charCount * 33, 12000); // cap at 12s
+  const jitter = Math.floor(Math.random() * 2000) - 1000; // ±1s
+  const ms = Math.max(2000, baseMs + jitter); // minimum 2s
+  console.log(`Typing delay: ${ms}ms for ${charCount} chars`);
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -616,6 +627,10 @@ serve(async (req) => {
     if (Object.keys(updateData).length > 0) {
       await supabase.from("contacts").update(updateData).eq("id", contactId);
     }
+
+    // === Simulate typing based on message length ===
+    await sendTypingIndicator(phoneNumberId, accessToken, contact.phone);
+    await typingDelay(aiText);
 
     // === Send WhatsApp message (reuse accessToken/phoneNumberId resolved earlier) ===
     const whatsappUrl = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
