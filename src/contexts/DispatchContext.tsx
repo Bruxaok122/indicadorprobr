@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useRef, useEffect, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type DispatchMode = "batch" | "individual";
+export type DispatchMode = "batch" | "individual" | "turbo";
 
 export interface ActiveDispatch {
   id: string;
