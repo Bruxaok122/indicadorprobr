@@ -369,9 +369,9 @@ serve(async (req) => {
       .order("created_at", { ascending: true })
       .limit(30);
 
-    // Detect if a REAL document/ofício was sent (NOT just a template greeting)
+    // Detect if a document/template was sent to this contact
     const hasDocumentSent = (recentMessages || []).some(m => 
-      m.message_type === "document"
+      m.message_type === "template" || m.message_type === "document"
     );
 
     // Detect if AI is resuming a conversation (there are already messages exchanged)

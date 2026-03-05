@@ -234,14 +234,12 @@ export type Database = {
           last_message_preview: string | null
           lawyer_name: string | null
           name: string
-          name_verified: boolean | null
           phone: string
           process_number: string | null
           status: string | null
           updated_at: string
           user_id: string | null
           valor_da_causa: number | null
-          whatsapp_profile_name: string | null
         }
         Insert: {
           ai_enabled?: boolean
@@ -259,14 +257,12 @@ export type Database = {
           last_message_preview?: string | null
           lawyer_name?: string | null
           name: string
-          name_verified?: boolean | null
           phone: string
           process_number?: string | null
           status?: string | null
           updated_at?: string
           user_id?: string | null
           valor_da_causa?: number | null
-          whatsapp_profile_name?: string | null
         }
         Update: {
           ai_enabled?: boolean
@@ -284,14 +280,12 @@ export type Database = {
           last_message_preview?: string | null
           lawyer_name?: string | null
           name?: string
-          name_verified?: boolean | null
           phone?: string
           process_number?: string | null
           status?: string | null
           updated_at?: string
           user_id?: string | null
           valor_da_causa?: number | null
-          whatsapp_profile_name?: string | null
         }
         Relationships: [
           {

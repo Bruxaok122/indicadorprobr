@@ -116,25 +116,15 @@ serve(async (req) => {
                     continue;
                   }
                   
-                   // Update contact status and last message + mark as has_whatsapp + capture profile name
-                   const updatePayloadContact: any = {
-                     status: "respondido",
-                     last_message_at: timestamp.toISOString(),
-                     has_whatsapp: true,
-                     whatsapp_profile_name: contactName !== "Desconhecido" ? contactName : existingContact.whatsapp_profile_name,
-                   };
-
-                   // Auto-verify name: compare first name from list with WhatsApp profile name
-                   if (contactName && contactName !== "Desconhecido" && existingContact.name) {
-                     const listFirstName = existingContact.name.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\/\d]+$/, "").trim();
-                     const waFirstName = contactName.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                     updatePayloadContact.name_verified = listFirstName === waFirstName;
-                   }
-
-                   await supabase
-                     .from("contacts")
-                     .update(updatePayloadContact)
-                     .eq("id", contactId);
+                  // Update contact status and last message + mark as has_whatsapp
+                  await supabase
+                    .from("contacts")
+                    .update({
+                      status: "respondido",
+                      last_message_at: timestamp.toISOString(),
+                      has_whatsapp: true,
+                    })
+                    .eq("id", contactId);
                 }
 
                 // Find or create conversation for this specific contact
