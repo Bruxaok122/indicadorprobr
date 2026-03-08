@@ -202,7 +202,7 @@ export default function ConversasPage() {
       <div className={cn(
         "flex flex-col overflow-hidden relative min-h-0 transition-colors duration-300",
         "bg-muted dark:bg-background",
-        isMobile && !isAdmin ? "h-[100dvh]" : isMobile ? "h-[calc(100dvh-3.5rem)]" : "h-screen"
+        isMobile && !isAdmin ? "h-[100dvh]" : isMobile ? "h-[calc(100dvh-3.5rem)]" : isAdmin ? "h-[calc(100vh-3.5rem)]" : "h-screen"
       )}>
         <div className={cn("flex flex-1 overflow-hidden relative min-h-0", !isMobile && "gap-3 p-2 pr-2")}>
           {/* Contact list with 3D effect */}

@@ -68,7 +68,7 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="flex h-screen flex-col overflow-hidden bg-muted dark:bg-background">
+      <div className="flex flex-1 flex-col overflow-hidden bg-muted dark:bg-background">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -12 }}
