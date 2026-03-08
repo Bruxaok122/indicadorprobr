@@ -191,8 +191,8 @@ export function LoginGlassCard() {
           className="relative h-12 w-full overflow-hidden rounded-xl text-sm font-bold uppercase tracking-wider text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
           style={{
             background:
-              "linear-gradient(135deg, hsl(43 84% 42%) 0%, hsl(43 84% 55%) 100%)",
-            boxShadow: "0 8px 32px hsla(43, 84%, 38%, 0.35)",
+              "linear-gradient(135deg, hsl(263 70% 55%) 0%, hsl(263 70% 65%) 100%)",
+            boxShadow: "0 8px 32px hsla(263, 70%, 50%, 0.35)",
           }}
         >
           {/* Shine effect */}
