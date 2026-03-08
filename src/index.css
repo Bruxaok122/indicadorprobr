@@ -45,6 +45,10 @@
     --input: 213 25% 88%;
     --ring: 213 53% 24%;
 
+    /* Violet accent */
+    --violet: 263 70% 58%;
+    --violet-foreground: 0 0% 100%;
+
     --radius: 0.5rem;
 
     /* WhatsApp chat colors */
