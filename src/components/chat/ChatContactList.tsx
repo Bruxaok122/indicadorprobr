@@ -218,7 +218,7 @@ export function ChatContactList({
                 {count > 0 && (
                   <span className={cn(
                     "absolute -top-1.5 -right-2.5 inline-flex items-center justify-center h-3.5 min-w-[14px] px-0.5 rounded-full text-[9px] font-bold text-white",
-                    isActive ? "bg-green-500" : "bg-gray-400"
+                    isActive ? "bg-violet" : "bg-gray-400"
                   )}>
                     {count}
                   </span>
