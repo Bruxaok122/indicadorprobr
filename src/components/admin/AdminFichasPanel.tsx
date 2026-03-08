@@ -64,7 +64,7 @@ export function AdminFichasPanel() {
         .from("contacts")
         .select("id, name, phone, cpf, lawyer_name, process_number, valor_da_causa, bank_data, ai_stage, created_at, updated_at")
         .eq("ai_enabled", true)
-        .not("ai_stage", "is", null)
+        .in("ai_stage", ["pronto_para_compliance", "compliance_confirmado"])
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return data as FichaContact[];
@@ -92,9 +92,9 @@ export function AdminFichasPanel() {
     );
   });
 
-  // Group: pronto_para_compliance first, then others
+  // Group: compliance_confirmado first, then pronto_para_compliance
+  const confirmados = filtered.filter((c) => c.ai_stage === "compliance_confirmado");
   const prontos = filtered.filter((c) => c.ai_stage === "pronto_para_compliance");
-  const outros = filtered.filter((c) => c.ai_stage !== "pronto_para_compliance");
 
   if (isLoading) {
     return (
@@ -121,27 +121,28 @@ export function AdminFichasPanel() {
         </Badge>
       </div>
 
-      {prontos.length > 0 && (
+      {confirmados.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-green-500 flex items-center gap-2">
             <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            Prontos para Compliance ({prontos.length})
+            Compliance Confirmado ({confirmados.length})
           </h3>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {prontos.map((c) => (
+            {confirmados.map((c) => (
               <FichaCard key={c.id} contact={c} onCopy={handleCopy} isCopied={copiedId === c.id} />
             ))}
           </div>
         </div>
       )}
 
-      {outros.length > 0 && (
+      {prontos.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-muted-foreground">
-            Em andamento ({outros.length})
+          <h3 className="text-sm font-semibold text-emerald-400 flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            Prontos para Compliance ({prontos.length})
           </h3>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {outros.map((c) => (
+            {prontos.map((c) => (
               <FichaCard key={c.id} contact={c} onCopy={handleCopy} isCopied={copiedId === c.id} />
             ))}
           </div>
