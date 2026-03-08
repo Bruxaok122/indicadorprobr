@@ -228,7 +228,7 @@ export function ChatContactList({
               {isActive && (
                 <motion.div
                   layoutId="chatTab"
-                  className="absolute bottom-0 left-2 right-2 h-[2px] bg-green-500 rounded-full"
+                  className="absolute bottom-0 left-2 right-2 h-[2px] bg-violet rounded-full"
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               )}
