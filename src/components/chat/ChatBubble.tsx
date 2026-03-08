@@ -92,7 +92,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
       return (
         <div>
           <span className="mb-1 inline-block rounded bg-black/5 dark:bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider opacity-60">Template</span>
-          <p className="whitespace-pre-wrap text-[13px]">{message.content || message.template_name}</p>
+          <p className="whitespace-pre-wrap text-sm">{message.content || message.template_name}</p>
         </div>
       );
     }
