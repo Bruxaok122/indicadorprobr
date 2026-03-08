@@ -55,7 +55,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
             </div>
           </div>
           {message.content && message.content !== "[Imagem recebida]" && (
-            <p className="text-[13px] whitespace-pre-wrap">{message.content}</p>
+            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
           )}
         </div>
       );
