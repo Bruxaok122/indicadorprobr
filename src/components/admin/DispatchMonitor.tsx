@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useDispatchContext } from "@/contexts/DispatchContext";
+import { FailureRateBar } from "@/components/admin/FailureRateBar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ export function DispatchMonitor() {
 
   return (
     <div className="space-y-6">
+      <FailureRateBar visible={activeOnes.length > 0} />
       <div>
         <h2 className="text-xl font-bold flex items-center gap-2">
           <Activity className="h-5 w-5 text-primary" />
