@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAICompletionAlert } from "@/hooks/useAICompletionAlert";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -8,6 +9,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const isMobile = useIsMobile();
+  useAICompletionAlert();
 
   return (
     <div className={`flex min-h-screen bg-background overflow-hidden ${isMobile ? 'flex-col' : ''}`}>
