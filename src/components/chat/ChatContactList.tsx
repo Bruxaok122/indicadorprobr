@@ -245,7 +245,7 @@ export function ChatContactList({
             placeholder="Buscar contato..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 border-0 text-sm focus-visible:ring-1 focus-visible:ring-green-400/50"
+            className="pl-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 border-0 text-sm focus-visible:ring-1 focus-visible:ring-violet/40"
           />
         </div>
         {onClearAll && contacts.length > 0 && (
