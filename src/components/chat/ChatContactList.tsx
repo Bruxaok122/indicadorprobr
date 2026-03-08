@@ -13,10 +13,9 @@ import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 
-type TabFilter = "todos" | "aguardando" | "respondido" | "ia_ativa";
+type TabFilter = "aguardando" | "respondido" | "ia_ativa";
 
 const tabs: { id: TabFilter; label: string; icon: React.ElementType }[] = [
-  { id: "todos", label: "Inbox", icon: Inbox },
   { id: "aguardando", label: "Pendentes", icon: Clock },
   { id: "respondido", label: "Respondidos", icon: CheckCircle2 },
   { id: "ia_ativa", label: "IA Ativa", icon: Bot },
@@ -102,12 +101,14 @@ export function ChatContactList({
   notificationEnabled,
   onToggleNotification,
 }: ChatContactListProps) {
-  const [activeTab, setActiveTab] = useState<TabFilter>("todos");
+  const [activeTab, setActiveTab] = useState<TabFilter>("aguardando");
 
   const filteredContacts = contacts
     .filter((contact) => {
-      if (activeTab === "ia_ativa" && !contact.ai_enabled) return false;
-      if (activeTab !== "todos" && activeTab !== "ia_ativa" && contact.status !== activeTab) return false;
+      if (activeTab === "ia_ativa") return contact.ai_enabled;
+      return contact.status === activeTab;
+    })
+    .filter((contact) => {
       const q = search.toLowerCase();
       return contact.name.toLowerCase().includes(q) || contact.phone.includes(search);
     })
@@ -119,7 +120,6 @@ export function ChatContactList({
     });
 
   const tabCounts = {
-    todos: contacts.length,
     aguardando: contacts.filter((c) => c.status === "aguardando").length,
     respondido: contacts.filter((c) => c.status === "respondido").length,
     ia_ativa: contacts.filter((c) => c.ai_enabled).length,
