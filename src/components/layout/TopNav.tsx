@@ -41,7 +41,7 @@ export function TopNav() {
   };
 
   return (
-    <div className="flex items-center justify-center h-14 bg-card/60 dark:bg-card/40 backdrop-blur-xl border-b border-border/30 px-4 gap-3 shrink-0 sticky top-0 z-40">
+    <div className="flex items-center justify-center h-14 bg-card/60 dark:bg-card/40 backdrop-blur-xl border-b border-violet/20 px-4 gap-3 shrink-0 sticky top-0 z-40">
       {/* Logo */}
       <Link to="/" className="flex items-center gap-2.5 mr-2 shrink-0">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/20">
