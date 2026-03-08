@@ -12,6 +12,7 @@ export interface Contact {
   last_message_preview?: string;
   dispatched_phone_number_id?: string;
   ai_enabled?: boolean;
+  whatsapp_profile_name?: string | null;
   ai_stage?: string | null;
   bank_data?: {
     banco?: string;

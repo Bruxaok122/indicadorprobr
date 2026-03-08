@@ -337,9 +337,16 @@ export function ChatContactList({
                   {/* Info */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        {contact.name}
-                      </p>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          {contact.name}
+                        </p>
+                        {contact.whatsapp_profile_name && contact.whatsapp_profile_name !== contact.name && (
+                          <p className="truncate text-[10px] text-muted-foreground/70 leading-tight">
+                            ~{contact.whatsapp_profile_name}
+                          </p>
+                        )}
+                      </div>
                       {contact.last_message_at && (
                         <span className={cn(
                           "shrink-0 text-[11px] whitespace-nowrap",
