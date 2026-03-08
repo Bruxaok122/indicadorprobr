@@ -224,12 +224,14 @@ export function useContacts() {
     mutationFn: async () => {
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Delete by user_id directly instead of .in() with hundreds of IDs
-      // First delete messages belonging to user's contacts
-      const { data: userContacts } = await supabase
-        .from("contacts")
-        .select("id")
-        .eq("user_id", user.id);
+      // Admin sees own + orphan contacts, so fetch all visible contacts
+      let query = supabase.from("contacts").select("id");
+      if (isAdmin) {
+        query = query.or(`user_id.eq.${user.id},user_id.is.null`);
+      } else {
+        query = query.eq("user_id", user.id);
+      }
+      const { data: userContacts } = await query;
 
       if (!userContacts || userContacts.length === 0) return;
 
@@ -239,10 +241,8 @@ export function useContacts() {
         const batch = userContacts.slice(i, i + batchSize).map(c => c.id);
         await supabase.from("messages").delete().in("contact_id", batch);
         await supabase.from("conversations").delete().in("contact_id", batch);
+        await supabase.from("contacts").delete().in("id", batch);
       }
-
-      // Delete all contacts for this user
-      await supabase.from("contacts").delete().eq("user_id", user.id);
     },
     onSuccess: () => {
       toast.success("Lista limpa com sucesso!");
