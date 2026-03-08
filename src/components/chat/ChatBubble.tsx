@@ -84,7 +84,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
             <FileText className="h-5 w-5 shrink-0" />
             <span className="text-sm font-medium truncate">{message.document_name || "Documento"}</span>
           </div>
-          {message.content && <p className="whitespace-pre-wrap text-[13px]">{message.content}</p>}
+          {message.content && <p className="whitespace-pre-wrap text-sm">{message.content}</p>}
         </>
       );
     }
