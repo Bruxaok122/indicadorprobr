@@ -136,7 +136,7 @@ export function ChatContactList({
     >
       {/* Operator header bar */}
       {(operatorName || operatorPhone || operatorLawyer) && (
-        <div className="px-3 py-2.5 border-b border-border bg-primary/5 dark:bg-primary/10">
+        <div className="px-3 py-2.5 border-b border-violet/15 bg-primary/5 dark:bg-primary/10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <a href="/" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Voltar ao painel">
@@ -197,7 +197,7 @@ export function ChatContactList({
       )}
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-800">
+      <div className="flex border-b border-violet/15">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const count = tabCounts[tab.id];

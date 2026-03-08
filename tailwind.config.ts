@@ -77,6 +77,10 @@ export default {
           "incoming-foreground": "hsl(var(--chat-incoming-foreground))",
           timestamp: "hsl(var(--chat-timestamp))",
         },
+        violet: {
+          DEFAULT: "hsl(var(--violet))",
+          foreground: "hsl(var(--violet-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -57,7 +57,7 @@ export function ChatInput({
 
   if (isContactBlocked) {
     return (
-      <div className={cn("bg-card dark:bg-card border-t border-border px-3 md:px-4 py-3", isMobile && "pb-[max(0.75rem,env(safe-area-inset-bottom))]")}>
+      <div className={cn("bg-card dark:bg-card border-t border-violet/15 px-3 md:px-4 py-3", isMobile && "pb-[max(0.75rem,env(safe-area-inset-bottom))]")}>
         <div className="flex items-center justify-center gap-2 rounded-xl bg-red-50 dark:bg-red-900/20 px-3 py-3">
           <Lock className="h-4 w-4 text-red-500" />
           <p className="text-sm font-medium text-red-600 dark:text-red-400">Cliente bloqueado — desbloqueie para enviar mensagens</p>
@@ -68,7 +68,7 @@ export function ChatInput({
 
   return (
     <div className={cn(
-      "bg-muted/50 dark:bg-card border-t border-border px-2 md:px-3 py-2 shrink-0",
+      "bg-muted/50 dark:bg-card border-t border-violet/15 px-2 md:px-3 py-2 shrink-0",
       isMobile && "pb-[max(0.75rem,env(safe-area-inset-bottom))]"
     )}>
       <AnimatePresence>
