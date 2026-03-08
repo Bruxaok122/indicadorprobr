@@ -197,7 +197,7 @@ export function ChatContactList({
       )}
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-800">
+      <div className="flex border-b border-violet/15">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const count = tabCounts[tab.id];
