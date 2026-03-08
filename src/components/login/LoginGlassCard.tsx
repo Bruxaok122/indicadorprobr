@@ -165,7 +165,7 @@ export function LoginGlassCard() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-12 rounded-xl border-white/10 bg-white/[0.06] pl-11 pr-11 text-base text-white shadow-sm transition-all duration-200 placeholder:text-white/25 focus-visible:border-white/20 focus-visible:ring-1 focus-visible:ring-white/10"
+              className="h-12 rounded-xl border-white/10 bg-white/[0.06] pl-11 pr-11 text-base text-white shadow-sm transition-all duration-200 placeholder:text-white/25 focus-visible:border-violet/40 focus-visible:ring-1 focus-visible:ring-violet/30"
               required
               disabled={isLoading}
             />

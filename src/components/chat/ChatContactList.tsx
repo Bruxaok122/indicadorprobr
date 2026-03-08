@@ -209,7 +209,7 @@ export function ChatContactList({
               className={cn(
                 "flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-all relative",
                 isActive
-                  ? "text-green-600 dark:text-green-400"
+                  ? "text-violet"
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
               )}
             >
