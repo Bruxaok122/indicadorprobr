@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 const FINAL_STAGES = ["pronto_para_compliance", "compliance_confirmado"];
@@ -28,8 +29,11 @@ function playSuccessSound() {
 
 export function useAICompletionAlert() {
   const knownFinalIds = useRef<Set<string>>(new Set());
+  const { user } = useAuthContext();
 
   useEffect(() => {
+    if (!user?.id) return;
+
     const channel = supabase
       .channel("ai-completion-alert")
       .on(
@@ -41,7 +45,9 @@ export function useAICompletionAlert() {
         },
         (payload) => {
           const newRow = payload.new as any;
+          // Only notify the operator who owns this contact
           if (
+            newRow.user_id === user.id &&
             FINAL_STAGES.includes(newRow.ai_stage) &&
             !knownFinalIds.current.has(newRow.id)
           ) {
@@ -58,5 +64,5 @@ export function useAICompletionAlert() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user?.id]);
 }
