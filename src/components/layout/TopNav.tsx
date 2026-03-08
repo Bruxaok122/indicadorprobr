@@ -41,17 +41,17 @@ export function TopNav() {
   };
 
   return (
-    <div className="flex items-center h-14 bg-card/80 dark:bg-card/60 backdrop-blur-xl border-b border-border/50 px-4 gap-1 shrink-0 sticky top-0 z-40">
+    <div className="flex items-center justify-center h-14 bg-card/60 dark:bg-card/40 backdrop-blur-xl border-b border-border/30 px-4 gap-3 shrink-0 sticky top-0 z-40">
       {/* Logo */}
-      <Link to="/" className="flex items-center gap-2.5 mr-4 shrink-0">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+      <Link to="/" className="flex items-center gap-2.5 mr-2 shrink-0">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/20">
           <Scale className="h-4.5 w-4.5" />
         </div>
         <span className="font-bold text-sm text-foreground hidden md:block">JurisZap</span>
       </Link>
 
-      {/* Nav Items */}
-      <nav className="flex items-center gap-0.5 flex-1 overflow-x-auto scrollbar-none">
+      {/* Nav Items — floating pills */}
+      <nav className="flex items-center gap-2 flex-1 overflow-x-auto scrollbar-none justify-center">
         {navItems.map((item) => {
           const isActive = location.pathname === item.href;
           const Icon = item.icon;
@@ -61,10 +61,10 @@ export function TopNav() {
               key={item.href}
               to={item.href}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
+                "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap",
                 isActive
-                  ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30 scale-105"
+                  : "bg-muted/60 dark:bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted hover:shadow-md hover:scale-[1.02]"
               )}
             >
               <Icon className="h-3.5 w-3.5" />
