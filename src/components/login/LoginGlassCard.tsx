@@ -51,7 +51,7 @@ export function LoginGlassCard() {
         background: "hsla(213, 40%, 16%, 0.55)",
         backdropFilter: "blur(24px) saturate(1.4)",
         WebkitBackdropFilter: "blur(24px) saturate(1.4)",
-        border: "1px solid hsla(0, 0%, 100%, 0.08)",
+        border: "1px solid hsla(263, 70%, 60%, 0.2)",
         boxShadow:
           "0 32px 64px -12px hsla(213, 53%, 8%, 0.6), inset 0 1px 0 hsla(0, 0%, 100%, 0.06)",
       }}
