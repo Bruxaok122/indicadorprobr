@@ -118,7 +118,7 @@ export function ChatInput({
             value={messageText}
             onChange={handleInput}
             onKeyDown={handleKeyPress}
-            className="w-full resize-none rounded-2xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-base md:text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400/50 focus-visible:border-green-400 disabled:cursor-not-allowed disabled:opacity-50 transition-shadow scrollbar-none"
+            className="w-full resize-none rounded-2xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-base md:text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet/40 focus-visible:border-violet/50 disabled:cursor-not-allowed disabled:opacity-50 transition-shadow scrollbar-none"
             rows={1}
             style={{ maxHeight: 120 }}
             disabled={!canSendFreeText}

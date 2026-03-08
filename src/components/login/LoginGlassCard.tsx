@@ -51,7 +51,7 @@ export function LoginGlassCard() {
         background: "hsla(213, 40%, 16%, 0.55)",
         backdropFilter: "blur(24px) saturate(1.4)",
         WebkitBackdropFilter: "blur(24px) saturate(1.4)",
-        border: "1px solid hsla(0, 0%, 100%, 0.08)",
+        border: "1px solid hsla(263, 70%, 60%, 0.2)",
         boxShadow:
           "0 32px 64px -12px hsla(213, 53%, 8%, 0.6), inset 0 1px 0 hsla(0, 0%, 100%, 0.06)",
       }}
@@ -142,7 +142,7 @@ export function LoginGlassCard() {
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-12 rounded-xl border-white/10 bg-white/[0.06] pl-11 text-base text-white shadow-sm transition-all duration-200 placeholder:text-white/25 focus-visible:border-white/20 focus-visible:ring-1 focus-visible:ring-white/10"
+              className="h-12 rounded-xl border-white/10 bg-white/[0.06] pl-11 text-base text-white shadow-sm transition-all duration-200 placeholder:text-white/25 focus-visible:border-violet/40 focus-visible:ring-1 focus-visible:ring-violet/30"
               required
               disabled={isLoading}
             />
@@ -165,7 +165,7 @@ export function LoginGlassCard() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-12 rounded-xl border-white/10 bg-white/[0.06] pl-11 pr-11 text-base text-white shadow-sm transition-all duration-200 placeholder:text-white/25 focus-visible:border-white/20 focus-visible:ring-1 focus-visible:ring-white/10"
+              className="h-12 rounded-xl border-white/10 bg-white/[0.06] pl-11 pr-11 text-base text-white shadow-sm transition-all duration-200 placeholder:text-white/25 focus-visible:border-violet/40 focus-visible:ring-1 focus-visible:ring-violet/30"
               required
               disabled={isLoading}
             />
@@ -191,8 +191,8 @@ export function LoginGlassCard() {
           className="relative h-12 w-full overflow-hidden rounded-xl text-sm font-bold uppercase tracking-wider text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
           style={{
             background:
-              "linear-gradient(135deg, hsl(43 84% 42%) 0%, hsl(43 84% 55%) 100%)",
-            boxShadow: "0 8px 32px hsla(43, 84%, 38%, 0.35)",
+              "linear-gradient(135deg, hsl(263 70% 55%) 0%, hsl(263 70% 65%) 100%)",
+            boxShadow: "0 8px 32px hsla(263, 70%, 50%, 0.35)",
           }}
         >
           {/* Shine effect */}
