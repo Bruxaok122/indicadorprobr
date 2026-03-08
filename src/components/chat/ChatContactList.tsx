@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff } from "lucide-react";
+import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff, Bot } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -19,7 +19,7 @@ const tabs: { id: TabFilter; label: string; icon: React.ElementType }[] = [
   { id: "todos", label: "Inbox", icon: Inbox },
   { id: "aguardando", label: "Pendentes", icon: Clock },
   { id: "respondido", label: "Respondidos", icon: CheckCircle2 },
-  { id: "ia_ativa", label: "IA Ativa", icon: MessageSquare },
+  { id: "ia_ativa", label: "IA Ativa", icon: Bot },
 ];
 
 interface ChatContactListProps {
