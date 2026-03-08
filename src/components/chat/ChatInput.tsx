@@ -68,7 +68,7 @@ export function ChatInput({
 
   return (
     <div className={cn(
-      "bg-muted/50 dark:bg-card border-t border-border px-2 md:px-3 py-2 shrink-0",
+      "bg-muted/50 dark:bg-card border-t border-violet/15 px-2 md:px-3 py-2 shrink-0",
       isMobile && "pb-[max(0.75rem,env(safe-area-inset-bottom))]"
     )}>
       <AnimatePresence>
