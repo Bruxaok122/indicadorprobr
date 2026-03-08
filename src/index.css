@@ -243,7 +243,7 @@ div[style*="Edit with Lovable"],
     4px 0 20px -4px rgba(0, 0, 0, 0.12),
     0 6px 32px -8px rgba(0, 0, 0, 0.16),
     0 0 0 1px rgba(0, 0, 0, 0.04);
-  border: 1px solid hsl(var(--border));
+  border: 1px solid hsl(var(--violet) / 0.25);
 }
 
 .dark .contact-list-float {
@@ -251,7 +251,26 @@ div[style*="Edit with Lovable"],
     4px 0 20px -4px rgba(0, 0, 0, 0.4),
     0 4px 32px -8px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid hsl(var(--violet) / 0.2);
+}
+
+/* Chat panel violet glow */
+.chat-panel-float {
+  box-shadow: 
+    -4px 0 20px -4px rgba(0, 0, 0, 0.12),
+    0 6px 32px -8px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  border-left: 1px solid hsl(var(--violet) / 0.2);
+  border-top: 1px solid hsl(var(--violet) / 0.15);
+}
+
+.dark .chat-panel-float {
+  box-shadow: 
+    -4px 0 20px -4px rgba(0, 0, 0, 0.4),
+    0 4px 32px -8px rgba(0, 0, 0, 0.5),
+    inset 1px 0 0 rgba(255, 255, 255, 0.03);
+  border-left: 1px solid hsl(var(--violet) / 0.25);
+  border-top: 1px solid hsl(var(--violet) / 0.15);
 }
 
 /* WhatsApp bubble tails */
