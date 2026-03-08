@@ -96,7 +96,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
         </div>
       );
     }
-    return <p className="whitespace-pre-wrap text-[13px] leading-relaxed">{message.content}</p>;
+    return <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>;
   };
 
   return (
