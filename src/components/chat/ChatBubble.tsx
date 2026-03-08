@@ -55,7 +55,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
             </div>
           </div>
           {message.content && message.content !== "[Imagem recebida]" && (
-            <p className="text-[13px] whitespace-pre-wrap">{message.content}</p>
+            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
           )}
         </div>
       );
@@ -73,7 +73,7 @@ export function ChatBubble({ message }: ChatBubbleProps) {
       return (
         <div className="flex items-center gap-1.5 py-0.5">
           <Mic className="h-4 w-4 shrink-0 opacity-70" />
-          <span className="text-[13px]">{isOutgoing ? "Áudio enviado!" : "🎵 Áudio recebido"}</span>
+          <span className="text-sm">{isOutgoing ? "Áudio enviado!" : "🎵 Áudio recebido"}</span>
         </div>
       );
     }
@@ -82,9 +82,9 @@ export function ChatBubble({ message }: ChatBubbleProps) {
         <>
           <div className="mb-1 flex items-center gap-2 rounded-md bg-black/5 dark:bg-white/5 p-2">
             <FileText className="h-5 w-5 shrink-0" />
-            <span className="text-[13px] font-medium truncate">{message.document_name || "Documento"}</span>
+            <span className="text-sm font-medium truncate">{message.document_name || "Documento"}</span>
           </div>
-          {message.content && <p className="whitespace-pre-wrap text-[13px]">{message.content}</p>}
+          {message.content && <p className="whitespace-pre-wrap text-sm">{message.content}</p>}
         </>
       );
     }
@@ -92,11 +92,11 @@ export function ChatBubble({ message }: ChatBubbleProps) {
       return (
         <div>
           <span className="mb-1 inline-block rounded bg-black/5 dark:bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider opacity-60">Template</span>
-          <p className="whitespace-pre-wrap text-[13px]">{message.content || message.template_name}</p>
+          <p className="whitespace-pre-wrap text-sm">{message.content || message.template_name}</p>
         </div>
       );
     }
-    return <p className="whitespace-pre-wrap text-[13px] leading-relaxed">{message.content}</p>;
+    return <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>;
   };
 
   return (
