@@ -35,9 +35,9 @@ function normalizePhone(phone: string): string {
     return "5511" + digits;
   }
 
-  // Se tem 8 dígitos (número sem 9 e sem DDD) - assume DDD 11
+  // Se tem 8 dígitos (número fixo sem DDD) - FIXO, ignorar
   if (digits.length === 8) {
-    return "55119" + digits;
+    return ""; // Telefone fixo, não pode usar WhatsApp
   }
 
   // Retorna original se não conseguir normalizar
