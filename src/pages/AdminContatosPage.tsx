@@ -874,6 +874,7 @@ export default function AdminContatosPage() {
                     {splitByState && <TableHead>Estado</TableHead>}
                     <TableHead>Parte Contrária</TableHead>
                     <TableHead>Processo</TableHead>
+                    <TableHead className="w-8"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
