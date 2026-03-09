@@ -301,7 +301,7 @@ function parseBlockDashFormat(block: string): ParsedBlock | null {
       const parts = raw.split(",").map(p => p.trim()).filter(Boolean);
       for (const part of parts) {
         const normalized = normalizePhone(part);
-        if (normalized.length >= 12 && normalized.length <= 13) {
+        if (normalized.length === 13 && isMobileNumber(normalized)) {
           phones.push(normalized);
         }
       }
