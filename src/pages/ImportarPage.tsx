@@ -23,6 +23,7 @@ import {
   Plus,
   UserPlus,
   File,
+  Trash2,
 } from "lucide-react";
 import {
   Dialog,
@@ -47,6 +48,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ImportarPage() {
   const { importContacts, isImporting, addContact, isAddingContact } = useContacts();
@@ -438,7 +440,7 @@ Requerido (Polo Passivo):
             </AlertBanner>
           )}
 
-          <div className="max-h-[400px] overflow-auto rounded-lg border">
+          <ScrollArea className="max-h-[400px] rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -446,6 +448,7 @@ Requerido (Polo Passivo):
                   <TableHead>Telefone</TableHead>
                   <TableHead>Parte Contrária</TableHead>
                   <TableHead>Processo</TableHead>
+                  <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -455,11 +458,21 @@ Requerido (Polo Passivo):
                     <TableCell className="font-mono text-sm">{contact.phone}</TableCell>
                     <TableCell>{contact.lawyer_name || "-"}</TableCell>
                     <TableCell className="text-xs">{contact.process_number || "-"}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => setParsedContacts(prev => prev.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </ScrollArea>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPreview(false)}>
