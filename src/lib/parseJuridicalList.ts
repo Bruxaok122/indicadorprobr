@@ -15,9 +15,9 @@ function normalizePhone(phone: string): string {
     return digits;
   }
 
-  // Se tem 12 dígitos (55 + DDD + 8 dígitos), adiciona 9 após DDD
+  // Se tem 12 dígitos (55 + DDD + 8 dígitos) = FIXO, ignorar
   if (digits.length === 12 && digits.startsWith("55")) {
-    return digits.slice(0, 4) + "9" + digits.slice(4);
+    return ""; // Telefone fixo, não pode usar WhatsApp
   }
 
   // Se tem 11 dígitos (DDD + 9 + número)
