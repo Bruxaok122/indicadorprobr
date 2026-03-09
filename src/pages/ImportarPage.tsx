@@ -48,6 +48,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ImportarPage() {
   const { importContacts, isImporting, addContact, isAddingContact } = useContacts();
