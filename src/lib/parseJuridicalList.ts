@@ -45,7 +45,18 @@ function normalizePhone(phone: string): string {
 }
 
 /**
+ * Verifica se um número normalizado (55+DDD+número) é celular
+ * Celulares brasileiros têm 9 dígitos após o DDD (começando com 9)
+ */
+function isMobileNumber(normalized: string): boolean {
+  if (normalized.length !== 13) return false;
+  // 55 + 2 DDD + 9 dígitos, o primeiro dígito após DDD deve ser 9
+  return normalized[4] === "9";
+}
+
+/**
  * Extrai telefones de uma string (pode ter múltiplos separados por vírgula)
+ * Filtra apenas números celulares (WhatsApp não funciona em fixo)
  */
 function extractPhones(text: string): string[] {
   // Pattern para telefones brasileiros: (XX) XXXXX-XXXX ou variações
@@ -54,7 +65,7 @@ function extractPhones(text: string): string[] {
   
   return matches
     .map(phone => normalizePhone(phone))
-    .filter(phone => phone.length >= 12 && phone.length <= 13);
+    .filter(phone => phone.length === 13 && isMobileNumber(phone));
 }
 
 /**
@@ -290,7 +301,7 @@ function parseBlockDashFormat(block: string): ParsedBlock | null {
       const parts = raw.split(",").map(p => p.trim()).filter(Boolean);
       for (const part of parts) {
         const normalized = normalizePhone(part);
-        if (normalized.length >= 12 && normalized.length <= 13) {
+        if (normalized.length === 13 && isMobileNumber(normalized)) {
           phones.push(normalized);
         }
       }
