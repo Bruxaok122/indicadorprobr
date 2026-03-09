@@ -884,10 +884,20 @@ export default function AdminContatosPage() {
                       {splitByState && <TableCell><Badge variant="outline" className="text-[10px]">{getStateFromPhone(c.phone)}</Badge></TableCell>}
                       <TableCell className="text-xs">{c.lawyer_name || "-"}</TableCell>
                       <TableCell className="text-xs">{c.process_number || "-"}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                          onClick={() => setParsedContacts(prev => prev.filter((_, idx) => idx !== i))}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {(whatsappEntries.length > 0 ? validatedContacts : parsedContacts).length > 50 && (
-                    <TableRow><TableCell colSpan={splitByState ? 5 : 4} className="text-center text-xs text-muted-foreground">... e mais {(whatsappEntries.length > 0 ? validatedContacts : parsedContacts).length - 50} contatos</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={splitByState ? 6 : 5} className="text-center text-xs text-muted-foreground">... e mais {(whatsappEntries.length > 0 ? validatedContacts : parsedContacts).length - 50} contatos</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
