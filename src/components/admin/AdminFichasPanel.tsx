@@ -27,24 +27,39 @@ interface FichaContact {
 
 function buildFichaText(c: FichaContact): string {
   const bank = c.bank_data || {};
-  return `ADVOGADO: ${c.lawyer_name || "—"}
+  const valorFormatado = c.valor_da_causa
+    ? `R$ ${Number(c.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+    : "—";
 
-PROCESSO: ${c.process_number || "—"}
+  const lines = [
+    `ADVOGADO: ${c.advogado_name || "—"}`,
+    "",
+    `PARTE CONTRÁRIA: ${c.lawyer_name || "—"}`,
+    "",
+    `PROCESSO: ${c.process_number || "—"}`,
+    "",
+    `👤 Nome: ${c.name}`,
+    "",
+    `💳 Doc. CPF: ${c.cpf || "—"}`,
+    "",
+    `📞 Telefones: ${c.phone}`,
+    "",
+    `💰 Valor da Causa: ${valorFormatado}`,
+    "",
+    `DATA AGENDADA: AGORA`,
+    "",
+    `Dados bancários:`,
+    "",
+    `CPF: ${c.cpf || "—"}`,
+    "",
+    bank.banco || "—",
+    "",
+    `Agência: ${bank.agencia || "—"}`,
+    "",
+    `Conta: ${bank.conta || "—"}`,
+  ];
 
-👤 Nome: ${c.name}
-
-💳 Doc. CPF: ${c.cpf || "—"}
-
-📞 Telefone: ${c.phone}
-
-💰 Valor: R$ ${c.valor_da_causa ? Number(c.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : "—"}
-
-Dados bancários:
-CPF: ${c.cpf || "—"}
-Banco: ${bank.banco || "—"}
-Agência: ${bank.agencia || "—"}
-Conta: ${bank.conta || "—"}
-Tipo: ${bank.tipo || "—"}`;
+  return lines.join("\n");
 }
 
 const STAGE_LABELS: Record<string, string> = {
