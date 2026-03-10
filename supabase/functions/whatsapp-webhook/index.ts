@@ -87,7 +87,9 @@ serve(async (req) => {
                 let contactUserId: string | null = null;
 
                 if (!existingContact) {
-                  // Create new contact WITHOUT user_id (will be assigned on first outgoing message)
+                  // Assign new contacts to default operator (lbuser)
+                  const DEFAULT_OPERATOR_ID = "b17bfc96-dcc1-4cef-95c0-94e3598901b9";
+                  
                   const { data: newContact, error: contactError } = await supabase
                     .from("contacts")
                     .insert({
@@ -95,6 +97,7 @@ serve(async (req) => {
                       phone: phone,
                       status: "respondido",
                       last_message_at: timestamp.toISOString(),
+                      user_id: DEFAULT_OPERATOR_ID,
                     })
                     .select()
                     .single();
@@ -104,7 +107,8 @@ serve(async (req) => {
                     continue;
                   }
                   contactId = newContact.id;
-                  console.log(`Created new contact: ${contactId}`);
+                  contactUserId = DEFAULT_OPERATOR_ID;
+                  console.log(`Created new contact: ${contactId} (assigned to lbuser)`);
                 } else {
                   contactId = existingContact.id;
                   contactUserId = existingContact.user_id;
