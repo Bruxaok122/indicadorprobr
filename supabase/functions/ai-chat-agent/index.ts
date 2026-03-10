@@ -502,8 +502,19 @@ serve(async (req) => {
     // Extract new objection flag
     const isNewObjection = aiText.includes("##NEW_OBJECTION:true##");
     aiText = aiText.replace(/##NEW_OBJECTION:\w+##\s*/g, "");
-    // Catch-all: strip any remaining ## tags
+    // Catch-all: strip any remaining ## tags (complete or partial)
     aiText = aiText.replace(/##\S+?:\S*?(?:##)?\s*/g, "");
+    // Strip any bare stage names that leaked without ## tags
+    const stageNames = Object.values(AI_STAGES);
+    for (const stageName of stageNames) {
+      // Remove exact stage name or partial matches (e.g. "aguardando_" prefix)
+      const escaped = stageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      aiText = aiText.replace(new RegExp(escaped, 'gi'), "");
+    }
+    // Also catch any "aguardando_*" or similar leaked partial tags
+    aiText = aiText.replace(/\baguardando_\w*\b/gi, "");
+    aiText = aiText.replace(/\bpronto_\w*\b/gi, "");
+    aiText = aiText.replace(/\bcompliance_\w*\b/gi, "");
 
     aiText = aiText.trim();
     if (!aiText) {
