@@ -586,9 +586,14 @@ export default function AdminDisparosPage() {
 
             i++;
 
-            // Minimal delay (2s) to not hammer the API
+            // Use user-configured interval (default 2s minimum)
+            const turboDelayMs = Math.max(capturedInterval * 1000, 2000);
             if (i < remainingIds.length && !ctrl?.isCancelled) {
-              await new Promise((r) => setTimeout(r, 2000));
+              for (let s = 0; s < Math.ceil(turboDelayMs / 500); s++) {
+                const c = dispatchControlsRef.current[dispatchId];
+                if (c?.isCancelled || c?.isPaused) break;
+                await new Promise((r) => setTimeout(r, 500));
+              }
             }
           }
         } else if (capturedMode === "individual") {
@@ -711,10 +716,12 @@ export default function AdminDisparosPage() {
 
             i++;
 
-            // 🛡️ Anti-ban: Progressive randomized delay (increases with each block)
+            // 🛡️ Anti-ban: Use MAX between user interval and progressive delay
             if (i < remainingIds.length && !ctrl?.isCancelled) {
+              const userDelayMs = capturedInterval * 1000;
               const [pMin, pMax] = getProgressiveDelay(blocksCompleted, ANTI_BAN_MIN_DELAY_MS, ANTI_BAN_MAX_DELAY_MS);
-              const delayMs = randomBetween(pMin, Math.min(pMax, 15000)); // Cap at 15s
+              const antiBanDelayMs = randomBetween(pMin, Math.min(pMax, 15000));
+              const delayMs = Math.max(userDelayMs, antiBanDelayMs); // User interval always wins if larger
               for (let s = 0; s < Math.ceil(delayMs / 500); s++) {
                 const c = dispatchControlsRef.current[dispatchId];
                 if (c?.isCancelled || c?.isPaused) break;
