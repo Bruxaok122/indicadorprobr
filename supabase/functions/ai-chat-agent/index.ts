@@ -472,12 +472,12 @@ serve(async (req) => {
     let aiText = aiData.choices?.[0]?.message?.content || "";
     console.log("AI raw response:", aiText);
 
-    // Extract stage tag
+    // Extract stage tag (handle both closed ##STAGE:x## and unclosed ##STAGE:x)
     let newStage = contact.ai_stage;
-    const stageMatch = aiText.match(/##STAGE:(\S+?)##/);
+    const stageMatch = aiText.match(/##STAGE:(\S+?)(?:##|$)/);
     if (stageMatch) {
       newStage = stageMatch[1];
-      aiText = aiText.replace(/##STAGE:\S+?##\s*/g, "");
+      aiText = aiText.replace(/##STAGE:\S*?(?:##)?\s*/g, "");
     }
 
     // Extract bank data
