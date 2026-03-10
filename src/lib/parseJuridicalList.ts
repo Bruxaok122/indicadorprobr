@@ -343,7 +343,7 @@ function parseBlockDashFormat(block: string): ParsedBlock | null {
  */
 function parseBlock(block: string): ParsedBlock | null {
   // Detect dash format (has NOME: / TELEFONE: / np: fields)
-  if (/^NOME:/im.test(block) || /^TELEFONE:/im.test(block) || /^np:/im.test(block)) {
+  if (/^NOME:/im.test(block) || /^TELEFONE:/im.test(block) || /^np:/im.test(block) || (/^CPF:/im.test(block) && /^CONTRA:/im.test(block))) {
     return parseBlockDashFormat(block);
   }
 
