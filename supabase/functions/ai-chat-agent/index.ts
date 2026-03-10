@@ -116,7 +116,14 @@ ${conversionStats ? `\n## ESTATÍSTICAS DE CONVERSÃO:\n${conversionStats}` : ""
 ##STAGE:nome_do_estagio##
 Se extrair dados bancários: ##BANK_DATA:{"banco":"","agencia":"","conta":"","tipo":""}##
 Se o cliente mencionar um valor: ##VALUE_DETECTED:numero##
-IMPORTANTE: Essas tags são INVISÍVEIS ao cliente. NUNCA escreva as tags como texto da mensagem. Coloque ANTES do texto.`;
+
+## REGRAS CRÍTICAS SOBRE TAGS:
+- As tags são INVISÍVEIS ao cliente. NUNCA escreva nomes de estágio como texto.
+- NUNCA envie APENAS tags sem texto. Sua resposta DEVE conter uma mensagem real para o cliente.
+- Formato correto: ##STAGE:aguardando_dados_bancarios## Perfeito, me informa os dados da conta.
+- Formato ERRADO: ##STAGE:aguardando_dados_bancarios## (sem texto depois)
+- Formato ERRADO: aguardando_ (tag vazada como texto)
+- SEMPRE escreva uma frase COMPLETA e NATURAL para o cliente após as tags.`;
 }
 
 // Human-like delay: base 3-5s before AI processes
