@@ -108,8 +108,6 @@ export function AdminFichasPanel() {
     },
     refetchInterval: 10000,
   });
-    refetchInterval: 10000,
-  });
 
   const handleCopy = async (contact: FichaContact) => {
     const text = buildFichaText(contact);
