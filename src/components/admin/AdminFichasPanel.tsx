@@ -21,28 +21,45 @@ interface FichaContact {
   ai_stage: string | null;
   created_at: string;
   updated_at: string;
+  dispatched_phone_number_id: string | null;
+  advogado_name?: string;
 }
 
 function buildFichaText(c: FichaContact): string {
   const bank = c.bank_data || {};
-  return `ADVOGADO: ${c.lawyer_name || "—"}
+  const valorFormatado = c.valor_da_causa
+    ? `R$ ${Number(c.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+    : "—";
 
-PROCESSO: ${c.process_number || "—"}
+  const lines = [
+    `ADVOGADO: ${c.advogado_name || "—"}`,
+    "",
+    `PARTE CONTRÁRIA: ${c.lawyer_name || "—"}`,
+    "",
+    `PROCESSO: ${c.process_number || "—"}`,
+    "",
+    `👤 Nome: ${c.name}`,
+    "",
+    `💳 Doc. CPF: ${c.cpf || "—"}`,
+    "",
+    `📞 Telefones: ${c.phone}`,
+    "",
+    `💰 Valor da Causa: ${valorFormatado}`,
+    "",
+    `DATA AGENDADA: AGORA`,
+    "",
+    `Dados bancários:`,
+    "",
+    `CPF: ${c.cpf || "—"}`,
+    "",
+    bank.banco || "—",
+    "",
+    `Agência: ${bank.agencia || "—"}`,
+    "",
+    `Conta: ${bank.conta || "—"}`,
+  ];
 
-👤 Nome: ${c.name}
-
-💳 Doc. CPF: ${c.cpf || "—"}
-
-📞 Telefone: ${c.phone}
-
-💰 Valor: R$ ${c.valor_da_causa ? Number(c.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : "—"}
-
-Dados bancários:
-CPF: ${c.cpf || "—"}
-Banco: ${bank.banco || "—"}
-Agência: ${bank.agencia || "—"}
-Conta: ${bank.conta || "—"}
-Tipo: ${bank.tipo || "—"}`;
+  return lines.join("\n");
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -62,12 +79,32 @@ export function AdminFichasPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("id, name, phone, cpf, lawyer_name, process_number, valor_da_causa, bank_data, ai_stage, created_at, updated_at")
+        .select("id, name, phone, cpf, lawyer_name, process_number, valor_da_causa, bank_data, ai_stage, created_at, updated_at, dispatched_phone_number_id")
         .eq("ai_enabled", true)
         .in("ai_stage", ["pronto_para_compliance", "compliance_confirmado"])
         .order("updated_at", { ascending: false });
       if (error) throw error;
-      return data as FichaContact[];
+
+      // Fetch advogado names from waba_phone_numbers
+      const phoneIds = [...new Set((data || []).map(c => c.dispatched_phone_number_id).filter(Boolean))];
+      let phoneMap: Record<string, string> = {};
+      if (phoneIds.length > 0) {
+        const { data: phones } = await supabase
+          .from("waba_phone_numbers")
+          .select("phone_number_id, verified_name")
+          .in("phone_number_id", phoneIds);
+        if (phones) {
+          for (const p of phones) {
+            const name = p.verified_name?.split("|")[0]?.trim() || p.verified_name || "";
+            phoneMap[p.phone_number_id] = name;
+          }
+        }
+      }
+
+      return (data || []).map(c => ({
+        ...c,
+        advogado_name: c.dispatched_phone_number_id ? phoneMap[c.dispatched_phone_number_id] || null : null,
+      })) as FichaContact[];
     },
     refetchInterval: 10000,
   });
@@ -185,12 +222,14 @@ function FichaCard({ contact, onCopy, isCopied }: { contact: FichaContact; onCop
       <CardContent className="space-y-2 text-sm">
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-muted-foreground">
           <span>Advogado:</span>
+          <span className="text-foreground font-medium truncate">{contact.advogado_name || "—"}</span>
+          <span>Parte Contrária:</span>
           <span className="text-foreground font-medium truncate">{contact.lawyer_name || "—"}</span>
           <span>Processo:</span>
           <span className="text-foreground font-medium truncate">{contact.process_number || "—"}</span>
           <span>CPF:</span>
           <span className="text-foreground font-medium">{contact.cpf || "—"}</span>
-          <span>Valor:</span>
+          <span>Valor da Causa:</span>
           <span className="text-foreground font-medium">
             {contact.valor_da_causa
               ? `R$ ${Number(contact.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
