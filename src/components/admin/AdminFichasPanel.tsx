@@ -79,13 +79,35 @@ export function AdminFichasPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("id, name, phone, cpf, lawyer_name, process_number, valor_da_causa, bank_data, ai_stage, created_at, updated_at")
+        .select("id, name, phone, cpf, lawyer_name, process_number, valor_da_causa, bank_data, ai_stage, created_at, updated_at, dispatched_phone_number_id")
         .eq("ai_enabled", true)
         .in("ai_stage", ["pronto_para_compliance", "compliance_confirmado"])
         .order("updated_at", { ascending: false });
       if (error) throw error;
-      return data as FichaContact[];
+
+      // Fetch advogado names from waba_phone_numbers
+      const phoneIds = [...new Set((data || []).map(c => c.dispatched_phone_number_id).filter(Boolean))];
+      let phoneMap: Record<string, string> = {};
+      if (phoneIds.length > 0) {
+        const { data: phones } = await supabase
+          .from("waba_phone_numbers")
+          .select("phone_number_id, verified_name")
+          .in("phone_number_id", phoneIds);
+        if (phones) {
+          for (const p of phones) {
+            const name = p.verified_name?.split("|")[0]?.trim() || p.verified_name || "";
+            phoneMap[p.phone_number_id] = name;
+          }
+        }
+      }
+
+      return (data || []).map(c => ({
+        ...c,
+        advogado_name: c.dispatched_phone_number_id ? phoneMap[c.dispatched_phone_number_id] || null : null,
+      })) as FichaContact[];
     },
+    refetchInterval: 10000,
+  });
     refetchInterval: 10000,
   });
 
