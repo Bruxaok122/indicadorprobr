@@ -104,6 +104,8 @@ export function ChatBubble({ message }: ChatBubbleProps) {
       .replace(/##NEW_OBJECTION:\w*##\s*/g, "")
       .replace(/##\S+?:\S*?##\s*/g, "") // catch-all for any remaining tags
       .replace(/##STAGE:\S*/g, "") // catch unclosed tags like ##STAGE:aguardando_
+      .replace(/^##\s*/gm, "") // catch standalone ## at start of lines
+      .replace(/\s*##\s*/g, " ") // catch any remaining ## in the middle
       .trim();
     if (!cleanContent) return null;
     return <p className="whitespace-pre-wrap text-sm leading-relaxed">{cleanContent}</p>;
