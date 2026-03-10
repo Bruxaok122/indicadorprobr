@@ -96,7 +96,17 @@ export function ChatBubble({ message }: ChatBubbleProps) {
         </div>
       );
     }
-    return <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>;
+    // Strip any leaked AI control tags from display
+    const cleanContent = (message.content || "")
+      .replace(/##STAGE:\S*?##\s*/g, "")
+      .replace(/##BANK_DATA:\{.*?\}##\s*/g, "")
+      .replace(/##VALUE_DETECTED:\S*?##\s*/g, "")
+      .replace(/##NEW_OBJECTION:\w*##\s*/g, "")
+      .replace(/##\S+?:\S*?##\s*/g, "") // catch-all for any remaining tags
+      .replace(/##STAGE:\S*/g, "") // catch unclosed tags like ##STAGE:aguardando_
+      .trim();
+    if (!cleanContent) return null;
+    return <p className="whitespace-pre-wrap text-sm leading-relaxed">{cleanContent}</p>;
   };
 
   return (

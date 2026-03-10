@@ -106,6 +106,8 @@ export function ChatContactList({
   const filteredContacts = contacts
     .filter((contact) => {
       if (activeTab === "ia_ativa") return contact.ai_enabled;
+      // Exclude AI-attended contacts from other tabs
+      if (contact.ai_enabled) return false;
       return contact.status === activeTab;
     })
     .filter((contact) => {

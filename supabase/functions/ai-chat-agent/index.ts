@@ -507,6 +507,8 @@ serve(async (req) => {
     // Extract new objection flag
     const isNewObjection = aiText.includes("##NEW_OBJECTION:true##");
     aiText = aiText.replace(/##NEW_OBJECTION:\w+##\s*/g, "");
+    // Catch-all: strip any remaining ## tags
+    aiText = aiText.replace(/##\S+?:\S*?(?:##)?\s*/g, "");
 
     aiText = aiText.trim();
     if (!aiText) {
