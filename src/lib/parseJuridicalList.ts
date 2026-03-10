@@ -360,6 +360,7 @@ export function parseJuridicalList(rawText: string): {
   const errors: string[] = [];
   const blocks: ParsedBlock[] = [];
   const contacts: ParsedContact[] = [];
+  const usedPhones = new Set<string>();
 
   // Divide o texto pelos separadores (equals ou dashes)
   const hasDashSeparator = /^-{10,}$/m.test(rawText);
@@ -367,24 +368,33 @@ export function parseJuridicalList(rawText: string): {
     ? rawText.split(/\n?-{10,}\n?/).filter((block) => block.trim().length > 0)
     : rawText.split(SEPARATOR_EQUALS).filter((block) => block.trim().length > 0);
 
+  const addContactsFromBlock = (parsed: ParsedBlock) => {
+    // Deduplicate: skip phones already used by a previous block
+    const newPhones = parsed.phones.filter(p => !usedPhones.has(p));
+    if (newPhones.length === 0) return;
+    newPhones.forEach(p => usedPhones.add(p));
+
+    blocks.push(parsed);
+    const totalPhones = newPhones.length;
+    newPhones.forEach((phone, phoneIndex) => {
+      const displayName = totalPhones > 1
+        ? `${parsed.clientName} /${phoneIndex + 1}`
+        : parsed.clientName;
+      contacts.push({
+        name: displayName,
+        phone,
+        lawyer_name: parsed.lawyer,
+        process_number: parsed.process,
+        cpf: parsed.cpf,
+        renda: parsed.renda ? parseFloat(parsed.renda.replace(/\./g, "").replace(",", ".")) || undefined : undefined,
+      });
+    });
+  };
+
   if (rawBlocks.length === 0) {
     const parsed = parseBlock(rawText);
     if (parsed && parsed.phones.length > 0) {
-      blocks.push(parsed);
-      const totalPhones = parsed.phones.length;
-      parsed.phones.forEach((phone, phoneIndex) => {
-      const displayName = totalPhones > 1
-          ? `${parsed.clientName} /${phoneIndex + 1}`
-          : parsed.clientName;
-      contacts.push({
-          name: displayName,
-          phone,
-          lawyer_name: parsed.lawyer,
-          process_number: parsed.process,
-          cpf: parsed.cpf,
-          renda: parsed.renda ? parseFloat(parsed.renda.replace(/\./g, "").replace(",", ".")) || undefined : undefined,
-        });
-      });
+      addContactsFromBlock(parsed);
     } else {
       errors.push("Nenhum bloco válido encontrado. Verifique o formato da lista.");
     }
@@ -407,23 +417,7 @@ export function parseJuridicalList(rawText: string): {
       return;
     }
 
-    blocks.push(parsed);
-
-    // Cria um contato para cada telefone, diferenciando quando há múltiplos
-    const totalPhones = parsed.phones.length;
-    parsed.phones.forEach((phone, phoneIndex) => {
-      const displayName = totalPhones > 1
-        ? `${parsed.clientName} /${phoneIndex + 1}`
-        : parsed.clientName;
-      contacts.push({
-        name: displayName,
-        phone,
-        lawyer_name: parsed.lawyer,
-        process_number: parsed.process,
-        cpf: parsed.cpf,
-        renda: parsed.renda ? parseFloat(parsed.renda.replace(/\./g, "").replace(",", ".")) || undefined : undefined,
-      });
-    });
+    addContactsFromBlock(parsed);
   });
 
   return { contacts, errors, blocks };

@@ -292,18 +292,18 @@ export default function ConversasPage() {
 
       {/* Document Upload Dialog */}
       <Dialog open={showDocDialog} onOpenChange={setShowDocDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)]">
           <DialogHeader>
             <DialogTitle>Enviar Arquivo</DialogTitle>
             <DialogDescription>Confirme o envio do arquivo selecionado</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {selectedFile && (
-              <div className="flex items-center gap-3 rounded-lg border p-4">
+              <div className="flex items-center gap-3 rounded-lg border p-3 overflow-hidden">
                 {selectedFile.type.startsWith("image/") ? <FileImage className="h-8 w-8 text-blue-500 shrink-0" /> : <FileText className="h-8 w-8 text-red-500 shrink-0" />}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{selectedFile.name}</p>
-                  <p className="text-sm text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <p className="font-medium truncate text-sm">{selectedFile.name}</p>
+                  <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                 </div>
               </div>
             )}
@@ -312,7 +312,7 @@ export default function ConversasPage() {
               <Input id="docCaption" placeholder="Descrição do arquivo..." value={docCaption} onChange={(e) => setDocCaption(e.target.value)} />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => { setShowDocDialog(false); setSelectedFile(null); setDocCaption(""); }}>Cancelar</Button>
             <Button onClick={handleSendDocument} disabled={isUploading} className="bg-green-500 hover:bg-green-600 text-white">
               {isUploading ? <><LoadingSpinner size="sm" /> Enviando...</> : <><Upload className="mr-2 h-4 w-4" /> Enviar</>}
