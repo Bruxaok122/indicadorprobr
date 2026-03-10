@@ -222,12 +222,14 @@ function FichaCard({ contact, onCopy, isCopied }: { contact: FichaContact; onCop
       <CardContent className="space-y-2 text-sm">
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-muted-foreground">
           <span>Advogado:</span>
+          <span className="text-foreground font-medium truncate">{contact.advogado_name || "—"}</span>
+          <span>Parte Contrária:</span>
           <span className="text-foreground font-medium truncate">{contact.lawyer_name || "—"}</span>
           <span>Processo:</span>
           <span className="text-foreground font-medium truncate">{contact.process_number || "—"}</span>
           <span>CPF:</span>
           <span className="text-foreground font-medium">{contact.cpf || "—"}</span>
-          <span>Valor:</span>
+          <span>Valor da Causa:</span>
           <span className="text-foreground font-medium">
             {contact.valor_da_causa
               ? `R$ ${Number(contact.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
