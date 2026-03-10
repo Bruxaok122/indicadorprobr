@@ -674,7 +674,7 @@ export default function AdminContatosPage() {
                       <p className="text-sm">Nenhum contato nesta lista</p>
                     </div>
                   ) : (
-                    <ScrollArea className="max-h-72">
+                    <ScrollArea className="h-[400px]">
                       <Table>
                         <TableHeader>
                           <TableRow>
