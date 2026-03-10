@@ -310,9 +310,17 @@ function parseBlockDashFormat(block: string): ParsedBlock | null {
     else if (/^contra:/i.test(line)) {
       contra = line.replace(/^contra:\s*/i, "").trim() || undefined;
     }
-    // np: 1000323-61.2026.4.01.3508
+    // np: or PROCESSO:
     else if (/^np:/i.test(line)) {
       process = line.replace(/^np:\s*/i, "").trim() || "Não informado";
+    }
+    else if (/^PROCESSO:/i.test(line)) {
+      const extracted = extractProcess(line);
+      if (extracted) {
+        process = extracted;
+      } else {
+        process = line.replace(/^PROCESSO:\s*/i, "").trim() || "Não informado";
+      }
     }
   }
 
@@ -335,7 +343,7 @@ function parseBlockDashFormat(block: string): ParsedBlock | null {
  */
 function parseBlock(block: string): ParsedBlock | null {
   // Detect dash format (has NOME: / TELEFONE: / np: fields)
-  if (/^NOME:/im.test(block) || /^TELEFONE:/im.test(block) || /^np:/im.test(block)) {
+  if (/^NOME:/im.test(block) || /^TELEFONE:/im.test(block) || /^np:/im.test(block) || (/^CPF:/im.test(block) && /^CONTRA:/im.test(block))) {
     return parseBlockDashFormat(block);
   }
 
