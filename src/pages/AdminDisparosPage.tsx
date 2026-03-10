@@ -586,9 +586,14 @@ export default function AdminDisparosPage() {
 
             i++;
 
-            // Minimal delay (2s) to not hammer the API
+            // Use user-configured interval (default 2s minimum)
+            const turboDelayMs = Math.max(capturedInterval * 1000, 2000);
             if (i < remainingIds.length && !ctrl?.isCancelled) {
-              await new Promise((r) => setTimeout(r, 2000));
+              for (let s = 0; s < Math.ceil(turboDelayMs / 500); s++) {
+                const c = dispatchControlsRef.current[dispatchId];
+                if (c?.isCancelled || c?.isPaused) break;
+                await new Promise((r) => setTimeout(r, 500));
+              }
             }
           }
         } else if (capturedMode === "individual") {
