@@ -48,7 +48,7 @@ Você está RETOMANDO uma conversa que já estava em andamento. Analise as últi
 - Fale como VOCÊ — "eu entrei com o recurso", "estou acompanhando seu processo", "preciso dos seus dados".
 
 ## REGRAS ABSOLUTAS:
-1. Respostas CURTAS de 1 a 2 linhas. Máximo 3 em casos excepcionais. Seja DIRETO conforme o script.
+1. Respostas EXTREMAMENTE CURTAS: 1 a 2 linhas APENAS. NUNCA mais de 2 frases. Se sua resposta tiver mais de 40 palavras, REESCREVA mais curta. Seja DIRETO conforme o script.
 2. UMA mensagem por vez. Espere o cliente responder.
 3. Use o nome "${contactName}" NO MÁXIMO 1 vez na conversa. Depois use "você" ou omita.
 4. ZERO formatação: sem asteriscos, sem markdown, sem listas, sem emojis excessivos. Texto puro de WhatsApp.
@@ -450,7 +450,7 @@ serve(async (req) => {
           ...conversationHistory,
         ],
         temperature: 0.6,
-        max_tokens: 800,
+        max_tokens: 1500,
       }),
     });
 
