@@ -522,6 +522,8 @@ serve(async (req) => {
     aiText = aiText.replace(/\baguardando_\w*\b/gi, "");
     aiText = aiText.replace(/\bpronto_\w*\b/gi, "");
     aiText = aiText.replace(/\bcompliance_\w*\b/gi, "");
+    // Remove any standalone ## that leaked
+    aiText = aiText.replace(/##/g, "");
 
     aiText = aiText.trim();
     if (!aiText) {
