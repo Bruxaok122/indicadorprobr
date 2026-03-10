@@ -586,8 +586,10 @@ export default function AdminDisparosPage() {
 
             i++;
 
-            // Use user-configured interval (default 2s minimum)
-            const turboDelayMs = Math.max(capturedInterval * 1000, 2000);
+            // User interval + random jitter (5-25% extra) to avoid pattern detection
+            const baseDelayMs = Math.max(capturedInterval * 1000, 2000);
+            const jitterMs = Math.floor(baseDelayMs * (0.05 + Math.random() * 0.20));
+            const turboDelayMs = baseDelayMs + jitterMs;
             if (i < remainingIds.length && !ctrl?.isCancelled) {
               for (let s = 0; s < Math.ceil(turboDelayMs / 500); s++) {
                 const c = dispatchControlsRef.current[dispatchId];
