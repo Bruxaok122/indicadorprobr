@@ -118,6 +118,19 @@ export function ChatContactList({
       // Priority contacts always on top
       if (a.is_priority && !b.is_priority) return -1;
       if (!a.is_priority && b.is_priority) return 1;
+      // In IA Ativa tab, sort by stage progress (most advanced first)
+      if (activeTab === "ia_ativa") {
+        const stageOrder: Record<string, number> = {
+          compliance_confirmado: 5,
+          pronto_para_compliance: 4,
+          aguardando_confirmacao_chamada: 3,
+          aguardando_dados_bancarios: 2,
+          aguardando_confirmacao_doc: 1,
+        };
+        const aStage = stageOrder[(a as any).ai_stage || ""] || 0;
+        const bStage = stageOrder[(b as any).ai_stage || ""] || 0;
+        if (bStage !== aStage) return bStage - aStage;
+      }
       return 0;
     });
 

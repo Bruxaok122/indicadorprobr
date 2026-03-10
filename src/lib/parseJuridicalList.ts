@@ -417,23 +417,7 @@ export function parseJuridicalList(rawText: string): {
       return;
     }
 
-    blocks.push(parsed);
-
-    // Cria um contato para cada telefone, diferenciando quando há múltiplos
-    const totalPhones = parsed.phones.length;
-    parsed.phones.forEach((phone, phoneIndex) => {
-      const displayName = totalPhones > 1
-        ? `${parsed.clientName} /${phoneIndex + 1}`
-        : parsed.clientName;
-      contacts.push({
-        name: displayName,
-        phone,
-        lawyer_name: parsed.lawyer,
-        process_number: parsed.process,
-        cpf: parsed.cpf,
-        renda: parsed.renda ? parseFloat(parsed.renda.replace(/\./g, "").replace(",", ".")) || undefined : undefined,
-      });
-    });
+    addContactsFromBlock(parsed);
   });
 
   return { contacts, errors, blocks };
