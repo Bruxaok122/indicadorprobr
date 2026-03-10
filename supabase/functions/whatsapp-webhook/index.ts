@@ -71,6 +71,18 @@ serve(async (req) => {
 
                 console.log(`Processing message from ${phone}: ${message.type}`);
 
+                // === DEDUP: Skip if we already processed this WhatsApp message ID ===
+                const { data: existingMsg } = await supabase
+                  .from("messages")
+                  .select("id")
+                  .eq("whatsapp_message_id", messageId)
+                  .limit(1)
+                  .maybeSingle();
+                if (existingMsg) {
+                  console.log(`Skipping duplicate message: ${messageId}`);
+                  continue;
+                }
+
                 // Find existing contact by phone - prioritize the one with the most recent activity
                 // This ensures incoming replies go to the operator who most recently dispatched
                 const { data: contactsWithPhone } = await supabase
