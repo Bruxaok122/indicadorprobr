@@ -21,6 +21,8 @@ interface FichaContact {
   ai_stage: string | null;
   created_at: string;
   updated_at: string;
+  dispatched_phone_number_id: string | null;
+  advogado_name?: string;
 }
 
 function buildFichaText(c: FichaContact): string {
