@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Profile } from "@/types/juriszap";
 import { Badge } from "@/components/ui/badge";
-import { Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye } from "lucide-react";
+import { Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye, ShieldCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,8 +72,14 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
             <TableHead>Usuário</TableHead>
              <TableHead>Status</TableHead>
              <TableHead>Plano</TableHead>
-             <TableHead>API Compartilhada</TableHead>
-             <TableHead>Gerenciar Números</TableHead>
+             <TableHead>
+               <div className="flex items-center gap-1">
+                 <ShieldCheck className="h-3.5 w-3.5" />
+                 Todas
+               </div>
+             </TableHead>
+             <TableHead>API</TableHead>
+             <TableHead>Números</TableHead>
              <TableHead>Disparos</TableHead>
             <TableHead>Dispositivo</TableHead>
             <TableHead>Mensagens</TableHead>
@@ -159,6 +165,27 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
                        </span>
                      )}
                    </div>
+                 </TableCell>
+                 <TableCell>
+                   <Tooltip>
+                     <TooltipTrigger asChild>
+                       <div>
+                         <Switch
+                           checked={
+                             (user.can_use_shared_api || false) &&
+                             ((user as any).can_manage_numbers || false) &&
+                             ((user as any).can_dispatch || false)
+                           }
+                           onCheckedChange={(checked) => {
+                             onToggleApiPermission({ userId: user.user_id, canUseSharedApi: checked });
+                             onToggleManageNumbers({ userId: user.user_id, canManageNumbers: checked });
+                             onToggleDispatch({ userId: user.user_id, canDispatch: checked });
+                           }}
+                         />
+                       </div>
+                     </TooltipTrigger>
+                     <TooltipContent>Liga/desliga todas as permissões de uma vez</TooltipContent>
+                   </Tooltip>
                  </TableCell>
                  <TableCell>
                    <Switch

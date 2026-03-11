@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Lock, Unlock, Trash2, Timer, Monitor, Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye } from "lucide-react";
+import { Lock, Unlock, Trash2, Timer, Monitor, Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye, ShieldCheck } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -225,45 +225,65 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleM
         </div>
 
          {/* Actions */}
-         <div className="flex items-center justify-between pt-2 border-t">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">API</span>
-              <Switch
-                checked={user.can_use_shared_api || false}
-                onCheckedChange={(checked) =>
-                  onToggleApiPermission({
-                    userId: user.user_id,
-                    canUseSharedApi: checked,
-                  })
-                }
-              />
+         <div className="space-y-2 pt-2 border-t">
+          {/* All permissions toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              <span className="text-xs font-semibold">Todas as Permissões</span>
             </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">Números</span>
-              <Switch
-                checked={(user as any).can_manage_numbers || false}
-                onCheckedChange={(checked) =>
-                  onToggleManageNumbers({
-                    userId: user.user_id,
-                    canManageNumbers: checked,
-                  })
-                }
-              />
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">Disparos</span>
-              <Switch
-                checked={(user as any).can_dispatch || false}
-                onCheckedChange={(checked) =>
-                  onToggleDispatch({
-                    userId: user.user_id,
-                    canDispatch: checked,
-                  })
-                }
-              />
-            </div>
+            <Switch
+              checked={
+                (user.can_use_shared_api || false) &&
+                ((user as any).can_manage_numbers || false) &&
+                ((user as any).can_dispatch || false)
+              }
+              onCheckedChange={(checked) => {
+                onToggleApiPermission({ userId: user.user_id, canUseSharedApi: checked });
+                onToggleManageNumbers({ userId: user.user_id, canManageNumbers: checked });
+                onToggleDispatch({ userId: user.user_id, canDispatch: checked });
+              }}
+            />
           </div>
+          <div className="flex items-center justify-between">
+           <div className="flex items-center gap-3">
+             <div className="flex items-center gap-1">
+               <span className="text-xs text-muted-foreground">API</span>
+               <Switch
+                 checked={user.can_use_shared_api || false}
+                 onCheckedChange={(checked) =>
+                   onToggleApiPermission({
+                     userId: user.user_id,
+                     canUseSharedApi: checked,
+                   })
+                 }
+               />
+             </div>
+             <div className="flex items-center gap-1">
+               <span className="text-xs text-muted-foreground">Números</span>
+               <Switch
+                 checked={(user as any).can_manage_numbers || false}
+                 onCheckedChange={(checked) =>
+                   onToggleManageNumbers({
+                     userId: user.user_id,
+                     canManageNumbers: checked,
+                   })
+                 }
+               />
+             </div>
+             <div className="flex items-center gap-1">
+               <span className="text-xs text-muted-foreground">Disparos</span>
+               <Switch
+                 checked={(user as any).can_dispatch || false}
+                 onCheckedChange={(checked) =>
+                   onToggleDispatch({
+                     userId: user.user_id,
+                     canDispatch: checked,
+                   })
+                 }
+               />
+             </div>
+           </div>
           <div className="flex gap-1">
             <Button
               variant="ghost"
@@ -309,6 +329,7 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleM
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
+         </div>
         </div>
       </CardContent>
     </Card>

@@ -20,7 +20,7 @@ import {
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
-import { Upload, Send, List, Trash2, Pause, Play, XCircle, FileText, Phone, Radio, SkipForward, Hand, CheckCircle, X, ChevronRight, ChevronLeft } from "lucide-react";
+import { Upload, Send, List, Trash2, Pause, Play, XCircle, FileText, Phone, Radio, SkipForward, Hand, CheckCircle, X, ChevronRight, ChevronLeft, Plus } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useContacts } from "@/hooks/useContacts";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
@@ -30,6 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { ParsedContact } from "@/types/juriszap";
+import { CreateTemplateDialog } from "@/components/templates/CreateTemplateDialog";
 
 // --- Parser for the operator's raw format ---
 // No number validation, accepts all phones as-is
@@ -144,7 +145,7 @@ const CONTACT_FIELD_OPTIONS = [
 export default function OperatorDisparosPage() {
   const { user, profile } = useAuthContext();
   const { importContacts, isImporting } = useContacts();
-  const { templates } = useMetaTemplates();
+  const { templates, createTemplate, isCreatingTemplate, refetch: refetchTemplates } = useMetaTemplates();
   const { phones } = useWabaPhones();
   const {
     activeDispatches,
@@ -174,6 +175,7 @@ export default function OperatorDisparosPage() {
   const [dispatchMode, setDispatchMode] = useState<"auto" | "manual">("auto");
   const [minRenda, setMinRenda] = useState<string>("all");
   const [wizardStep, setWizardStep] = useState(0);
+  const [showCreateTemplate, setShowCreateTemplate] = useState(false);
 
   // Manual dispatch state
   const [manualContacts, setManualContacts] = useState<{ id: string; name: string; phone: string; status?: string }[]>([]);
@@ -766,7 +768,18 @@ export default function OperatorDisparosPage() {
                           className="space-y-4"
                         >
                           <div className="space-y-2">
-                            <Label>Template</Label>
+                            <div className="flex items-center justify-between">
+                              <Label>Template</Label>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => setShowCreateTemplate(true)}
+                              >
+                                <Plus className="mr-1 h-3 w-3" />
+                                Criar Template
+                              </Button>
+                            </div>
                             <Select
                               value={selectedTemplate?.name || ""}
                               onValueChange={v => setSelectedTemplate(approvedTemplates.find(t => t.name === v) || null)}
@@ -1115,6 +1128,20 @@ export default function OperatorDisparosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CreateTemplateDialog
+        open={showCreateTemplate}
+        onOpenChange={setShowCreateTemplate}
+        onSubmit={(data) => {
+          createTemplate(data, {
+            onSuccess: () => {
+              setShowCreateTemplate(false);
+              refetchTemplates();
+            },
+          });
+        }}
+        isSubmitting={isCreatingTemplate}
+      />
     </AppLayout>
   );
 }
