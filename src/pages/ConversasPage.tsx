@@ -14,8 +14,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useNotificationSound } from "@/hooks/useNotificationSound";
 import { MessageSquare, Send, Upload, FileText, FileImage } from "lucide-react";
 import { DispatchCountdown } from "@/components/chat/DispatchCountdown";
-import { OnboardingGuide } from "@/components/onboarding/OnboardingGuide";
-import { guides } from "@/components/onboarding/onboardingContent";
 
 import { ChatContactList } from "@/components/chat/ChatContactList";
 import { ChatHeader } from "@/components/chat/ChatHeader";
