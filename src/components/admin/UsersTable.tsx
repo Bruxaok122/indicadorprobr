@@ -52,7 +52,7 @@ interface UsersTableProps {
   onMonitorChat: (user: Profile) => void;
 }
 
-export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UsersTableProps) {
+export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UsersTableProps) {
   // Controlled delete dialog - prevents closure/portal issues with inline AlertDialogs in loops
   const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
 
