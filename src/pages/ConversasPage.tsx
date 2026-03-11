@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNotificationSound } from "@/hooks/useNotificationSound";
 import { MessageSquare, Send, Upload, FileText, FileImage } from "lucide-react";
+import { DispatchCountdown } from "@/components/chat/DispatchCountdown";
 
 import { ChatContactList } from "@/components/chat/ChatContactList";
 import { ChatHeader } from "@/components/chat/ChatHeader";
