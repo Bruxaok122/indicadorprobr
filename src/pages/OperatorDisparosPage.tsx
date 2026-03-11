@@ -635,10 +635,14 @@ export default function OperatorDisparosPage() {
             )}
 
             <Tabs defaultValue="importar" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="importar" className="gap-2">
                   <Upload className="h-4 w-4" />
-                  Importar Lista
+                  Importar
+                </TabsTrigger>
+                <TabsTrigger value="listas" className="gap-2">
+                  <Users className="h-4 w-4" />
+                  Listas
                 </TabsTrigger>
                 <TabsTrigger value="disparar" className="gap-2">
                   <Send className="h-4 w-4" />
