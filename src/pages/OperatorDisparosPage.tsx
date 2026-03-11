@@ -1,0 +1,759 @@
+import { useState, useEffect, useRef } from "react";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Tabs, TabsContent, TabsList, TabsTrigger,
+} from "@/components/ui/tabs";
+import { Upload, Send, List, Trash2, Pause, Play, XCircle, FileText, Phone, Radio } from "lucide-react";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { useContacts } from "@/hooks/useContacts";
+import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
+import { useWabaPhones } from "@/hooks/useWabaPhones";
+import { useDispatchContext, ActiveDispatch } from "@/contexts/DispatchContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { motion } from "framer-motion";
+import { ParsedContact } from "@/types/juriszap";
+
+// --- Parser for the operator's raw format ---
+// No number validation, accepts all phones as-is
+
+interface OperatorParsedContact {
+  name: string;
+  phone: string;
+  cpf?: string;
+  contra?: string;
+  process?: string;
+  renda?: string;
+}
+
+function parseOperatorRawText(rawText: string): { contacts: OperatorParsedContact[]; errors: string[] } {
+  const contacts: OperatorParsedContact[] = [];
+  const errors: string[] = [];
+
+  // Split by blank lines or by NOME: as separator
+  const blocks = rawText.split(/\n\s*\n/).filter(b => b.trim().length > 0);
+
+  for (let bi = 0; bi < blocks.length; bi++) {
+    const block = blocks[bi];
+    const lines = block.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+
+    let name = "";
+    let cpf: string | undefined;
+    let phones: string[] = [];
+    let contra: string | undefined;
+    let process: string | undefined;
+    let renda: string | undefined;
+
+    for (const line of lines) {
+      if (/^NOME:/i.test(line)) {
+        let afterColon = line.replace(/^NOME:\s*/i, "").trim();
+        const rendaMatch = afterColon.match(/\s*-\s*renda\s+\$?([\d.,]+)/i);
+        if (rendaMatch) {
+          renda = rendaMatch[1];
+          afterColon = afterColon.replace(/\s*-\s*renda\s+\$?[\d.,]+/i, "").trim();
+        }
+        if (afterColon) name = afterColon;
+      } else if (/^CPF:/i.test(line)) {
+        cpf = line.replace(/^CPF:\s*/i, "").trim() || undefined;
+      } else if (/^TELEFONE:/i.test(line)) {
+        const raw = line.replace(/^TELEFONE:\s*/i, "").trim();
+        const parts = raw.split(",").map(p => p.trim()).filter(Boolean);
+        for (const part of parts) {
+          // Normalize: remove non-digits, add 55 if needed
+          let digits = part.replace(/\D/g, "");
+          if (digits.length === 11) digits = "55" + digits;
+          else if (digits.length === 13 && digits.startsWith("55")) { /* ok */ }
+          else if (!digits.startsWith("55")) digits = "55" + digits;
+          if (digits.length >= 12) phones.push(digits);
+        }
+      } else if (/^CONTRA:/i.test(line)) {
+        contra = line.replace(/^CONTRA:\s*/i, "").trim() || undefined;
+      } else if (/^PROCESSO:/i.test(line)) {
+        process = line.replace(/^PROCESSO:\s*/i, "").trim() || undefined;
+      }
+    }
+
+    if (!name || phones.length === 0) {
+      if (name) errors.push(`Bloco "${name}": sem telefone`);
+      continue;
+    }
+
+    // Create one contact per phone
+    phones.forEach((phone, i) => {
+      contacts.push({
+        name: phones.length > 1 ? `${name} /${i + 1}` : name,
+        phone,
+        cpf,
+        contra,
+        process,
+        renda,
+      });
+    });
+  }
+
+  return { contacts, errors };
+}
+
+// --- Dispatch helpers (copied from admin, simplified) ---
+
+function randomBetween(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function extractVariables(text: string): number[] {
+  const matches = text.match(/\{\{(\d+)\}\}/g);
+  if (!matches) return [];
+  return [...new Set(matches.map(m => parseInt(m.replace(/[{}]/g, ""))))].sort((a, b) => a - b);
+}
+
+function getTemplateBody(template: MetaTemplate): string {
+  if (template.components) {
+    const body = (template.components as any[]).find((c: any) => c.type === "BODY");
+    return body?.text || "";
+  }
+  return "";
+}
+
+const CONTACT_FIELD_OPTIONS = [
+  { value: "name", label: "Nome do Cliente" },
+  { value: "advogado", label: "Nome do Advogado (Nº Disparo)" },
+  { value: "phone", label: "Telefone" },
+  { value: "lawyer_name", label: "Parte Contrária" },
+  { value: "process_number", label: "Número do Processo" },
+  { value: "cpf", label: "CPF" },
+  { value: "valor_da_causa", label: "Valor da Causa" },
+];
+
+export default function OperatorDisparosPage() {
+  const { user, profile } = useAuthContext();
+  const { importContacts, isImporting } = useContacts();
+  const { templates } = useMetaTemplates();
+  const { phones } = useWabaPhones();
+  const {
+    activeDispatches,
+    addDispatch,
+    updateDispatch,
+    dismissDispatch,
+    handlePause,
+    handleCancel,
+    dispatchControlsRef,
+  } = useDispatchContext();
+
+  // Import state
+  const [rawText, setRawText] = useState("");
+  const [parsedContacts, setParsedContacts] = useState<OperatorParsedContact[]>([]);
+  const [parseErrors, setParseErrors] = useState<string[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [listName, setListName] = useState("");
+
+  // Dispatch state
+  const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
+  const [variableMappings, setVariableMappings] = useState<Record<string, string>>({});
+  const [selectedList, setSelectedList] = useState("");
+  const [availableLists, setAvailableLists] = useState<{ name: string; count: number }[]>([]);
+  const [loadingLists, setLoadingLists] = useState(false);
+  const [intervalSeconds, setIntervalSeconds] = useState(60);
+
+  const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
+  const defaultPhoneName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
+  const [customAdvogadoName, setCustomAdvogadoName] = useState("");
+  const phoneVerifiedName = customAdvogadoName || defaultPhoneName;
+
+  const approvedTemplates = templates.filter(t => (t as any).status === "APPROVED");
+  const templateBody = selectedTemplate ? getTemplateBody(selectedTemplate) : "";
+  const templateVars = extractVariables(templateBody);
+
+  // Auto-select phone
+  useEffect(() => {
+    if (phones.length === 1 && !selectedPhoneNumberId) {
+      setSelectedPhoneNumberId(phones[0].phone_number_id);
+    }
+    setCustomAdvogadoName("");
+  }, [phones, selectedPhoneNumberId]);
+
+  // Auto-set variable mappings when template changes
+  useEffect(() => {
+    if (!selectedTemplate) { setVariableMappings({}); return; }
+    const body = getTemplateBody(selectedTemplate);
+    const vars = extractVariables(body);
+    const defaults: Record<string, string> = {};
+    vars.forEach((v, i) => {
+      if (i === 0) defaults[String(v)] = "name";
+      else if (i === 1) defaults[String(v)] = "process_number";
+    });
+    setVariableMappings(defaults);
+  }, [selectedTemplate]);
+
+  // Refresh lists
+  useEffect(() => {
+    refreshLists();
+    const interval = setInterval(refreshLists, 5000);
+    return () => clearInterval(interval);
+  }, [user?.id]);
+
+  function refreshLists() {
+    if (!user?.id) return;
+    setLoadingLists(true);
+    supabase
+      .from("contacts")
+      .select("contact_list")
+      .eq("user_id", user.id)
+      .not("contact_list", "is", null)
+      .limit(50000)
+      .then(({ data }) => {
+        if (!data) { setLoadingLists(false); return; }
+        const map: Record<string, number> = {};
+        (data as any[]).forEach(c => {
+          if (c.contact_list) map[c.contact_list] = (map[c.contact_list] || 0) + 1;
+        });
+        setAvailableLists(
+          Object.entries(map)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        );
+        setLoadingLists(false);
+      });
+  }
+
+  const handleParse = () => {
+    const { contacts, errors } = parseOperatorRawText(rawText);
+    setParsedContacts(contacts);
+    setParseErrors(errors);
+    if (contacts.length > 0) setShowPreview(true);
+    else toast.error("Nenhum contato encontrado. Verifique o formato.");
+  };
+
+  const handleImport = () => {
+    if (!listName.trim()) {
+      toast.error("Informe um nome para a lista");
+      return;
+    }
+    const contactsToImport: ParsedContact[] = parsedContacts.map(c => ({
+      name: c.name,
+      phone: c.phone,
+      lawyer_name: c.contra || "********",
+      process_number: c.process || "Não informado",
+      cpf: c.cpf,
+    }));
+
+    // Import with contact_list name — use direct supabase insert for operator's own contacts
+    (async () => {
+      try {
+        let successful = 0;
+        let failed = 0;
+        for (const contact of contactsToImport) {
+          const { error } = await supabase.from("contacts").insert({
+            name: contact.name,
+            phone: contact.phone,
+            lawyer_name: contact.lawyer_name,
+            process_number: contact.process_number,
+            cpf: contact.cpf,
+            status: "novo",
+            user_id: user!.id,
+            contact_list: listName.trim(),
+          });
+          if (error) { failed++; console.error(error); } else successful++;
+        }
+        toast.success(`Importação concluída! ${successful} contatos importados${failed > 0 ? `, ${failed} falhas` : ""}`);
+        setRawText("");
+        setParsedContacts([]);
+        setParseErrors([]);
+        setShowPreview(false);
+        setListName("");
+        refreshLists();
+      } catch (err: any) {
+        toast.error("Erro na importação", { description: err.message });
+      }
+    })();
+  };
+
+  // --- Dispatch ---
+  const handleSend = async () => {
+    if (!selectedTemplate || !selectedList || !user?.id) return;
+    if (phones.length > 0 && !selectedPhoneNumberId) {
+      toast.error("Selecione um número de disparo");
+      return;
+    }
+
+    // Fetch contacts from operator's own list
+    const { data: contactsData } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("contact_list", selectedList)
+      .eq("user_id", user.id)
+      .eq("status", "novo");
+
+    const contactIds = (contactsData || []).map((c: any) => c.id);
+    if (contactIds.length === 0) {
+      toast.error("Nenhum contato disponível nesta lista");
+      return;
+    }
+
+    const dispatchId = crypto.randomUUID();
+    dispatchControlsRef.current[dispatchId] = { isPaused: false, isCancelled: false };
+
+    const newDispatch: ActiveDispatch = {
+      id: dispatchId,
+      operatorName: profile?.full_name || "Operador",
+      operatorId: user.id,
+      templateName: selectedTemplate.name,
+      listName: selectedList,
+      mode: "individual",
+      total: contactIds.length,
+      sent: 0,
+      failed: 0,
+      current: 0,
+      isPaused: false,
+      isCancelled: false,
+      isFinished: false,
+      errors: [],
+    };
+
+    addDispatch(newDispatch);
+
+    const capturedTemplate = selectedTemplate;
+    const capturedPhoneId = selectedPhoneNumberId;
+    const capturedMappings = { ...variableMappings };
+    const capturedPhoneVerifiedName = phoneVerifiedName;
+    const capturedInterval = intervalSeconds;
+    const capturedListName = selectedList;
+
+    // Run dispatch in background
+    (async () => {
+      const results = { sent: 0, failed: 0, errors: [] as string[] };
+      let consecutiveErrors = 0;
+
+      try {
+        for (let i = 0; i < contactIds.length; i++) {
+          const ctrl = dispatchControlsRef.current[dispatchId];
+          if (ctrl?.isCancelled) break;
+
+          if (ctrl?.isPaused) {
+            while (ctrl?.isPaused && !ctrl?.isCancelled) {
+              await new Promise(r => setTimeout(r, 500));
+            }
+            if (ctrl?.isCancelled) break;
+          }
+
+          const contactId = contactIds[i];
+
+          const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
+            body: {
+              contactIds: [contactId],
+              templateName: capturedTemplate.name,
+              templateLanguage: capturedTemplate.language,
+              userId: user?.id,
+              assignedUserId: user?.id,
+              selectedPhoneNumberId: capturedPhoneId || undefined,
+              variableMappings: capturedMappings,
+              phoneVerifiedName: capturedPhoneVerifiedName,
+            },
+          });
+
+          if (!sendError && result?.results) {
+            results.sent += result.results.sent || 0;
+            results.failed += result.results.failed || 0;
+            if (result.results.errors) results.errors.push(...result.results.errors);
+
+            if (result.results.errors?.some((e: string) => e.includes("Conta Business bloqueada"))) {
+              toast.error("🛑 Conta bloqueada! Parando.");
+              break;
+            }
+            consecutiveErrors = 0;
+          } else {
+            results.failed++;
+            consecutiveErrors++;
+            if (sendError) {
+              const msg = sendError?.message || "Erro desconhecido";
+              results.errors.push(msg);
+            }
+
+            if (consecutiveErrors >= 3) {
+              toast.warning("🚨 3 erros consecutivos! Cooldown 5 min...");
+              await new Promise(r => setTimeout(r, 5 * 60 * 1000));
+              consecutiveErrors = 0;
+              const ctrl2 = dispatchControlsRef.current[dispatchId];
+              if (ctrl2?.isCancelled) break;
+            }
+          }
+
+          updateDispatch(dispatchId, {
+            current: results.sent + results.failed,
+            sent: results.sent,
+            failed: results.failed,
+            errors: [...results.errors],
+          });
+
+          // Delay with jitter (5-25% extra on base interval)
+          if (i < contactIds.length - 1 && !ctrl?.isCancelled) {
+            const baseDelayMs = capturedInterval * 1000;
+            const jitterMs = Math.floor(baseDelayMs * (0.05 + Math.random() * 0.20));
+            const delayMs = baseDelayMs + jitterMs;
+            for (let s = 0; s < Math.ceil(delayMs / 500); s++) {
+              const c = dispatchControlsRef.current[dispatchId];
+              if (c?.isCancelled || c?.isPaused) break;
+              await new Promise(r => setTimeout(r, 500));
+            }
+          }
+        }
+
+        const ctrl = dispatchControlsRef.current[dispatchId];
+        if (ctrl?.isCancelled) {
+          toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas`);
+        } else if (results.failed > 0) {
+          toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas`);
+        } else {
+          toast.success(`Concluído — ${results.sent} enviados!`);
+        }
+      } catch (err: any) {
+        toast.error("Erro no disparo", { description: err.message });
+      } finally {
+        updateDispatch(dispatchId, { isFinished: true });
+        delete dispatchControlsRef.current[dispatchId];
+        refreshLists();
+      }
+    })();
+
+    toast.info("Disparo iniciado!");
+  };
+
+  const listContactCount = availableLists.find(l => l.name === selectedList)?.count || 0;
+
+  return (
+    <AppLayout>
+      <div className="flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden">
+        <PageHeader
+          title="Listas e Disparos"
+          description="Importe contatos e dispare mensagens via WhatsApp"
+        />
+
+        <div className="flex-1 overflow-auto p-4 md:p-6">
+          <div className="mx-auto max-w-3xl space-y-6">
+
+            {/* Active Dispatches */}
+            {activeDispatches.filter(d => d.operatorId === user?.id).length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Radio className="h-4 w-4 text-primary" />
+                    Disparos Ativos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {activeDispatches.filter(d => d.operatorId === user?.id).map(dispatch => {
+                    const progress = dispatch.total > 0 ? (dispatch.current / dispatch.total) * 100 : 0;
+                    return (
+                      <motion.div
+                        key={dispatch.id}
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        <div className={`rounded-lg border p-3 space-y-2 ${dispatch.isFinished ? "border-muted" : "border-primary/30 bg-primary/5"}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Badge variant="outline" className="text-[10px]">{dispatch.templateName}</Badge>
+                              <Badge variant="secondary" className="text-[10px]">{dispatch.listName}</Badge>
+                            </div>
+                            {!dispatch.isFinished ? (
+                              <div className="flex gap-1.5 shrink-0">
+                                <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => handlePause(dispatch.id)}>
+                                  {dispatch.isPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+                                </Button>
+                                <Button size="sm" variant="destructive" className="h-7 px-2" onClick={() => handleCancel(dispatch.id)}>
+                                  <XCircle className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => dismissDispatch(dispatch.id)}>
+                                Limpar
+                              </Button>
+                            )}
+                          </div>
+                          <Progress value={progress} className="h-2" />
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>{dispatch.sent} enviados · {dispatch.failed} falhas</span>
+                            <span>{Math.round(progress)}% ({dispatch.current}/{dispatch.total})</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+
+            <Tabs defaultValue="importar" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="importar" className="gap-2">
+                  <Upload className="h-4 w-4" />
+                  Importar Lista
+                </TabsTrigger>
+                <TabsTrigger value="disparar" className="gap-2">
+                  <Send className="h-4 w-4" />
+                  Disparar
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Tab: Import */}
+              <TabsContent value="importar" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <FileText className="h-5 w-5 text-accent" />
+                      Colar Lista de Contatos
+                    </CardTitle>
+                    <CardDescription>
+                      Cole os dados no formato NOME / CPF / TELEFONE / CONTRA / PROCESSO
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Nome da Lista</Label>
+                      <Input
+                        value={listName}
+                        onChange={e => setListName(e.target.value)}
+                        placeholder="Ex: Lista Janeiro 2026"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Dados dos Contatos</Label>
+                      <Textarea
+                        value={rawText}
+                        onChange={e => setRawText(e.target.value)}
+                        placeholder={`NOME: CAIO HENRIQUE PEDRO FERREIRA  - renda $1861,27\n\nCPF: 41173349804\n\nTELEFONE: +5511970178814,+551126110638\n\nCONTRA: Qualicorp Consultoria\n\nPROCESSO: 4017392-65.2026.8.26.0100`}
+                        className="min-h-[250px] font-mono text-sm"
+                      />
+                    </div>
+                    <Button onClick={handleParse} disabled={!rawText.trim() || !listName.trim()} className="w-full" size="lg">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Processar Lista
+                    </Button>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Tab: Dispatch */}
+              <TabsContent value="disparar" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Send className="h-5 w-5 text-accent" />
+                      Configurar Disparo
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Phone selection */}
+                    {phones.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Número de Disparo</Label>
+                        <Select value={selectedPhoneNumberId} onValueChange={setSelectedPhoneNumberId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o número..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {phones.map(p => (
+                              <SelectItem key={p.phone_number_id} value={p.phone_number_id}>
+                                <span className="flex items-center gap-2">
+                                  <Phone className="h-3 w-3" />
+                                  {p.display_phone_number} {p.verified_name ? `(${p.verified_name})` : ""}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {selectedPhoneData && (
+                          <div className="space-y-1">
+                            <Label className="text-xs">Nome do advogado (variável)</Label>
+                            <Input
+                              value={customAdvogadoName}
+                              onChange={e => setCustomAdvogadoName(e.target.value)}
+                              placeholder={defaultPhoneName || "Nome do advogado..."}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Template */}
+                    <div className="space-y-2">
+                      <Label>Template</Label>
+                      <Select
+                        value={selectedTemplate?.name || ""}
+                        onValueChange={v => setSelectedTemplate(approvedTemplates.find(t => t.name === v) || null)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o template..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {approvedTemplates.map(t => (
+                            <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Variable mappings */}
+                    {templateVars.length > 0 && (
+                      <div className="space-y-2 rounded-lg border p-3">
+                        <Label className="text-xs font-semibold">Mapeamento de Variáveis</Label>
+                        {templateVars.map(v => (
+                          <div key={v} className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs shrink-0">{`{{${v}}}`}</Badge>
+                            <Select
+                              value={variableMappings[String(v)] || ""}
+                              onValueChange={val => setVariableMappings(prev => ({ ...prev, [String(v)]: val }))}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="Campo..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {CONTACT_FIELD_OPTIONS.map(f => (
+                                  <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* List selection */}
+                    <div className="space-y-2">
+                      <Label>Lista de Contatos</Label>
+                      {loadingLists ? (
+                        <LoadingSpinner size="sm" text="Carregando listas..." />
+                      ) : availableLists.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Nenhuma lista disponível. Importe contatos primeiro.</p>
+                      ) : (
+                        <Select value={selectedList} onValueChange={setSelectedList}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a lista..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableLists.map(l => (
+                              <SelectItem key={l.name} value={l.name}>
+                                {l.name} ({l.count} contatos)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+
+                    {/* Interval */}
+                    <div className="space-y-2">
+                      <Label>Intervalo entre mensagens (segundos)</Label>
+                      <Input
+                        type="number"
+                        value={intervalSeconds}
+                        onChange={e => setIntervalSeconds(Math.max(10, parseInt(e.target.value) || 60))}
+                        min={10}
+                        className="w-32"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Mínimo 10s. Varia automaticamente 5-25% para proteção anti-ban.
+                      </p>
+                    </div>
+
+                    {/* Send button */}
+                    <Button
+                      onClick={handleSend}
+                      disabled={!selectedTemplate || !selectedList || listContactCount === 0}
+                      className="w-full"
+                      size="lg"
+                    >
+                      <Send className="mr-2 h-4 w-4" />
+                      Iniciar Disparo ({listContactCount} contatos)
+                    </Button>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+      </div>
+
+      {/* Preview Dialog */}
+      <Dialog open={showPreview} onOpenChange={setShowPreview}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Confirmar Importação</DialogTitle>
+            <DialogDescription>
+              {parsedContacts.length} contato(s) na lista "{listName}".
+            </DialogDescription>
+          </DialogHeader>
+
+          {parseErrors.length > 0 && (
+            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm">
+              <p className="font-medium">Avisos:</p>
+              <ul className="list-disc pl-4 text-xs">
+                {parseErrors.map((e, i) => <li key={i}>{e}</li>)}
+              </ul>
+            </div>
+          )}
+
+          <ScrollArea className="max-h-[400px] rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead>Contra</TableHead>
+                  <TableHead>Processo</TableHead>
+                  <TableHead className="w-10"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {parsedContacts.map((c, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium text-sm">{c.name}</TableCell>
+                    <TableCell className="font-mono text-xs">{c.phone}</TableCell>
+                    <TableCell className="text-xs">{c.contra || "-"}</TableCell>
+                    <TableCell className="text-xs">{c.process || "-"}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => setParsedContacts(prev => prev.filter((_, idx) => idx !== i))}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setShowPreview(false)}>Cancelar</Button>
+            <Button onClick={handleImport} disabled={parsedContacts.length === 0}>
+              <Upload className="mr-2 h-4 w-4" />
+              Importar {parsedContacts.length} Contatos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </AppLayout>
+  );
+}

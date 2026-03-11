@@ -179,6 +179,25 @@ export function useAdmin() {
       });
     },
   });
+
+  // Toggle dispatch permission mutation
+  const toggleDispatchMutation = useMutation({
+    mutationFn: async ({ userId, canDispatch }: { userId: string; canDispatch: boolean }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ can_dispatch: canDispatch } as any)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: (_, { canDispatch }) => {
+      toast.success(canDispatch ? "Permissão de disparos concedida!" : "Permissão de disparos removida!");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao alterar permissão", { description: error.message });
+    },
+  });
+
   const clearTempBanMutation = useMutation({
     mutationFn: async (userId: string) => {
       const { error } = await supabase
@@ -348,6 +367,8 @@ export function useAdmin() {
     isTogglingApiPermission: toggleApiPermissionMutation.isPending,
     toggleManageNumbers: toggleManageNumbersMutation.mutate,
     isTogglingManageNumbers: toggleManageNumbersMutation.isPending,
+    toggleDispatch: toggleDispatchMutation.mutate,
+    isTogglingDispatch: toggleDispatchMutation.isPending,
     deleteUser: deleteUserMutation.mutate,
     isDeletingUser: deleteUserMutation.isPending,
     clearTempBan: clearTempBanMutation.mutate,

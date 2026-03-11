@@ -554,6 +554,7 @@ export type Database = {
           authorized_device_info: Json | null
           authorized_fingerprint: string | null
           ban_reason: string | null
+          can_dispatch: boolean | null
           can_manage_numbers: boolean | null
           can_use_shared_api: boolean | null
           created_at: string
@@ -578,6 +579,7 @@ export type Database = {
           authorized_device_info?: Json | null
           authorized_fingerprint?: string | null
           ban_reason?: string | null
+          can_dispatch?: boolean | null
           can_manage_numbers?: boolean | null
           can_use_shared_api?: boolean | null
           created_at?: string
@@ -602,6 +604,7 @@ export type Database = {
           authorized_device_info?: Json | null
           authorized_fingerprint?: string | null
           ban_reason?: string | null
+          can_dispatch?: boolean | null
           can_manage_numbers?: boolean | null
           can_use_shared_api?: boolean | null
           created_at?: string

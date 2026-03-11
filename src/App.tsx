@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { DispatchProvider } from "@/contexts/DispatchContext";
 
 import ConfiguracaoPage from "./pages/ConfiguracaoPage";
 import ImportarPage from "./pages/ImportarPage";
@@ -14,6 +15,7 @@ import ConversasPage from "./pages/ConversasPage";
 import TemplatesPage from "./pages/TemplatesPage";
 import WebhookPage from "./pages/WebhookPage";
 import WhatsAppApiPage from "./pages/WhatsAppApiPage";
+import OperatorDisparosPage from "./pages/OperatorDisparosPage";
 import LoginPage from "./pages/LoginPage";
 import AdminPage from "./pages/AdminPage";
 import NotFound from "./pages/NotFound";
@@ -27,6 +29,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <DispatchProvider>
           <ScrollToTop />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -95,6 +98,14 @@ const App = () => (
               }
             />
             <Route
+              path="/disparos"
+              element={
+                <ProtectedRoute>
+                  <OperatorDisparosPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/webhook"
               element={
                 <ProtectedRoute>
@@ -104,6 +115,7 @@ const App = () => (
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </DispatchProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

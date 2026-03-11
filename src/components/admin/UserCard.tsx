@@ -19,6 +19,7 @@ interface UserCardProps {
   onToggleBlock: (params: { userId: string; isBlocked: boolean }) => void;
   onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
   onToggleManageNumbers: (params: { userId: string; canManageNumbers: boolean }) => void;
+  onToggleDispatch: (params: { userId: string; canDispatch: boolean }) => void;
   onDelete: (user: Profile) => void;
   onClearTempBan: (userId: string) => void;
   onManagePhones: (user: Profile) => void;
@@ -28,7 +29,7 @@ interface UserCardProps {
   onMonitorChat: (user: Profile) => void;
 }
 
-export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UserCardProps) {
+export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UserCardProps) {
    const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
  
    return (
@@ -246,6 +247,18 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleM
                   onToggleManageNumbers({
                     userId: user.user_id,
                     canManageNumbers: checked,
+                  })
+                }
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">Disparos</span>
+              <Switch
+                checked={(user as any).can_dispatch || false}
+                onCheckedChange={(checked) =>
+                  onToggleDispatch({
+                    userId: user.user_id,
+                    canDispatch: checked,
                   })
                 }
               />

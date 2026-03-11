@@ -202,11 +202,11 @@ export default function ConversasPage() {
       <div className={cn(
         "flex flex-col overflow-hidden relative min-h-0 transition-colors duration-300",
         "bg-muted dark:bg-background",
-        isMobile && !isAdmin && !(profile as any)?.can_manage_numbers
+        isMobile && !isAdmin && !(profile as any)?.can_manage_numbers && !(profile as any)?.can_dispatch
           ? "h-[100dvh]"
           : isMobile
             ? "h-[calc(100dvh-3.5rem)]"
-            : isAdmin || (profile as any)?.can_manage_numbers
+            : isAdmin || (profile as any)?.can_manage_numbers || (profile as any)?.can_dispatch
               ? "h-[calc(100vh-3.5rem)]"
               : "h-screen"
       )}>
@@ -363,7 +363,7 @@ export default function ConversasPage() {
     </>
   );
 
-  if (isAdmin || (profile as any)?.can_manage_numbers) {
+  if (isAdmin || (profile as any)?.can_manage_numbers || (profile as any)?.can_dispatch) {
     return <AppLayout>{chatContent}</AppLayout>;
   }
 
