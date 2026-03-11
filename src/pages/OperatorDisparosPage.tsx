@@ -172,6 +172,7 @@ export default function OperatorDisparosPage() {
   const [loadingLists, setLoadingLists] = useState(false);
   const [intervalSeconds, setIntervalSeconds] = useState(65);
   const [dispatchMode, setDispatchMode] = useState<"auto" | "manual">("auto");
+  const [minRenda, setMinRenda] = useState<string>("all");
 
   // Manual dispatch state
   const [manualContacts, setManualContacts] = useState<{ id: string; name: string; phone: string; status?: string }[]>([]);
@@ -300,14 +301,19 @@ export default function OperatorDisparosPage() {
       return;
     }
 
-    // Fetch contacts from operator's own list
-    const { data: contactsData } = await supabase
+    // Fetch contacts from operator's own list with renda filter
+    let query = supabase
       .from("contacts")
       .select("id")
       .eq("contact_list", selectedList)
       .eq("user_id", user.id)
       .eq("status", "novo");
 
+    if (minRenda !== "all") {
+      query = query.gte("valor_da_causa", parseInt(minRenda));
+    }
+
+    const { data: contactsData } = await query;
     const contactIds = (contactsData || []).map((c: any) => c.id);
     if (contactIds.length === 0) {
       toast.error("Nenhum contato disponível nesta lista");
@@ -451,12 +457,18 @@ export default function OperatorDisparosPage() {
       return;
     }
 
-    const { data: contactsData } = await supabase
+    let manualQuery = supabase
       .from("contacts")
       .select("id, name, phone")
       .eq("contact_list", selectedList)
       .eq("user_id", user.id)
       .eq("status", "novo");
+
+    if (minRenda !== "all") {
+      manualQuery = manualQuery.gte("valor_da_causa", parseInt(minRenda));
+    }
+
+    const { data: contactsData } = await manualQuery;
 
     const contacts = (contactsData || []).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone }));
     if (contacts.length === 0) {
@@ -768,6 +780,26 @@ export default function OperatorDisparosPage() {
                           </SelectContent>
                         </Select>
                       )}
+                    </div>
+
+                    {/* Income filter */}
+                    <div className="space-y-2">
+                      <Label>Filtro de Renda</Label>
+                      <Select value={minRenda} onValueChange={setMinRenda}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Todos os contatos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos (sem filtro)</SelectItem>
+                          <SelectItem value="5000">Acima de R$ 5.000</SelectItem>
+                          <SelectItem value="10000">Acima de R$ 10.000</SelectItem>
+                          <SelectItem value="15000">Acima de R$ 15.000</SelectItem>
+                          <SelectItem value="20000">Acima de R$ 20.000</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Filtra contatos pelo valor da causa/renda mínima.
+                      </p>
                     </div>
 
                     {/* Mode selection */}
