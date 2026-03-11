@@ -169,6 +169,17 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
                      }
                    />
                  </TableCell>
+                 <TableCell>
+                   <Switch
+                     checked={(user as any).can_manage_numbers || false}
+                     onCheckedChange={(checked) =>
+                       onToggleManageNumbers({
+                         userId: user.user_id,
+                         canManageNumbers: checked,
+                       })
+                     }
+                   />
+                 </TableCell>
             <TableCell>
               <div className="flex flex-col gap-1.5">
                 {user.authorized_fingerprint ? (
