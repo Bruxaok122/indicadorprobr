@@ -14,12 +14,12 @@ export function useContacts() {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      // Admin sees own contacts + orphan contacts (user_id = null) so no response is lost
+      // Admin sees ONLY orphan contacts (user_id = null) — never operator contacts
       if (isAdmin) {
         const { data, error } = await supabase
           .from("contacts")
           .select("*")
-          .or(`user_id.eq.${user.id},user_id.is.null`)
+          .is("user_id", null)
           .order("last_message_at", { ascending: false, nullsFirst: false })
           .order("created_at", { ascending: false });
 
@@ -227,7 +227,7 @@ export function useContacts() {
       // Admin sees own + orphan contacts, so fetch all visible contacts
       let query = supabase.from("contacts").select("id");
       if (isAdmin) {
-        query = query.or(`user_id.eq.${user.id},user_id.is.null`);
+        query = query.is("user_id", null);
       } else {
         query = query.eq("user_id", user.id);
       }
