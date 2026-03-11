@@ -108,6 +108,35 @@ export default function WhatsAppApiPage() {
   const selectedPhoneStatus = selectedPhone ? phoneStatuses[selectedPhone.phone_number_id] : null;
   const isPhoneConnected = selectedPhoneStatus?.status === "CONNECTED";
 
+  const getInvokeErrorMessage = async (invokeError: any, fallback: string) => {
+    const response = invokeError?.context;
+    const statusCode = response?.status;
+    const statusSuffix = statusCode ? ` (HTTP ${statusCode})` : "";
+
+    if (response && typeof response.clone === "function") {
+      try {
+        const rawText = await response.clone().text();
+        if (rawText) {
+          try {
+            const parsed = JSON.parse(rawText);
+            const backendMessage =
+              (typeof parsed?.error === "string" && parsed.error) ||
+              (typeof parsed?.message === "string" && parsed.message) ||
+              null;
+
+            if (backendMessage) return `${backendMessage}${statusSuffix}`;
+          } catch {
+            return `${rawText}${statusSuffix}`;
+          }
+        }
+      } catch {
+        // fallback abaixo
+      }
+    }
+
+    return `${invokeError?.message || fallback}${statusSuffix}`;
+  };
+
   // Check status of a single phone
   const checkPhoneStatus = async (phoneNumberId: string) => {
     setPhoneStatuses((prev) => ({
@@ -190,13 +219,15 @@ export default function WhatsAppApiPage() {
           setVerifiedName("");
           return;
         } catch (pinErr: any) {
-          toast.info("Número registrado! PIN automático falhou, configure manualmente.", { description: pinErr.message });
+          const pinErrorMessage = await getInvokeErrorMessage(pinErr, "Falha ao configurar PIN automaticamente");
+          toast.info("Número registrado! PIN automático falhou, configure manualmente.", { description: pinErrorMessage });
         }
       }
       
       toast.success("Número registrado!", { description: "Solicite o código de verificação ou defina o PIN." });
     } catch (err: any) {
-      toast.error("Erro ao registrar", { description: err.message });
+      const errorMessage = await getInvokeErrorMessage(err, "Erro ao registrar número");
+      toast.error("Erro ao registrar", { description: errorMessage });
     } finally {
       setRegistering(false);
     }
