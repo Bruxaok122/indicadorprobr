@@ -29,7 +29,7 @@ interface UserCardProps {
   onMonitorChat: (user: Profile) => void;
 }
 
-export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UserCardProps) {
+export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UserCardProps) {
    const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
  
    return (
