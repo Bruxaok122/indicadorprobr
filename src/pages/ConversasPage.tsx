@@ -357,7 +357,7 @@ export default function ConversasPage() {
     </>
   );
 
-  if (isAdmin) {
+  if (isAdmin || (profile as any)?.can_manage_numbers) {
     return <AppLayout>{chatContent}</AppLayout>;
   }
 
