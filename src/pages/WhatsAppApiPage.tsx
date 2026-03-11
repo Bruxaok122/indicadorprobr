@@ -441,7 +441,7 @@ export default function WhatsAppApiPage() {
           <div className="mx-auto max-w-3xl space-y-6">
 
             {/* Registered Numbers with Status */}
-            <Card>
+            <Card data-onboarding="phone-list">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
