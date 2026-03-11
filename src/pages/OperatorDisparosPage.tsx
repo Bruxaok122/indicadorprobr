@@ -171,6 +171,13 @@ export default function OperatorDisparosPage() {
   const [availableLists, setAvailableLists] = useState<{ name: string; count: number }[]>([]);
   const [loadingLists, setLoadingLists] = useState(false);
   const [intervalSeconds, setIntervalSeconds] = useState(65);
+  const [dispatchMode, setDispatchMode] = useState<"auto" | "manual">("auto");
+
+  // Manual dispatch state
+  const [manualContacts, setManualContacts] = useState<{ id: string; name: string; phone: string; status?: string }[]>([]);
+  const [manualIndex, setManualIndex] = useState(0);
+  const [manualSending, setManualSending] = useState(false);
+  const [manualResults, setManualResults] = useState({ sent: 0, failed: 0 });
 
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
   const defaultPhoneName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
