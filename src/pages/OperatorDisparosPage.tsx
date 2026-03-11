@@ -301,13 +301,17 @@ export default function OperatorDisparosPage() {
       return;
     }
 
-    // Fetch contacts from operator's own list
-    const { data: contactsData } = await supabase
+    // Fetch contacts from operator's own list with renda filter
+    let query = supabase
       .from("contacts")
       .select("id")
       .eq("contact_list", selectedList)
       .eq("user_id", user.id)
       .eq("status", "novo");
+
+    if (minRenda !== "all") {
+      query = query.gte("valor_da_causa", parseInt(minRenda));
+    }
 
     const contactIds = (contactsData || []).map((c: any) => c.id);
     if (contactIds.length === 0) {
