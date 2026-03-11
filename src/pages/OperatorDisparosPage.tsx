@@ -182,7 +182,8 @@ export default function OperatorDisparosPage() {
   const [manualResults, setManualResults] = useState({ sent: 0, failed: 0 });
 
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
-  const defaultPhoneName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
+  const rawDisplayName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
+  const defaultPhoneName = rawDisplayName.includes("|") ? rawDisplayName.split("|")[0].trim() : rawDisplayName;
   const [customAdvogadoName, setCustomAdvogadoName] = useState("");
   const phoneVerifiedName = customAdvogadoName || defaultPhoneName;
 
