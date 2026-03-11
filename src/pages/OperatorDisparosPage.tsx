@@ -170,7 +170,7 @@ export default function OperatorDisparosPage() {
   const [selectedList, setSelectedList] = useState("");
   const [availableLists, setAvailableLists] = useState<{ name: string; count: number }[]>([]);
   const [loadingLists, setLoadingLists] = useState(false);
-  const [intervalSeconds, setIntervalSeconds] = useState(60);
+  const [intervalSeconds, setIntervalSeconds] = useState(65);
 
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
   const defaultPhoneName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
