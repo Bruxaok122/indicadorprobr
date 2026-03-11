@@ -457,12 +457,18 @@ export default function OperatorDisparosPage() {
       return;
     }
 
-    const { data: contactsData } = await supabase
+    let manualQuery = supabase
       .from("contacts")
       .select("id, name, phone")
       .eq("contact_list", selectedList)
       .eq("user_id", user.id)
       .eq("status", "novo");
+
+    if (minRenda !== "all") {
+      manualQuery = manualQuery.gte("valor_da_causa", parseInt(minRenda));
+    }
+
+    const { data: contactsData } = await manualQuery;
 
     const contacts = (contactsData || []).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone }));
     if (contacts.length === 0) {
