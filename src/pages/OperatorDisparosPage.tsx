@@ -585,6 +585,41 @@ export default function OperatorDisparosPage() {
     setLoadingListContacts(false);
   };
 
+  const handleDeleteList = async (listNameToDelete: string) => {
+    if (!user?.id) return;
+    const confirmed = window.confirm(`Excluir a lista "${listNameToDelete}" e todos os seus contatos? Esta ação não pode ser desfeita.`);
+    if (!confirmed) return;
+    setDeletingList(listNameToDelete);
+    try {
+      // Get contact IDs first
+      const { data: contactIds } = await supabase
+        .from("contacts")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("contact_list", listNameToDelete);
+      
+      const ids = (contactIds || []).map((c: any) => c.id);
+      
+      if (ids.length > 0) {
+        // Delete messages and conversations in batches
+        for (let i = 0; i < ids.length; i += 100) {
+          const batch = ids.slice(i, i + 100);
+          await supabase.from("messages").delete().in("contact_id", batch);
+          await supabase.from("conversations").delete().in("contact_id", batch);
+          await supabase.from("contacts").delete().in("id", batch);
+        }
+      }
+      
+      toast.success(`Lista "${listNameToDelete}" excluída com sucesso`);
+      if (selectedList === listNameToDelete) setSelectedList("");
+      refreshLists();
+    } catch (err: any) {
+      toast.error("Erro ao excluir lista", { description: err.message });
+    } finally {
+      setDeletingList(null);
+    }
+  };
+
   const listContactCount = availableLists.find(l => l.name === selectedList)?.count || 0;
 
   return (
