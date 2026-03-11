@@ -387,10 +387,12 @@ export default function WhatsAppApiPage() {
                     <CardDescription>Status de conexão dos seus números</CardDescription>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => syncPhones()} disabled={isSyncing}>
-                      <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-                      Sincronizar
-                    </Button>
+                    {isAdmin && (
+                      <Button variant="outline" size="sm" onClick={() => syncPhones()} disabled={isSyncing}>
+                        <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
+                        Sincronizar
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" onClick={checkAllStatuses} disabled={checkingAllStatuses}>
                       {checkingAllStatuses ? <LoadingSpinner size="sm" /> : "Verificar Status"}
                     </Button>
@@ -404,7 +406,7 @@ export default function WhatsAppApiPage() {
                   </div>
                 ) : availablePhones.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">
-                    Nenhum número cadastrado. Registre um número abaixo ou sincronize da Meta.
+                    Nenhum número cadastrado. Registre um número abaixo.
                   </p>
                 ) : (
                   <div className="space-y-3">
