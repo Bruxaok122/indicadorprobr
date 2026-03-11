@@ -711,6 +711,17 @@ export default function OperatorDisparosPage() {
                       </Select>
                     </div>
 
+                    {/* Template Preview */}
+                    {selectedTemplate && templateBody && (
+                      <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-xs font-semibold text-muted-foreground">Preview do Template</span>
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed">{templateBody}</p>
+                      </div>
+                    )}
+
                     {/* Variable mappings */}
                     {templateVars.length > 0 && (
                       <div className="space-y-2 rounded-lg border p-3">
