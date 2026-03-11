@@ -759,31 +759,137 @@ export default function OperatorDisparosPage() {
                       )}
                     </div>
 
-                    {/* Interval */}
+                    {/* Mode selection */}
                     <div className="space-y-2">
-                      <Label>Intervalo entre mensagens (segundos)</Label>
-                      <Input
-                        type="number"
-                        value={intervalSeconds}
-                        onChange={e => setIntervalSeconds(Math.max(60, parseInt(e.target.value) || 65))}
-                        min={60}
-                        className="w-32"
-                      />
+                      <Label>Modo de Disparo</Label>
+                      <div className="flex gap-2">
+                        <Button
+                          variant={dispatchMode === "auto" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setDispatchMode("auto")}
+                          className="flex-1"
+                        >
+                          <Send className="mr-2 h-3.5 w-3.5" />
+                          Automático
+                        </Button>
+                        <Button
+                          variant={dispatchMode === "manual" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setDispatchMode("manual")}
+                          className="flex-1"
+                        >
+                          <Hand className="mr-2 h-3.5 w-3.5" />
+                          Manual (1 a 1)
+                        </Button>
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        Mínimo 60s. O intervalo varia automaticamente (ex: 63s, 67s, 72s) para proteção anti-ban.
+                        {dispatchMode === "auto"
+                          ? "Envia automaticamente com intervalo entre mensagens."
+                          : "Você controla cada envio manualmente, um por um."}
                       </p>
                     </div>
 
-                    {/* Send button */}
-                    <Button
-                      onClick={handleSend}
-                      disabled={!selectedTemplate || !selectedList || listContactCount === 0}
-                      className="w-full"
-                      size="lg"
-                    >
-                      <Send className="mr-2 h-4 w-4" />
-                      Iniciar Disparo ({listContactCount} contatos)
-                    </Button>
+                    {/* Auto mode: interval + send */}
+                    {dispatchMode === "auto" && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Intervalo entre mensagens (segundos)</Label>
+                          <Input
+                            type="number"
+                            value={intervalSeconds}
+                            onChange={e => setIntervalSeconds(Math.max(60, parseInt(e.target.value) || 65))}
+                            min={60}
+                            className="w-32"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Mínimo 60s. O intervalo varia automaticamente (ex: 63s, 67s, 72s) para proteção anti-ban.
+                          </p>
+                        </div>
+                        <Button
+                          onClick={handleSend}
+                          disabled={!selectedTemplate || !selectedList || listContactCount === 0}
+                          className="w-full"
+                          size="lg"
+                        >
+                          <Send className="mr-2 h-4 w-4" />
+                          Iniciar Disparo Automático ({listContactCount} contatos)
+                        </Button>
+                      </>
+                    )}
+
+                    {/* Manual mode */}
+                    {dispatchMode === "manual" && (
+                      <>
+                        {manualContacts.length === 0 ? (
+                          <Button
+                            onClick={handleStartManual}
+                            disabled={!selectedTemplate || !selectedList || listContactCount === 0}
+                            className="w-full"
+                            size="lg"
+                          >
+                            <Hand className="mr-2 h-4 w-4" />
+                            Iniciar Disparo Manual ({listContactCount} contatos)
+                          </Button>
+                        ) : (
+                          <div className="space-y-3 rounded-lg border p-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-semibold text-sm">Disparo Manual</h4>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {manualIndex}/{manualContacts.length}
+                                </Badge>
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={handleManualStop}>
+                                  <X className="h-3.5 w-3.5 mr-1" /> Parar
+                                </Button>
+                              </div>
+                            </div>
+
+                            <Progress value={(manualIndex / manualContacts.length) * 100} className="h-2" />
+
+                            <div className="flex gap-3 text-xs text-muted-foreground">
+                              <span className="text-green-600 dark:text-green-400">{manualResults.sent} enviados</span>
+                              <span className="text-destructive">{manualResults.failed} falhas</span>
+                            </div>
+
+                            {manualFinished ? (
+                              <div className="text-center py-4 space-y-2">
+                                <CheckCircle className="h-8 w-8 mx-auto text-green-500" />
+                                <p className="font-medium text-sm">Disparo manual concluído!</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {manualResults.sent} enviados, {manualResults.failed} falhas
+                                </p>
+                                <Button size="sm" variant="outline" onClick={handleManualStop}>Fechar</Button>
+                              </div>
+                            ) : currentManualContact ? (
+                              <div className="space-y-3">
+                                <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                                  <p className="font-medium text-sm">{currentManualContact.name}</p>
+                                  <p className="text-xs text-muted-foreground font-mono">{currentManualContact.phone}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    onClick={handleManualSendOne}
+                                    disabled={manualSending}
+                                    className="flex-1"
+                                  >
+                                    {manualSending ? <LoadingSpinner size="sm" /> : <Send className="mr-2 h-4 w-4" />}
+                                    {manualSending ? "Enviando..." : "Enviar"}
+                                  </Button>
+                                  <Button
+                                    onClick={handleManualSkip}
+                                    disabled={manualSending}
+                                    variant="outline"
+                                  >
+                                    <SkipForward className="mr-2 h-4 w-4" />
+                                    Pular
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
