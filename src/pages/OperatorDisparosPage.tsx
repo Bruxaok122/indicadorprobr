@@ -716,7 +716,7 @@ export default function OperatorDisparosPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="space-y-2">
+                    <div className="space-y-2" data-onboarding="dispatch-list-name">
                       <Label>Nome da Lista</Label>
                       <Input
                         value={listName}
