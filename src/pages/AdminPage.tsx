@@ -45,6 +45,7 @@ function AdminPageInner() {
     isCreatingUser,
     toggleBlock,
     toggleApiPermission,
+    toggleManageNumbers,
     deleteUser,
     clearTempBan,
     setSubscriptionPlan,
