@@ -845,8 +845,8 @@ export default function OperatorDisparosPage() {
                             {phones.length === 0 ? (
                               <p className="text-sm text-muted-foreground">Nenhum número disponível. Registre um número primeiro.</p>
                             ) : (
-                              <Select value={selectedPhoneNumberId} onValueChange={setSelectedPhoneNumberId}>
-                                <SelectTrigger>
+                              <Select data-onboarding="dispatch-phone-select" value={selectedPhoneNumberId} onValueChange={setSelectedPhoneNumberId}>
+                                <SelectTrigger data-onboarding="dispatch-phone-select">
                                   <SelectValue placeholder="Selecione o número..." />
                                 </SelectTrigger>
                                 <SelectContent>
