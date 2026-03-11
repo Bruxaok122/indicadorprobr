@@ -194,6 +194,7 @@ export default function ConfiguracaoPage() {
 
                 {/* Validate Button */}
                 <Button
+                  data-onboarding="config-validate"
                   onClick={handleValidate}
                   disabled={!isFormValid || isValidating}
                   className="w-full"
