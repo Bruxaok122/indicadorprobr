@@ -776,7 +776,6 @@ export default function WhatsAppApiPage() {
                   )}
                 </CardContent>
               </Card>
-            )}
           </div>
         </div>
       </div>

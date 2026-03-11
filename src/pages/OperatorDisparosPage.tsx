@@ -666,12 +666,12 @@ export default function OperatorDisparosPage() {
                       <Input
                         type="number"
                         value={intervalSeconds}
-                        onChange={e => setIntervalSeconds(Math.max(10, parseInt(e.target.value) || 60))}
-                        min={10}
+                        onChange={e => setIntervalSeconds(Math.max(60, parseInt(e.target.value) || 65))}
+                        min={60}
                         className="w-32"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Mínimo 10s. Varia automaticamente 5-25% para proteção anti-ban.
+                        Mínimo 60s. O intervalo varia automaticamente (ex: 63s, 67s, 72s) para proteção anti-ban.
                       </p>
                     </div>
 
