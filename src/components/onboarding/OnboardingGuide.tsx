@@ -1,5 +1,6 @@
 import { useOnboardingGuide } from "@/hooks/useOnboardingGuide";
 import { GuideContent } from "./onboardingContent";
+import { useAuthContext } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,7 @@ interface OnboardingGuideProps {
 }
 
 export function OnboardingGuide({ guide }: OnboardingGuideProps) {
+  const { isAdmin } = useAuthContext();
   const { isOpen, currentStep, nextStep, prevStep, dismiss } =
     useOnboardingGuide(guide.id);
 
@@ -26,7 +28,8 @@ export function OnboardingGuide({ guide }: OnboardingGuideProps) {
   const progress = ((currentStep + 1) / steps.length) * 100;
   const isLast = currentStep === steps.length - 1;
 
-  if (!isOpen || !step) return null;
+  // Only show for operators (non-admin), never for admins
+  if (isAdmin || !isOpen || !step) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && dismiss()}>
