@@ -167,39 +167,58 @@ export function useApiConfigs() {
       const config = configs.find((c) => c.id === configId);
       if (!config) throw new Error("Configuração não encontrada");
 
-      const [phoneRes, wabaRes] = await Promise.all([
-        fetch(`https://graph.facebook.com/v18.0/${config.phone_number_id}?fields=display_phone_number,quality_rating,status,account_mode`, {
-          headers: { Authorization: `Bearer ${config.access_token}` },
-        }),
-        fetch(`https://graph.facebook.com/v18.0/${config.waba_id}?fields=name,account_review_status`, {
-          headers: { Authorization: `Bearer ${config.access_token}` },
-        }),
-      ]);
+      const wabaRes = await fetch(`https://graph.facebook.com/v18.0/${config.waba_id}?fields=name,account_review_status`, {
+        headers: { Authorization: `Bearer ${config.access_token}` },
+      });
 
       let statusMessage = "";
       let isValidated = false;
 
-      if (!phoneRes.ok) {
-        const errData = await phoneRes.json().catch(() => ({}));
-        statusMessage = `❌ Falha na conexão: ${(errData as any).error?.message || "Erro desconhecido"}`;
+      if (!wabaRes.ok) {
+        const errData = await wabaRes.json().catch(() => ({}));
+        statusMessage = `❌ Falha na conexão WABA: ${(errData as any).error?.message || "Erro desconhecido"}`;
       } else {
-        const phoneData = await phoneRes.json();
-        const wabaData = wabaRes.ok ? await wabaRes.json() : null;
+        const wabaData = await wabaRes.json();
         const accountStatus = wabaData?.account_review_status;
-        const phoneStatus = phoneData.status;
 
         if (accountStatus === "DISABLED" || accountStatus === "PENDING_DELETION") {
-          statusMessage = `❌ Conta desativada pela Meta — ${wabaData?.name || config.name}. Status da conta: ${accountStatus}`;
-        } else if (phoneStatus === "BANNED" || phoneStatus === "RESTRICTED") {
-          statusMessage = `❌ Número ${phoneStatus === "BANNED" ? "banido" : "restrito"} — ${phoneData.display_phone_number || config.name}. Envio bloqueado.`;
-        } else if (phoneStatus === "FLAGGED") {
-          statusMessage = `⚠️ Número sinalizado (FLAGGED) — ${phoneData.display_phone_number || config.name}. Qualidade: ${phoneData.quality_rating || "N/A"}`;
-          isValidated = true;
-        } else if (phoneStatus === "RATE_LIMITED") {
-          statusMessage = `⚠️ Número com limite de taxa — ${phoneData.display_phone_number || config.name}`;
+          statusMessage = `❌ Conta desativada pela Meta — ${wabaData?.name || config.name}. Status: ${accountStatus}`;
         } else {
-          statusMessage = `✅ Conectada — ${phoneData.display_phone_number || config.name} | Conta: ${accountStatus || "OK"} | Qualidade: ${phoneData.quality_rating || "N/A"}`;
-          isValidated = true;
+          // WABA is OK, now optionally check phone
+          let phoneInfo = "";
+          if (config.phone_number_id) {
+            try {
+              const phoneRes = await fetch(`https://graph.facebook.com/v18.0/${config.phone_number_id}?fields=display_phone_number,quality_rating,status`, {
+                headers: { Authorization: `Bearer ${config.access_token}` },
+              });
+              if (phoneRes.ok) {
+                const phoneData = await phoneRes.json();
+                const phoneStatus = phoneData.status;
+                if (phoneStatus === "BANNED" || phoneStatus === "RESTRICTED") {
+                  statusMessage = `❌ Número ${phoneStatus === "BANNED" ? "banido" : "restrito"} — ${phoneData.display_phone_number}`;
+                } else if (phoneStatus === "FLAGGED") {
+                  phoneInfo = ` | Número: FLAGGED (${phoneData.quality_rating || "N/A"})`;
+                  isValidated = true;
+                } else {
+                  phoneInfo = ` | Número: ${phoneData.display_phone_number || "OK"} (${phoneData.quality_rating || "N/A"})`;
+                  isValidated = true;
+                }
+              } else {
+                // Phone check failed but WABA is fine — still valid
+                phoneInfo = " | Número não vinculado diretamente";
+                isValidated = true;
+              }
+            } catch {
+              phoneInfo = " | Número não verificado";
+              isValidated = true;
+            }
+          } else {
+            isValidated = true;
+          }
+
+          if (!statusMessage) {
+            statusMessage = `✅ Conectada — ${wabaData?.name || config.name} | Conta: ${accountStatus || "OK"}${phoneInfo}`;
+          }
         }
       }
 
