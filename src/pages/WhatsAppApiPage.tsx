@@ -366,7 +366,7 @@ export default function WhatsAppApiPage() {
 
   return (
     <AppLayout>
-      <div className="flex h-screen flex-col overflow-hidden">
+      <div className="flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden">
         <PageHeader
           title="Números"
           description="Registre números e configure perfis comerciais"
