@@ -192,7 +192,7 @@ export default function OperatorDisparosPage() {
   const [customAdvogadoName, setCustomAdvogadoName] = useState("");
   const phoneVerifiedName = customAdvogadoName || defaultPhoneName;
 
-  const approvedTemplates = templates.filter(t => (t as any).status === "APPROVED");
+  const approvedTemplates = allTemplates.filter(t => (t as any).status === "APPROVED");
   const templateBody = selectedTemplate ? getTemplateBody(selectedTemplate) : "";
   const templateVars = extractVariables(templateBody);
 
