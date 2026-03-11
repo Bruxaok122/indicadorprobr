@@ -767,14 +767,25 @@ export default function OperatorDisparosPage() {
                               <p className="font-medium text-sm truncate">{l.name}</p>
                               <p className="text-xs text-muted-foreground">{l.count} contatos</p>
                             </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => loadListContacts(l.name)}
-                            >
-                              <Eye className="mr-1.5 h-3.5 w-3.5" />
-                              Ver
-                            </Button>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => loadListContacts(l.name)}
+                              >
+                                <Eye className="mr-1.5 h-3.5 w-3.5" />
+                                Ver
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteList(l.name)}
+                                disabled={deletingList === l.name}
+                              >
+                                {deletingList === l.name ? <LoadingSpinner size="sm" /> : <Trash2 className="h-3.5 w-3.5" />}
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
