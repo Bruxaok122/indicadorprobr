@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Profile } from "@/types/juriszap";
 import { Badge } from "@/components/ui/badge";
-import { Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye } from "lucide-react";
+import { Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye, ShieldCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import {
