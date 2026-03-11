@@ -331,3 +331,15 @@ div[style*="Edit with Lovable"],
 [data-radix-toast-announce-exclude] {
   display: none !important;
 }
+
+/* Onboarding hand pointer animation */
+@keyframes hand-point {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-12px) scale(1.15);
+    opacity: 0.85;
+  }
+}
