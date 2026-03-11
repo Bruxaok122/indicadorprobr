@@ -67,7 +67,7 @@ export default function WhatsAppApiPage() {
   const [cc, setCc] = useState("55");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [verifiedName, setVerifiedName] = useState("");
-  const [pin, setPin] = useState("");
+  const [pin, setPin] = useState("123456");
   const [registering, setRegistering] = useState(false);
   const [phoneNumberIdForCode, setPhoneNumberIdForCode] = useState("");
   const [codeMethod, setCodeMethod] = useState("SMS");
