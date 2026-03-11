@@ -1234,6 +1234,59 @@ export default function OperatorDisparosPage() {
         }}
         isSubmitting={isCreatingTemplate}
       />
+
+      {/* View List Contacts Dialog */}
+      <Dialog open={!!viewingList} onOpenChange={(open) => { if (!open) setViewingList(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Lista: {viewingList}</DialogTitle>
+            <DialogDescription>
+              {viewingListContacts.length} contato(s) nesta lista
+            </DialogDescription>
+          </DialogHeader>
+          {loadingListContacts ? (
+            <div className="flex justify-center py-8">
+              <LoadingSpinner size="md" text="Carregando contatos..." />
+            </div>
+          ) : (
+            <ScrollArea className="max-h-[400px] rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Telefone</TableHead>
+                    <TableHead>Contra</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {viewingListContacts.map((c, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-medium text-sm">{c.name}</TableCell>
+                      <TableCell className="font-mono text-xs">{c.phone}</TableCell>
+                      <TableCell className="text-xs">{c.lawyer_name || "-"}</TableCell>
+                      <TableCell>
+                        <span className={cn(
+                          "inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium",
+                          c.status === "novo" && "bg-info/10 text-info",
+                          c.status === "aguardando" && "bg-warning/10 text-warning",
+                          c.status === "respondido" && "bg-success/10 text-success",
+                          c.status === "encerrado" && "bg-muted text-muted-foreground",
+                        )}>
+                          {c.status === "novo" ? "Novo" : c.status === "aguardando" ? "Aguardando" : c.status === "respondido" ? "Respondido" : c.status === "encerrado" ? "Encerrado" : c.status || "Novo"}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewingList(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
