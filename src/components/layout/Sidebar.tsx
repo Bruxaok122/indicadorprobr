@@ -27,10 +27,12 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-const userNavItems = [
+const baseUserNavItems = [
   { title: "Painel", href: "/", icon: BarChart3, description: "Visão geral do sistema" },
   { title: "Conversas", href: "/conversas", icon: MessagesSquare, description: "Chat com clientes" },
 ];
+
+const numerosItem = { title: "Números", href: "/whatsapp-api", icon: Phone, description: "Gerenciar números e perfil" };
 
 const adminNavItems = [
   { title: "Painel", href: "/", icon: BarChart3, description: "Visão geral do sistema" },
@@ -38,7 +40,7 @@ const adminNavItems = [
   { title: "Contatos", href: "/contatos", icon: ContactRound, description: "Gerenciar clientes" },
   { title: "Importar", href: "/importar", icon: FileUp, description: "Importar lista jurídica" },
   { title: "Templates", href: "/templates", icon: FileStack, description: "Modelos de mensagem" },
-  { title: "Números", href: "/whatsapp-api", icon: Phone, description: "Gerenciar números e perfil" },
+  numerosItem,
   { title: "Webhook", href: "/webhook", icon: Radio, description: "Informações do webhook" },
 ];
 
@@ -50,6 +52,9 @@ export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const userNavItems = profile?.can_manage_numbers
+    ? [...baseUserNavItems, numerosItem]
+    : baseUserNavItems;
   const navItems = isAdmin ? adminNavItems : userNavItems;
 
   const handleLogout = async () => {

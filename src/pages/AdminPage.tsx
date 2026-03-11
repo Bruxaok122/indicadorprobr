@@ -45,6 +45,7 @@ function AdminPageInner() {
     isCreatingUser,
     toggleBlock,
     toggleApiPermission,
+    toggleManageNumbers,
     deleteUser,
     clearTempBan,
     setSubscriptionPlan,
@@ -154,6 +155,7 @@ function AdminPageInner() {
                         user={user}
                         onToggleBlock={toggleBlock}
                         onToggleApiPermission={toggleApiPermission}
+                        onToggleManageNumbers={toggleManageNumbers}
                         onDelete={setUserToDeleteMobile}
                         onClearTempBan={clearTempBan}
                         onManagePhones={setPhonePermUser}
@@ -169,6 +171,7 @@ function AdminPageInner() {
                     users={users}
                     onToggleBlock={toggleBlock}
                     onToggleApiPermission={toggleApiPermission}
+                    onToggleManageNumbers={toggleManageNumbers}
                     onDelete={deleteUser}
                     onClearTempBan={clearTempBan}
                     onManagePhones={setPhonePermUser}

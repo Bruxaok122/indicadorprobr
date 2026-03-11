@@ -42,6 +42,7 @@ interface UsersTableProps {
   users: Profile[];
   onToggleBlock: (params: { userId: string; isBlocked: boolean }) => void;
   onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
+  onToggleManageNumbers: (params: { userId: string; canManageNumbers: boolean }) => void;
   onDelete: (userId: string) => void;
   onClearTempBan: (userId: string) => void;
   onManagePhones: (user: Profile) => void;
@@ -51,7 +52,7 @@ interface UsersTableProps {
   onMonitorChat: (user: Profile) => void;
 }
 
-export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UsersTableProps) {
+export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UsersTableProps) {
   // Controlled delete dialog - prevents closure/portal issues with inline AlertDialogs in loops
   const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
 
@@ -71,6 +72,7 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onDele
              <TableHead>Status</TableHead>
              <TableHead>Plano</TableHead>
              <TableHead>API Compartilhada</TableHead>
+             <TableHead>Gerenciar Números</TableHead>
             <TableHead>Dispositivo</TableHead>
             <TableHead>Mensagens</TableHead>
             <TableHead>Último Acesso</TableHead>
@@ -163,6 +165,17 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onDele
                        onToggleApiPermission({
                          userId: user.user_id,
                          canUseSharedApi: checked,
+                       })
+                     }
+                   />
+                 </TableCell>
+                 <TableCell>
+                   <Switch
+                     checked={(user as any).can_manage_numbers || false}
+                     onCheckedChange={(checked) =>
+                       onToggleManageNumbers({
+                         userId: user.user_id,
+                         canManageNumbers: checked,
                        })
                      }
                    />

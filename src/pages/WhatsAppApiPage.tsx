@@ -67,7 +67,7 @@ export default function WhatsAppApiPage() {
   const [cc, setCc] = useState("55");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [verifiedName, setVerifiedName] = useState("");
-  const [pin, setPin] = useState("");
+  const [pin, setPin] = useState("123456");
   const [registering, setRegistering] = useState(false);
   const [phoneNumberIdForCode, setPhoneNumberIdForCode] = useState("");
   const [codeMethod, setCodeMethod] = useState("SMS");
@@ -153,25 +153,45 @@ export default function WhatsAppApiPage() {
   }, [availablePhones.length]);
 
   const handleRegister = async () => {
-    if (!phoneNumber || !verifiedName || !pin) {
+    if (!phoneNumber || !verifiedName) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
-    if (pin.length !== 6) {
+    const registerPin = pin || "123456";
+    if (registerPin.length !== 6) {
       toast.error("O PIN deve ter exatamente 6 dígitos");
       return;
     }
     setRegistering(true);
     try {
       const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
-        body: { action: "register", cc, phone_number: phoneNumber, verified_name: verifiedName, pin },
+        body: { action: "register", cc, phone_number: phoneNumber, verified_name: verifiedName, pin: registerPin },
       });
       if (error) throw error;
       if (data.error) throw new Error(data.error);
-      toast.success("Número registrado!", { description: "Solicite o código de verificação." });
-      if (data.data?.id) {
-        setPhoneNumberIdForCode(data.data.id);
+      
+      const phoneNumberId = data.data?.id;
+      if (phoneNumberId) {
+        setPhoneNumberIdForCode(phoneNumberId);
+        // Auto-set PIN to bring the number online immediately
+        try {
+          const { data: pinData, error: pinError } = await supabase.functions.invoke("manage-waba-phone", {
+            body: { action: "set_pin", phone_number_id: phoneNumberId, pin: registerPin },
+          });
+          if (pinError) throw pinError;
+          if (pinData?.error) throw new Error(pinData.error);
+          toast.success("Número registrado e ativado com sucesso!", { description: "O PIN padrão foi configurado automaticamente." });
+          syncPhones();
+          // Reset form
+          setPhoneNumber("");
+          setVerifiedName("");
+          return;
+        } catch (pinErr: any) {
+          toast.info("Número registrado! PIN automático falhou, configure manualmente.", { description: pinErr.message });
+        }
       }
+      
+      toast.success("Número registrado!", { description: "Solicite o código de verificação ou defina o PIN." });
     } catch (err: any) {
       toast.error("Erro ao registrar", { description: err.message });
     } finally {

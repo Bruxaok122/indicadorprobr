@@ -18,6 +18,7 @@ interface UserCardProps {
   user: Profile;
   onToggleBlock: (params: { userId: string; isBlocked: boolean }) => void;
   onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
+  onToggleManageNumbers: (params: { userId: string; canManageNumbers: boolean }) => void;
   onDelete: (user: Profile) => void;
   onClearTempBan: (userId: string) => void;
   onManagePhones: (user: Profile) => void;
@@ -27,7 +28,7 @@ interface UserCardProps {
   onMonitorChat: (user: Profile) => void;
 }
 
-export function UserCard({ user, onToggleBlock, onToggleApiPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UserCardProps) {
+export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UserCardProps) {
    const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
  
    return (
@@ -224,17 +225,31 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onDelete,
 
          {/* Actions */}
          <div className="flex items-center justify-between pt-2 border-t">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">API</span>
-            <Switch
-              checked={user.can_use_shared_api || false}
-              onCheckedChange={(checked) =>
-                onToggleApiPermission({
-                  userId: user.user_id,
-                  canUseSharedApi: checked,
-                })
-              }
-            />
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">API</span>
+              <Switch
+                checked={user.can_use_shared_api || false}
+                onCheckedChange={(checked) =>
+                  onToggleApiPermission({
+                    userId: user.user_id,
+                    canUseSharedApi: checked,
+                  })
+                }
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">Números</span>
+              <Switch
+                checked={(user as any).can_manage_numbers || false}
+                onCheckedChange={(checked) =>
+                  onToggleManageNumbers({
+                    userId: user.user_id,
+                    canManageNumbers: checked,
+                  })
+                }
+              />
+            </div>
           </div>
           <div className="flex gap-1">
             <Button

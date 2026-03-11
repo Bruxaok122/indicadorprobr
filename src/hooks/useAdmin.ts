@@ -155,7 +155,30 @@ export function useAdmin() {
     },
   });
 
-  // Clear temp ban mutation
+  // Toggle manage numbers permission mutation
+  const toggleManageNumbersMutation = useMutation({
+    mutationFn: async ({ userId, canManageNumbers }: { userId: string; canManageNumbers: boolean }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ can_manage_numbers: canManageNumbers } as any)
+        .eq("user_id", userId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { canManageNumbers }) => {
+      toast.success(
+        canManageNumbers 
+          ? "Permissão de gerenciar números concedida!" 
+          : "Permissão de gerenciar números removida!"
+      );
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao alterar permissão", {
+        description: error.message,
+      });
+    },
+  });
   const clearTempBanMutation = useMutation({
     mutationFn: async (userId: string) => {
       const { error } = await supabase
@@ -323,6 +346,8 @@ export function useAdmin() {
     isTogglingBlock: toggleBlockMutation.isPending,
     toggleApiPermission: toggleApiPermissionMutation.mutate,
     isTogglingApiPermission: toggleApiPermissionMutation.isPending,
+    toggleManageNumbers: toggleManageNumbersMutation.mutate,
+    isTogglingManageNumbers: toggleManageNumbersMutation.isPending,
     deleteUser: deleteUserMutation.mutate,
     isDeletingUser: deleteUserMutation.isPending,
     clearTempBan: clearTempBanMutation.mutate,

@@ -119,6 +119,7 @@ export interface Profile {
   email: string;
   is_blocked: boolean;
   can_use_shared_api: boolean;
+  can_manage_numbers?: boolean;
   device_fingerprint?: string;
   last_device_info?: {
     browser?: string;
