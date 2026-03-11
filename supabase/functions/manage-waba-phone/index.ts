@@ -95,6 +95,14 @@ serve(async (req) => {
         });
       }
 
+      const requestBody = {
+        cc: normalizedCc,
+        phone_number: normalizedPhone,
+        verified_name: normalizedVerifiedName,
+      };
+
+      console.log("Register request:", JSON.stringify({ wabaId, ...requestBody }));
+
       const registerRes = await fetch(
         `https://graph.facebook.com/v21.0/${wabaId}/phone_numbers`,
         {
@@ -103,19 +111,20 @@ serve(async (req) => {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
-          // Meta aceita somente cc, phone_number e verified_name neste endpoint
-          body: JSON.stringify({
-            cc: normalizedCc,
-            phone_number: normalizedPhone,
-            verified_name: normalizedVerifiedName,
-          }),
+          body: JSON.stringify(requestBody),
         }
       );
 
       const registerData = await registerRes.json();
+      console.log("Register response:", JSON.stringify(registerData));
+
       if (!registerRes.ok) {
-        const metaCode = registerData?.error?.code ? ` (Meta ${registerData.error.code})` : "";
-        throw new Error(`${registerData?.error?.message || "Erro ao registrar número"}${metaCode}`);
+        const err = registerData?.error;
+        const metaCode = err?.code ? ` (Meta ${err.code})` : "";
+        const subcode = err?.error_subcode ? ` [subcode: ${err.error_subcode}]` : "";
+        const userTitle = err?.error_user_title ? ` — ${err.error_user_title}` : "";
+        const userMsg = err?.error_user_msg || err?.message || "Erro ao registrar número";
+        throw new Error(`${userMsg}${userTitle}${metaCode}${subcode}`);
       }
 
       // Save the number to waba_phone_numbers with created_by
