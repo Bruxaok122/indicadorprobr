@@ -594,8 +594,7 @@ export default function WhatsAppApiPage() {
               </Card>
             )}
 
-            {/* Business Profile - admin only */}
-            {isAdmin && (
+            {/* Business Profile - available to all users */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
