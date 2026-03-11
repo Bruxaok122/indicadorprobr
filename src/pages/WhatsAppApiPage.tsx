@@ -504,7 +504,7 @@ export default function WhatsAppApiPage() {
                     )}
                   </>
                 )}
-                <Button onClick={handleRegister} disabled={registering} className="w-full">
+                <Button onClick={handleRegister} disabled={registering || (!isAdmin && availablePhones.length >= 3)} className="w-full">
                   {registering ? <LoadingSpinner size="sm" /> : <Send className="mr-2 h-4 w-4" />}
                   {registering ? "Registrando..." : "Registrar Número"}
                 </Button>
