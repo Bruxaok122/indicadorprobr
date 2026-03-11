@@ -1,7 +1,8 @@
 export interface OnboardingStep {
   title: string;
   description: string;
-  icon?: string; // emoji
+  target?: string; // data-onboarding attribute value to highlight
+  icon?: string;
 }
 
 export interface GuideContent {
@@ -13,167 +14,155 @@ export interface GuideContent {
 export const guides: Record<string, GuideContent> = {
   conversas: {
     id: "conversas",
-    title: "💬 Página de Conversas",
+    title: "💬 Conversas",
     steps: [
       {
-        title: "Lista de Contatos",
-        description:
-          "No painel esquerdo você encontra todos os seus contatos atribuídos. Use a barra de busca para encontrar um contato pelo nome ou telefone.",
-        icon: "👥",
+        title: "1. Busque um contato",
+        description: "Use esta barra de pesquisa para encontrar um contato pelo nome ou telefone. Digite e os resultados aparecem automaticamente.",
+        target: "contact-search",
+        icon: "🔍",
       },
       {
-        title: "Enviar Mensagens",
-        description:
-          "Selecione um contato para abrir a conversa. Digite sua mensagem no campo inferior e clique em Enviar. Você também pode enviar áudios, imagens e documentos.",
+        title: "2. Selecione um contato",
+        description: "Clique em qualquer contato da lista para abrir a conversa. Os contatos com mensagens recentes aparecem primeiro.",
+        target: "contact-list",
+        icon: "👆",
+      },
+      {
+        title: "3. Envie uma mensagem",
+        description: "Digite sua mensagem aqui embaixo e clique no botão de enviar. Você também pode enviar áudios, imagens e documentos.",
+        target: "chat-input",
         icon: "✉️",
       },
       {
-        title: "Enviar Templates",
-        description:
-          "Use o botão de template (ícone de documento) para enviar mensagens pré-aprovadas pelo WhatsApp. Templates são necessários para iniciar conversas.",
+        title: "4. Use Templates",
+        description: "Clique neste botão para enviar um template pré-aprovado. Templates são necessários para iniciar uma conversa nova.",
+        target: "template-button",
         icon: "📄",
       },
       {
-        title: "Perfil do Contato",
-        description:
-          "Clique no nome do contato no topo da conversa para abrir o painel lateral com informações detalhadas como CPF, processo, status e dados bancários.",
+        title: "5. Veja o perfil do contato",
+        description: "Clique no nome do contato no topo da conversa para abrir a ficha com CPF, processo, dados bancários e mais.",
+        target: "chat-header-name",
         icon: "📋",
-      },
-      {
-        title: "Contagem Regressiva",
-        description:
-          "Após o contato responder, você tem uma janela de 24h para enviar mensagens livres. O contador no topo mostra o tempo restante.",
-        icon: "⏱️",
       },
     ],
   },
 
   disparos: {
     id: "disparos",
-    title: "📡 Página de Disparos",
+    title: "📡 Disparos",
     steps: [
       {
-        title: "O que são Disparos?",
-        description:
-          "Disparos permitem enviar mensagens em massa via templates do WhatsApp para uma lista de contatos. É a forma principal de iniciar conversas com novos leads.",
-        icon: "🚀",
-      },
-      {
-        title: "Criar Lista de Disparo",
-        description:
-          "Na aba 'Criar Disparo', cole a lista de contatos no formato adequado (nome e telefone). O sistema processará e validará os números automaticamente.",
+        title: "1. Cole sua lista de contatos",
+        description: "Clique aqui e cole a lista de contatos no formato correto. O sistema processará nomes, telefones e dados automaticamente.",
+        target: "dispatch-textarea",
         icon: "📝",
       },
       {
-        title: "Escolher Template e Número",
-        description:
-          "Selecione o template aprovado que será enviado e o número de telefone remetente. Certifique-se de que o template está com status 'Aprovado'.",
-        icon: "✅",
+        title: "2. Dê um nome à lista",
+        description: "Digite um nome para identificar esta lista de disparo (ex: 'Lista Janeiro 2025').",
+        target: "dispatch-list-name",
+        icon: "🏷️",
       },
       {
-        title: "Iniciar e Acompanhar",
-        description:
-          "Após iniciar o disparo, acompanhe o progresso em tempo real na aba 'Acompanhamento'. Você pode pausar, retomar ou cancelar a qualquer momento.",
-        icon: "📊",
+        title: "3. Escolha o número remetente",
+        description: "Clique aqui para selecionar qual número de WhatsApp será usado para enviar as mensagens.",
+        target: "dispatch-phone-select",
+        icon: "📱",
       },
       {
-        title: "Modo Manual vs Automático",
-        description:
-          "No modo manual, cada envio aguarda sua confirmação. No automático, os envios são feitos com intervalo de segurança. Use o manual para maior controle.",
-        icon: "🔄",
+        title: "4. Selecione o template",
+        description: "Clique aqui para escolher qual template aprovado será enviado para os contatos da lista.",
+        target: "dispatch-template-select",
+        icon: "📄",
+      },
+      {
+        title: "5. Inicie o disparo",
+        description: "Depois de configurar tudo, clique neste botão para começar a enviar. Acompanhe o progresso em tempo real.",
+        target: "dispatch-start-button",
+        icon: "🚀",
       },
     ],
   },
 
   numeros: {
     id: "numeros",
-    title: "📱 Página de Números",
+    title: "📱 Números",
     steps: [
       {
-        title: "Seus Números WhatsApp",
-        description:
-          "Aqui você gerencia os números de telefone vinculados à sua conta. Cada número precisa estar registrado e verificado para enviar mensagens.",
+        title: "1. Veja seus números",
+        description: "Aqui ficam todos os números WhatsApp vinculados à sua conta. Verifique o status de cada um.",
+        target: "phone-list",
         icon: "📱",
       },
       {
-        title: "Registrar Número",
-        description:
-          "Para registrar um novo número, informe o Phone Number ID fornecido pela Meta e clique em 'Registrar'. O sistema vinculará o número à sua conta.",
+        title: "2. Registre um número novo",
+        description: "Preencha o Phone Number ID e o nome verificado, depois clique em 'Registrar' para vincular um novo número.",
+        target: "phone-register-form",
         icon: "➕",
       },
       {
-        title: "Definir PIN",
-        description:
-          "O PIN de 6 dígitos é obrigatório para a verificação em duas etapas do WhatsApp Business. Defina ou altere o PIN no card 'Definir PIN'.",
+        title: "3. Defina o PIN",
+        description: "Clique aqui para configurar o PIN de 6 dígitos obrigatório para a verificação em duas etapas.",
+        target: "phone-set-pin",
         icon: "🔐",
       },
       {
-        title: "Enviar Mensagem de Teste",
-        description:
-          "Use a seção 'Teste de Envio' para enviar uma mensagem de teste e verificar se o número está funcionando corretamente antes de usar em disparos.",
+        title: "4. Teste o envio",
+        description: "Use esta seção para enviar uma mensagem de teste e confirmar que o número está funcionando corretamente.",
+        target: "phone-test-send",
         icon: "🧪",
-      },
-      {
-        title: "Excluir Número",
-        description:
-          "Se precisar remover um número, clique no ícone de lixeira ao lado dele. Atenção: esta ação é permanente e o número precisará ser re-registrado.",
-        icon: "🗑️",
       },
     ],
   },
 
   templates: {
     id: "templates",
-    title: "📑 Página de Templates",
+    title: "📑 Templates",
     steps: [
       {
-        title: "O que são Templates?",
-        description:
-          "Templates são mensagens pré-aprovadas pela Meta/WhatsApp. São obrigatórios para iniciar conversas com contatos que não enviaram mensagem nas últimas 24h.",
-        icon: "📄",
-      },
-      {
-        title: "Visualizar Templates",
-        description:
-          "A lista mostra todos os templates cadastrados com seu status (Aprovado, Pendente ou Rejeitado). Apenas templates aprovados podem ser usados em disparos.",
+        title: "1. Veja seus templates",
+        description: "Aqui estão listados todos os templates com seu status: Aprovado ✅, Pendente ⏳ ou Rejeitado ❌. Só os aprovados podem ser usados.",
+        target: "template-list",
         icon: "👀",
       },
       {
-        title: "Criar Novo Template",
-        description:
-          "Clique em 'Criar Template' para submeter um novo modelo à Meta. Preencha o nome, categoria e conteúdo. A aprovação pode levar alguns minutos.",
-        icon: "✏️",
+        title: "2. Atualize a lista",
+        description: "Clique neste botão para sincronizar os templates com a Meta e ver os mais recentes.",
+        target: "template-refresh",
+        icon: "🔄",
       },
       {
-        title: "Usar em Disparos",
-        description:
-          "Templates aprovados ficam disponíveis automaticamente na página de Disparos e também podem ser enviados diretamente nas conversas individuais.",
-        icon: "📤",
+        title: "3. Crie um novo template",
+        description: "Clique aqui para criar e submeter um novo template para aprovação da Meta.",
+        target: "template-create",
+        icon: "✏️",
       },
     ],
   },
 
   configuracao: {
     id: "configuracao",
-    title: "⚙️ Página de Configuração",
+    title: "⚙️ Configuração",
     steps: [
       {
-        title: "Credenciais da API",
-        description:
-          "Nesta página você configura as credenciais da API do WhatsApp Business: Access Token, WABA ID e Phone Number ID. Esses dados são fornecidos pela Meta.",
+        title: "1. Informe o Access Token",
+        description: "Cole aqui o token de acesso da sua conta do Meta Developers. Use o ícone de olho para visualizar.",
+        target: "config-token",
         icon: "🔑",
       },
       {
-        title: "Validação",
-        description:
-          "Após salvar as credenciais, clique em 'Validar Configuração' para verificar se a conexão com a API está funcionando corretamente.",
-        icon: "✅",
+        title: "2. Preencha o WABA ID",
+        description: "Informe o ID da sua conta WhatsApp Business (WABA ID), encontrado no painel da Meta.",
+        target: "config-waba",
+        icon: "🆔",
       },
       {
-        title: "Segurança",
-        description:
-          "Suas credenciais são armazenadas de forma segura. Use o ícone de olho para visualizar ou ocultar o Access Token. Nunca compartilhe essas informações.",
-        icon: "🔒",
+        title: "3. Valide a configuração",
+        description: "Depois de preencher tudo, clique neste botão para verificar se a conexão está funcionando.",
+        target: "config-validate",
+        icon: "✅",
       },
     ],
   },
