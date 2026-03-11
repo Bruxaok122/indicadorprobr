@@ -180,6 +180,7 @@ export default function OperatorDisparosPage() {
   const [viewingList, setViewingList] = useState<string | null>(null);
   const [viewingListContacts, setViewingListContacts] = useState<{ name: string; phone: string; status: string | null; cpf?: string; lawyer_name?: string }[]>([]);
   const [loadingListContacts, setLoadingListContacts] = useState(false);
+  const [deletingList, setDeletingList] = useState<string | null>(null);
 
   // Manual dispatch state
   const [manualContacts, setManualContacts] = useState<{ id: string; name: string; phone: string; status?: string }[]>([]);
