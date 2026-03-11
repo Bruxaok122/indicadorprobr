@@ -727,6 +727,7 @@ export default function OperatorDisparosPage() {
                     <div className="space-y-2">
                       <Label>Dados dos Contatos</Label>
                       <Textarea
+                        data-onboarding="dispatch-textarea"
                         value={rawText}
                         onChange={e => setRawText(e.target.value)}
                         placeholder={`NOME: CAIO HENRIQUE PEDRO FERREIRA  - renda $1861,27\n\nCPF: 41173349804\n\nTELEFONE: +5511970178814,+551126110638\n\nCONTRA: Qualicorp Consultoria\n\nPROCESSO: 4017392-65.2026.8.26.0100`}
