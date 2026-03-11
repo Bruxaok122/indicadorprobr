@@ -429,11 +429,25 @@ export default function OperatorDisparosPage() {
             const baseDelayMs = safeBase * 1000;
             const jitterMs = Math.floor(baseDelayMs * (0.05 + Math.random() * 0.20));
             const delayMs = baseDelayMs + jitterMs;
+
+            // Set nextSendAt for countdown display
+            const nextAt = new Date(Date.now() + delayMs).toISOString();
+            updateDispatch(dispatchId, {
+              current: results.sent + results.failed,
+              sent: results.sent,
+              failed: results.failed,
+              errors: [...results.errors],
+              nextSendAt: nextAt,
+            });
+
             for (let s = 0; s < Math.ceil(delayMs / 500); s++) {
               const c = dispatchControlsRef.current[dispatchId];
               if (c?.isCancelled || c?.isPaused) break;
               await new Promise(r => setTimeout(r, 500));
             }
+
+            // Clear nextSendAt after delay
+            updateDispatch(dispatchId, { nextSendAt: undefined });
           }
         }
 
