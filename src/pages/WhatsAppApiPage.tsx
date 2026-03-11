@@ -631,7 +631,6 @@ export default function WhatsAppApiPage() {
                   </Button>
                 </CardContent>
               </Card>
-            )}
 
             {/* Business Profile - available to all users */}
               <Card>
