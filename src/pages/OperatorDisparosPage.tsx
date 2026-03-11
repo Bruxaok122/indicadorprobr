@@ -172,6 +172,7 @@ export default function OperatorDisparosPage() {
   const [loadingLists, setLoadingLists] = useState(false);
   const [intervalSeconds, setIntervalSeconds] = useState(65);
   const [dispatchMode, setDispatchMode] = useState<"auto" | "manual">("auto");
+  const [minRenda, setMinRenda] = useState<string>("all");
 
   // Manual dispatch state
   const [manualContacts, setManualContacts] = useState<{ id: string; name: string; phone: string; status?: string }[]>([]);
