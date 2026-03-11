@@ -251,6 +251,18 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleM
                 }
               />
             </div>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">Disparos</span>
+              <Switch
+                checked={(user as any).can_dispatch || false}
+                onCheckedChange={(checked) =>
+                  onToggleDispatch({
+                    userId: user.user_id,
+                    canDispatch: checked,
+                  })
+                }
+              />
+            </div>
           </div>
           <div className="flex gap-1">
             <Button
