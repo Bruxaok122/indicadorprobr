@@ -441,7 +441,7 @@ export default function WhatsAppApiPage() {
           <div className="mx-auto max-w-3xl space-y-6">
 
             {/* Registered Numbers with Status */}
-            <Card>
+            <Card data-onboarding="phone-list">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -537,7 +537,7 @@ export default function WhatsAppApiPage() {
             </Card>
 
             {/* Register Phone Number */}
-            <Card>
+            <Card data-onboarding="phone-register-form">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Phone className="h-5 w-5" />
@@ -642,7 +642,7 @@ export default function WhatsAppApiPage() {
             </Card>
 
             {/* Set PIN for Existing Number */}
-              <Card>
+            <Card data-onboarding="phone-set-pin">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Lock className="h-5 w-5" />

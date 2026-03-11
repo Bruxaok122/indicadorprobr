@@ -716,7 +716,7 @@ export default function OperatorDisparosPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="space-y-2">
+                    <div className="space-y-2" data-onboarding="dispatch-list-name">
                       <Label>Nome da Lista</Label>
                       <Input
                         value={listName}
@@ -727,6 +727,7 @@ export default function OperatorDisparosPage() {
                     <div className="space-y-2">
                       <Label>Dados dos Contatos</Label>
                       <Textarea
+                        data-onboarding="dispatch-textarea"
                         value={rawText}
                         onChange={e => setRawText(e.target.value)}
                         placeholder={`NOME: CAIO HENRIQUE PEDRO FERREIRA  - renda $1861,27\n\nCPF: 41173349804\n\nTELEFONE: +5511970178814,+551126110638\n\nCONTRA: Qualicorp Consultoria\n\nPROCESSO: 4017392-65.2026.8.26.0100`}
@@ -844,8 +845,8 @@ export default function OperatorDisparosPage() {
                             {phones.length === 0 ? (
                               <p className="text-sm text-muted-foreground">Nenhum número disponível. Registre um número primeiro.</p>
                             ) : (
-                              <Select value={selectedPhoneNumberId} onValueChange={setSelectedPhoneNumberId}>
-                                <SelectTrigger>
+                              <Select data-onboarding="dispatch-phone-select" value={selectedPhoneNumberId} onValueChange={setSelectedPhoneNumberId}>
+                                <SelectTrigger data-onboarding="dispatch-phone-select">
                                   <SelectValue placeholder="Selecione o número..." />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -914,7 +915,7 @@ export default function OperatorDisparosPage() {
                               value={selectedTemplate?.name || ""}
                               onValueChange={v => setSelectedTemplate(approvedTemplates.find(t => t.name === v) || null)}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger data-onboarding="dispatch-template-select">
                                 <SelectValue placeholder="Selecione o template aprovado..." />
                               </SelectTrigger>
                               <SelectContent>
@@ -1112,6 +1113,7 @@ export default function OperatorDisparosPage() {
                                 </p>
                               </div>
                               <Button
+                                data-onboarding="dispatch-start-button"
                                 onClick={handleSend}
                                 disabled={!selectedTemplate || !selectedList || listContactCount === 0}
                                 className="w-full"

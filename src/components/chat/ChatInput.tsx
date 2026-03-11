@@ -67,7 +67,7 @@ export function ChatInput({
   }
 
   return (
-    <div className={cn(
+    <div data-onboarding="chat-input" className={cn(
       "bg-muted/50 dark:bg-card border-t border-violet/15 px-2 md:px-3 py-2 shrink-0",
       isMobile && "pb-[max(0.75rem,env(safe-area-inset-bottom))]"
     )}>
@@ -99,7 +99,7 @@ export function ChatInput({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={onOpenTemplateDialog} disabled={!templatesAvailable}
+            <Button data-onboarding="template-button" variant="ghost" size="icon" onClick={onOpenTemplateDialog} disabled={!templatesAvailable}
               className="shrink-0 h-10 w-10 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800">
               <FileText className="h-5 w-5" />
             </Button>
