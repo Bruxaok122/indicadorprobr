@@ -52,6 +52,9 @@ export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const userNavItems = profile?.can_manage_numbers
+    ? [...baseUserNavItems, numerosItem]
+    : baseUserNavItems;
   const navItems = isAdmin ? adminNavItems : userNavItems;
 
   const handleLogout = async () => {
