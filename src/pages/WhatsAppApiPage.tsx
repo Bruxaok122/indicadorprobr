@@ -457,29 +457,44 @@ export default function WhatsAppApiPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Código do País</Label>
-                    <Input value={cc} onChange={(e) => setCc(e.target.value)} placeholder="55" />
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label>Número de Telefone</Label>
-                    <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="11999998888" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Nome Verificado (exibido no WhatsApp)</Label>
-                  <Input value={verifiedName} onChange={(e) => setVerifiedName(e.target.value)} placeholder="Nome da Empresa" />
-                </div>
-                <div className="space-y-2">
-                  <Label>PIN de 2 Fatores (6 dígitos)</Label>
-                  <Input
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    placeholder="123456"
-                    maxLength={6}
-                  />
-                </div>
+                {isAdmin ? (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Código do País</Label>
+                        <Input value={cc} onChange={(e) => setCc(e.target.value)} placeholder="55" />
+                      </div>
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label>Número de Telefone</Label>
+                        <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="11999998888" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nome Verificado (exibido no WhatsApp)</Label>
+                      <Input value={verifiedName} onChange={(e) => setVerifiedName(e.target.value)} placeholder="Nome da Empresa" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>PIN de 2 Fatores (6 dígitos)</Label>
+                      <Input
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        placeholder="123456"
+                        maxLength={6}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Número de Telefone (com DDD)</Label>
+                      <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="11999998888" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nome de Exibição</Label>
+                      <Input value={verifiedName} onChange={(e) => setVerifiedName(e.target.value)} placeholder="Nome que aparecerá no WhatsApp" />
+                    </div>
+                  </>
+                )}
                 <Button onClick={handleRegister} disabled={registering} className="w-full">
                   {registering ? <LoadingSpinner size="sm" /> : <Send className="mr-2 h-4 w-4" />}
                   {registering ? "Registrando..." : "Registrar Número"}
@@ -526,56 +541,58 @@ export default function WhatsAppApiPage() {
               </CardContent>
             </Card>
 
-            {/* Set PIN for Existing Number */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lock className="h-5 w-5" />
-                  Definir PIN para Número Existente
-                </CardTitle>
-                <CardDescription>
-                  Defina o PIN de verificação em duas etapas para um número que já está cadastrado
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Selecione o Número</Label>
-                  <Select value={setPinPhoneId} onValueChange={setSetPinPhoneId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Escolha um número..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availablePhones.map((p) => {
-                        const ps = phoneStatuses[p.phone_number_id];
-                        const statusInfo = getStatusInfo(ps?.status);
-                        return (
-                          <SelectItem key={p.id} value={p.id}>
-                            <span className="flex items-center gap-2">
-                              <span className={`inline-block h-2 w-2 rounded-full ${ps?.status === "CONNECTED" ? "bg-green-500" : ps?.status === "PENDING" ? "bg-yellow-500" : "bg-destructive"}`} />
-                              {p.display_phone_number} {p.verified_name ? `(${p.verified_name})` : ""}
-                              {ps?.status ? ` — ${statusInfo.label}` : ""}
-                            </span>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>PIN de 2 Fatores (6 dígitos)</Label>
-                  <Input
-                    value={setPinValue}
-                    onChange={(e) => setSetPinValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    placeholder="123456"
-                    maxLength={6}
-                  />
-                </div>
-                <Button onClick={handleSetPin} disabled={settingPin} className="w-full">
-                  {settingPin ? <LoadingSpinner size="sm" /> : <Lock className="mr-2 h-4 w-4" />}
-                  {settingPin ? "Definindo PIN..." : "Definir PIN"}
-                </Button>
-              </CardContent>
-            </Card>
+            {/* Set PIN for Existing Number - Admin Only */}
+            {isAdmin && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lock className="h-5 w-5" />
+                    Definir PIN para Número Existente
+                  </CardTitle>
+                  <CardDescription>
+                    Defina o PIN de verificação em duas etapas para um número que já está cadastrado
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Selecione o Número</Label>
+                    <Select value={setPinPhoneId} onValueChange={setSetPinPhoneId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Escolha um número..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availablePhones.map((p) => {
+                          const ps = phoneStatuses[p.phone_number_id];
+                          const statusInfo = getStatusInfo(ps?.status);
+                          return (
+                            <SelectItem key={p.id} value={p.id}>
+                              <span className="flex items-center gap-2">
+                                <span className={`inline-block h-2 w-2 rounded-full ${ps?.status === "CONNECTED" ? "bg-green-500" : ps?.status === "PENDING" ? "bg-yellow-500" : "bg-destructive"}`} />
+                                {p.display_phone_number} {p.verified_name ? `(${p.verified_name})` : ""}
+                                {ps?.status ? ` — ${statusInfo.label}` : ""}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>PIN de 2 Fatores (6 dígitos)</Label>
+                    <Input
+                      value={setPinValue}
+                      onChange={(e) => setSetPinValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="123456"
+                      maxLength={6}
+                    />
+                  </div>
+                  <Button onClick={handleSetPin} disabled={settingPin} className="w-full">
+                    {settingPin ? <LoadingSpinner size="sm" /> : <Lock className="mr-2 h-4 w-4" />}
+                    {settingPin ? "Definindo PIN..." : "Definir PIN"}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Business Profile - only when connected */}
             <Card>
