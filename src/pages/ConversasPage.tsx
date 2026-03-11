@@ -247,6 +247,7 @@ export default function ConversasPage() {
           >
             {selectedContact ? (
               <>
+                <DispatchCountdown />
                 <ChatHeader
                   contact={selectedContact} isMobile={isMobile} onBack={handleBackToList}
                   onToggleBlock={(contactId, blocked) => toggleContactBlock({ contactId, blocked })}
