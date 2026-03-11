@@ -364,6 +364,7 @@ export default function ConversasPage() {
 
       {/* Contact Profile Drawer */}
       <ContactProfileDrawer contact={selectedContact ?? null} open={showProfileDrawer} onOpenChange={setShowProfileDrawer} />
+      <OnboardingGuide guide={guides.conversas} />
     </>
   );
 

@@ -405,6 +405,7 @@ export default function TemplatesPage() {
         }}
         isSubmitting={isCreatingTemplate}
       />
+      <OnboardingGuide guide={guides.templates} />
     </AppLayout>
   );
 }

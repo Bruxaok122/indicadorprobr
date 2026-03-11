@@ -254,6 +254,7 @@ export default function ConfiguracaoPage() {
           </div>
         </div>
       </div>
+      <OnboardingGuide guide={guides.configuracao} />
     </AppLayout>
   );
 }

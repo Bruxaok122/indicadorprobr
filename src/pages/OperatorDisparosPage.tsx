@@ -1342,6 +1342,7 @@ export default function OperatorDisparosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <OnboardingGuide guide={guides.disparos} />
     </AppLayout>
   );
 }
