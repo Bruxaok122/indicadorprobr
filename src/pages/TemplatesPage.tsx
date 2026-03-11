@@ -217,7 +217,7 @@ export default function TemplatesPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4">
+              <div className="grid gap-4" data-onboarding="template-list">
                 {allTemplates.map((template) => (
                   <Card key={template.id} className={cn(template.status !== "APPROVED" && "opacity-80")}>
                     <CardHeader className="pb-3">
