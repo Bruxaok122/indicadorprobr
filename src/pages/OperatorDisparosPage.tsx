@@ -170,7 +170,7 @@ export default function OperatorDisparosPage() {
   const [selectedList, setSelectedList] = useState("");
   const [availableLists, setAvailableLists] = useState<{ name: string; count: number }[]>([]);
   const [loadingLists, setLoadingLists] = useState(false);
-  const [intervalSeconds, setIntervalSeconds] = useState(60);
+  const [intervalSeconds, setIntervalSeconds] = useState(65);
 
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
   const defaultPhoneName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
@@ -402,9 +402,10 @@ export default function OperatorDisparosPage() {
             errors: [...results.errors],
           });
 
-          // Delay with jitter (5-25% extra on base interval)
+          // Delay with jitter: always above 60s, varies 5-25% above base
           if (i < contactIds.length - 1 && !ctrl?.isCancelled) {
-            const baseDelayMs = capturedInterval * 1000;
+            const safeBase = Math.max(capturedInterval, 60);
+            const baseDelayMs = safeBase * 1000;
             const jitterMs = Math.floor(baseDelayMs * (0.05 + Math.random() * 0.20));
             const delayMs = baseDelayMs + jitterMs;
             for (let s = 0; s < Math.ceil(delayMs / 500); s++) {
@@ -665,12 +666,12 @@ export default function OperatorDisparosPage() {
                       <Input
                         type="number"
                         value={intervalSeconds}
-                        onChange={e => setIntervalSeconds(Math.max(10, parseInt(e.target.value) || 60))}
-                        min={10}
+                        onChange={e => setIntervalSeconds(Math.max(60, parseInt(e.target.value) || 65))}
+                        min={60}
                         className="w-32"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Mínimo 10s. Varia automaticamente 5-25% para proteção anti-ban.
+                        Mínimo 60s. O intervalo varia automaticamente (ex: 63s, 67s, 72s) para proteção anti-ban.
                       </p>
                     </div>
 
