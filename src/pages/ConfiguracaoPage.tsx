@@ -15,6 +15,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { OnboardingGuide } from "@/components/onboarding/OnboardingGuide";
+import { guides } from "@/components/onboarding/onboardingContent";
 
 export default function ConfiguracaoPage() {
   const { config, isLoading, isConfigured, validate, isValidating } = useWhatsAppConfig();
@@ -252,6 +254,7 @@ export default function ConfiguracaoPage() {
           </div>
         </div>
       </div>
+      <OnboardingGuide guide={guides.configuracao} />
     </AppLayout>
   );
 }

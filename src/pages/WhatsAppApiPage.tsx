@@ -25,6 +25,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { OnboardingGuide } from "@/components/onboarding/OnboardingGuide";
+import { guides } from "@/components/onboarding/onboardingContent";
 
 interface PhoneStatus {
   id: string;
@@ -875,6 +877,7 @@ export default function WhatsAppApiPage() {
           </div>
         </div>
       </div>
+      <OnboardingGuide guide={guides.numeros} />
     </AppLayout>
   );
 }
