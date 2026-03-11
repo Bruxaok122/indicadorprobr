@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { ParsedContact } from "@/types/juriszap";
 import { CreateTemplateDialog } from "@/components/templates/CreateTemplateDialog";
+import { cn } from "@/lib/utils";
 
 // --- Parser for the operator's raw format ---
 // No number validation, accepts all phones as-is
