@@ -106,7 +106,7 @@ export default function ConfiguracaoPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Access Token */}
-                <div className="space-y-2" data-onboarding="config-token">
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Label htmlFor="accessToken">Access Token</Label>
                     <Tooltip>
@@ -141,7 +141,7 @@ export default function ConfiguracaoPage() {
                 </div>
 
                 {/* WABA ID */}
-                <div className="space-y-2" data-onboarding="config-waba">
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Label htmlFor="wabaId">WABA ID (ID da Conta Business)</Label>
                     <Tooltip>
@@ -192,7 +192,6 @@ export default function ConfiguracaoPage() {
 
                 {/* Validate Button */}
                 <Button
-                  data-onboarding="config-validate"
                   onClick={handleValidate}
                   disabled={!isFormValid || isValidating}
                   className="w-full"
@@ -253,7 +252,6 @@ export default function ConfiguracaoPage() {
           </div>
         </div>
       </div>
-      
     </AppLayout>
   );
 }

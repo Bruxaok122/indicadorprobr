@@ -67,26 +67,15 @@ export function TopNav() {
       </Link>
 
       {/* Nav Items — floating pills */}
-      <nav data-onboarding="nav-bar" className="flex items-center gap-2 flex-1 overflow-x-auto scrollbar-none justify-center">
+      <nav className="flex items-center gap-2 flex-1 overflow-x-auto scrollbar-none justify-center">
         {navItems.map((item) => {
           const isActive = location.pathname === item.href;
           const Icon = item.icon;
-
-          // Map href to onboarding target name
-          const onboardingMap: Record<string, string> = {
-            "/conversas": "nav-conversas",
-            "/disparos": "nav-disparos",
-            "/templates": "nav-templates",
-            "/whatsapp-api": "nav-numeros",
-            "/configuracao": "nav-configuracao",
-          };
-          const onboardingId = onboardingMap[item.href];
 
           return (
             <Link
               key={item.href}
               to={item.href}
-              data-onboarding={onboardingId}
               className={cn(
                 "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap",
                 isActive

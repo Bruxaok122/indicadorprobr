@@ -253,7 +253,7 @@ export function ChatContactList({
       </div>
 
       {/* Search + Clear All */}
-      <div className="px-3 py-2.5 flex items-center gap-2" data-onboarding="contact-search">
+      <div className="px-3 py-2.5 flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
           <Input
@@ -296,7 +296,7 @@ export function ChatContactList({
       </div>
 
       {/* Contact list */}
-      <ScrollArea className="flex-1" data-onboarding="contact-list">
+      <ScrollArea className="flex-1">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <LoadingSpinner size="md" />
