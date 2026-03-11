@@ -15,7 +15,6 @@ import { useNotificationSound } from "@/hooks/useNotificationSound";
 import { MessageSquare, Send, Upload, FileText, FileImage } from "lucide-react";
 import { DispatchCountdown } from "@/components/chat/DispatchCountdown";
 import { OnboardingGuide } from "@/components/onboarding/OnboardingGuide";
-import { guides } from "@/components/onboarding/onboardingContent";
 
 import { ChatContactList } from "@/components/chat/ChatContactList";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -364,7 +363,7 @@ export default function ConversasPage() {
 
       {/* Contact Profile Drawer */}
       <ContactProfileDrawer contact={selectedContact ?? null} open={showProfileDrawer} onOpenChange={setShowProfileDrawer} />
-      <OnboardingGuide guide={guides.conversas} />
+      
     </>
   );
 
@@ -372,5 +371,11 @@ export default function ConversasPage() {
     return <AppLayout>{chatContent}</AppLayout>;
   }
 
-  return chatContent;
+  // Simple operators without nav — add onboarding directly
+  return (
+    <>
+      {chatContent}
+      <OnboardingGuide />
+    </>
+  );
 }

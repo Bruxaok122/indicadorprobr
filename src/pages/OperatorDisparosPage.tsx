@@ -32,8 +32,6 @@ import { motion } from "framer-motion";
 import { ParsedContact } from "@/types/juriszap";
 import { CreateTemplateDialog } from "@/components/templates/CreateTemplateDialog";
 import { cn } from "@/lib/utils";
-import { OnboardingGuide } from "@/components/onboarding/OnboardingGuide";
-import { guides } from "@/components/onboarding/onboardingContent";
 
 // --- Parser for the operator's raw format ---
 // No number validation, accepts all phones as-is
@@ -1344,7 +1342,7 @@ export default function OperatorDisparosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <OnboardingGuide guide={guides.disparos} />
+      
     </AppLayout>
   );
 }
