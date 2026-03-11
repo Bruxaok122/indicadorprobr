@@ -30,6 +30,7 @@ import { DispatchMonitor } from "@/components/admin/DispatchMonitor";
 import { AdminFichasPanel } from "@/components/admin/AdminFichasPanel";
 import { AITestPanel } from "@/components/admin/AITestPanel";
 import { FailureRateCard } from "@/components/admin/FailureRateCard";
+import { AdminTabOnboarding } from "@/components/onboarding/AdminTabOnboarding";
 
 function AdminPageInner() {
   const navigate = useNavigate();
