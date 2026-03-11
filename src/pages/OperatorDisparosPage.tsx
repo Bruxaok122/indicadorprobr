@@ -554,6 +554,21 @@ export default function OperatorDisparosPage() {
   const manualFinished = manualContacts.length > 0 && manualIndex >= manualContacts.length;
   const currentManualContact = manualContacts[manualIndex] || null;
 
+  const loadListContacts = async (listName: string) => {
+    if (!user?.id) return;
+    setViewingList(listName);
+    setLoadingListContacts(true);
+    const { data } = await supabase
+      .from("contacts")
+      .select("name, phone, status, cpf, lawyer_name")
+      .eq("user_id", user.id)
+      .eq("contact_list", listName)
+      .order("name")
+      .limit(500);
+    setViewingListContacts((data || []) as any[]);
+    setLoadingListContacts(false);
+  };
+
   const listContactCount = availableLists.find(l => l.name === selectedList)?.count || 0;
 
   return (
