@@ -443,6 +443,98 @@ export default function OperatorDisparosPage() {
     toast.info("Disparo iniciado!");
   };
 
+  // --- Manual Dispatch ---
+  const handleStartManual = async () => {
+    if (!selectedTemplate || !selectedList || !user?.id) return;
+    if (phones.length > 0 && !selectedPhoneNumberId) {
+      toast.error("Selecione um número de disparo");
+      return;
+    }
+
+    const { data: contactsData } = await supabase
+      .from("contacts")
+      .select("id, name, phone")
+      .eq("contact_list", selectedList)
+      .eq("user_id", user.id)
+      .eq("status", "novo");
+
+    const contacts = (contactsData || []).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone }));
+    if (contacts.length === 0) {
+      toast.error("Nenhum contato disponível nesta lista");
+      return;
+    }
+
+    setManualContacts(contacts);
+    setManualIndex(0);
+    setManualResults({ sent: 0, failed: 0 });
+    toast.info(`Modo manual iniciado — ${contacts.length} contatos na fila`);
+  };
+
+  const handleManualSendOne = async () => {
+    if (manualIndex >= manualContacts.length || !selectedTemplate || !user?.id) return;
+    setManualSending(true);
+    const contact = manualContacts[manualIndex];
+
+    try {
+      const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
+        body: {
+          contactIds: [contact.id],
+          templateName: selectedTemplate.name,
+          templateLanguage: selectedTemplate.language,
+          userId: user.id,
+          assignedUserId: user.id,
+          selectedPhoneNumberId: selectedPhoneNumberId || undefined,
+          variableMappings,
+          phoneVerifiedName,
+        },
+      });
+
+      if (!sendError && result?.results) {
+        if (result.results.sent > 0) {
+          setManualContacts(prev => prev.map((c, i) => i === manualIndex ? { ...c, status: "sent" } : c));
+          setManualResults(prev => ({ ...prev, sent: prev.sent + 1 }));
+          toast.success(`✅ Enviado para ${contact.name}`);
+        } else {
+          const errMsg = result.results.errors?.[0] || "Falha no envio";
+          setManualContacts(prev => prev.map((c, i) => i === manualIndex ? { ...c, status: "failed" } : c));
+          setManualResults(prev => ({ ...prev, failed: prev.failed + 1 }));
+          toast.error(`Falha: ${contact.name}`, { description: errMsg });
+        }
+      } else {
+        setManualContacts(prev => prev.map((c, i) => i === manualIndex ? { ...c, status: "failed" } : c));
+        setManualResults(prev => ({ ...prev, failed: prev.failed + 1 }));
+        toast.error(`Erro ao enviar para ${contact.name}`, { description: sendError?.message });
+      }
+
+      setManualIndex(prev => prev + 1);
+    } catch (err: any) {
+      toast.error("Erro no envio", { description: err.message });
+      setManualContacts(prev => prev.map((c, i) => i === manualIndex ? { ...c, status: "failed" } : c));
+      setManualResults(prev => ({ ...prev, failed: prev.failed + 1 }));
+      setManualIndex(prev => prev + 1);
+    } finally {
+      setManualSending(false);
+    }
+  };
+
+  const handleManualSkip = () => {
+    if (manualIndex >= manualContacts.length) return;
+    setManualContacts(prev => prev.map((c, i) => i === manualIndex ? { ...c, status: "skipped" } : c));
+    setManualIndex(prev => prev + 1);
+    toast.info("Contato pulado");
+  };
+
+  const handleManualStop = () => {
+    const sent = manualResults.sent;
+    const failed = manualResults.failed;
+    setManualContacts([]);
+    setManualIndex(0);
+    toast.warning(`Manual encerrado — ${sent} enviados, ${failed} falhas`);
+  };
+
+  const manualFinished = manualContacts.length > 0 && manualIndex >= manualContacts.length;
+  const currentManualContact = manualContacts[manualIndex] || null;
+
   const listContactCount = availableLists.find(l => l.name === selectedList)?.count || 0;
 
   return (
