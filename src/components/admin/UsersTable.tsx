@@ -167,6 +167,27 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
                    </div>
                  </TableCell>
                  <TableCell>
+                   <Tooltip>
+                     <TooltipTrigger asChild>
+                       <div>
+                         <Switch
+                           checked={
+                             (user.can_use_shared_api || false) &&
+                             ((user as any).can_manage_numbers || false) &&
+                             ((user as any).can_dispatch || false)
+                           }
+                           onCheckedChange={(checked) => {
+                             onToggleApiPermission({ userId: user.user_id, canUseSharedApi: checked });
+                             onToggleManageNumbers({ userId: user.user_id, canManageNumbers: checked });
+                             onToggleDispatch({ userId: user.user_id, canDispatch: checked });
+                           }}
+                         />
+                       </div>
+                     </TooltipTrigger>
+                     <TooltipContent>Liga/desliga todas as permissões de uma vez</TooltipContent>
+                   </Tooltip>
+                 </TableCell>
+                 <TableCell>
                    <Switch
                      checked={user.can_use_shared_api || false}
                      onCheckedChange={(checked) =>
