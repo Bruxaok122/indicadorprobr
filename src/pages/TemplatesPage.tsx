@@ -35,8 +35,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { OnboardingGuide } from "@/components/onboarding/OnboardingGuide";
-import { guides } from "@/components/onboarding/onboardingContent";
 
 const CONTACT_FIELD_OPTIONS = [
   { value: "name", label: "Nome do Cliente" },
