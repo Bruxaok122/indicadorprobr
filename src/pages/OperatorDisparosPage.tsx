@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +20,7 @@ import {
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
-import { Upload, Send, List, Trash2, Pause, Play, XCircle, FileText, Phone, Radio } from "lucide-react";
+import { Upload, Send, List, Trash2, Pause, Play, XCircle, FileText, Phone, Radio, SkipForward, Hand, CheckCircle, X } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useContacts } from "@/hooks/useContacts";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
@@ -171,6 +171,13 @@ export default function OperatorDisparosPage() {
   const [availableLists, setAvailableLists] = useState<{ name: string; count: number }[]>([]);
   const [loadingLists, setLoadingLists] = useState(false);
   const [intervalSeconds, setIntervalSeconds] = useState(65);
+  const [dispatchMode, setDispatchMode] = useState<"auto" | "manual">("auto");
+
+  // Manual dispatch state
+  const [manualContacts, setManualContacts] = useState<{ id: string; name: string; phone: string; status?: string }[]>([]);
+  const [manualIndex, setManualIndex] = useState(0);
+  const [manualSending, setManualSending] = useState(false);
+  const [manualResults, setManualResults] = useState({ sent: 0, failed: 0 });
 
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
   const defaultPhoneName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
@@ -436,6 +443,98 @@ export default function OperatorDisparosPage() {
     toast.info("Disparo iniciado!");
   };
 
+  // --- Manual Dispatch ---
+  const handleStartManual = async () => {
+    if (!selectedTemplate || !selectedList || !user?.id) return;
+    if (phones.length > 0 && !selectedPhoneNumberId) {
+      toast.error("Selecione um número de disparo");
+      return;
+    }
+
+    const { data: contactsData } = await supabase
+      .from("contacts")
+      .select("id, name, phone")
+      .eq("contact_list", selectedList)
+      .eq("user_id", user.id)
+      .eq("status", "novo");
+
+    const contacts = (contactsData || []).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone }));
+    if (contacts.length === 0) {
+      toast.error("Nenhum contato disponível nesta lista");
+      return;
+    }
+
+    setManualContacts(contacts);
+    setManualIndex(0);
+    setManualResults({ sent: 0, failed: 0 });
+    toast.info(`Modo manual iniciado — ${contacts.length} contatos na fila`);
+  };
+
+  const handleManualSendOne = async () => {
+    if (manualIndex >= manualContacts.length || !selectedTemplate || !user?.id) return;
+    setManualSending(true);
+    const contact = manualContacts[manualIndex];
+
+    try {
+      const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
+        body: {
+          contactIds: [contact.id],
+          templateName: selectedTemplate.name,
+          templateLanguage: selectedTemplate.language,
+          userId: user.id,
+          assignedUserId: user.id,
+          selectedPhoneNumberId: selectedPhoneNumberId || undefined,
+          variableMappings,
+          phoneVerifiedName,
+        },
+      });
+
+      if (!sendError && result?.results) {
+        if (result.results.sent > 0) {
+          setManualContacts(prev => prev.map((c, i) => i === manualIndex ? { ...c, status: "sent" } : c));
+          setManualResults(prev => ({ ...prev, sent: prev.sent + 1 }));
+          toast.success(`✅ Enviado para ${contact.name}`);
+        } else {
+          const errMsg = result.results.errors?.[0] || "Falha no envio";
+          setManualContacts(prev => prev.map((c, i) => i === manualIndex ? { ...c, status: "failed" } : c));
+          setManualResults(prev => ({ ...prev, failed: prev.failed + 1 }));
+          toast.error(`Falha: ${contact.name}`, { description: errMsg });
+        }
+      } else {
+        setManualContacts(prev => prev.map((c, i) => i === manualIndex ? { ...c, status: "failed" } : c));
+        setManualResults(prev => ({ ...prev, failed: prev.failed + 1 }));
+        toast.error(`Erro ao enviar para ${contact.name}`, { description: sendError?.message });
+      }
+
+      setManualIndex(prev => prev + 1);
+    } catch (err: any) {
+      toast.error("Erro no envio", { description: err.message });
+      setManualContacts(prev => prev.map((c, i) => i === manualIndex ? { ...c, status: "failed" } : c));
+      setManualResults(prev => ({ ...prev, failed: prev.failed + 1 }));
+      setManualIndex(prev => prev + 1);
+    } finally {
+      setManualSending(false);
+    }
+  };
+
+  const handleManualSkip = () => {
+    if (manualIndex >= manualContacts.length) return;
+    setManualContacts(prev => prev.map((c, i) => i === manualIndex ? { ...c, status: "skipped" } : c));
+    setManualIndex(prev => prev + 1);
+    toast.info("Contato pulado");
+  };
+
+  const handleManualStop = () => {
+    const sent = manualResults.sent;
+    const failed = manualResults.failed;
+    setManualContacts([]);
+    setManualIndex(0);
+    toast.warning(`Manual encerrado — ${sent} enviados, ${failed} falhas`);
+  };
+
+  const manualFinished = manualContacts.length > 0 && manualIndex >= manualContacts.length;
+  const currentManualContact = manualContacts[manualIndex] || null;
+
   const listContactCount = availableLists.find(l => l.name === selectedList)?.count || 0;
 
   return (
@@ -660,31 +759,137 @@ export default function OperatorDisparosPage() {
                       )}
                     </div>
 
-                    {/* Interval */}
+                    {/* Mode selection */}
                     <div className="space-y-2">
-                      <Label>Intervalo entre mensagens (segundos)</Label>
-                      <Input
-                        type="number"
-                        value={intervalSeconds}
-                        onChange={e => setIntervalSeconds(Math.max(60, parseInt(e.target.value) || 65))}
-                        min={60}
-                        className="w-32"
-                      />
+                      <Label>Modo de Disparo</Label>
+                      <div className="flex gap-2">
+                        <Button
+                          variant={dispatchMode === "auto" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setDispatchMode("auto")}
+                          className="flex-1"
+                        >
+                          <Send className="mr-2 h-3.5 w-3.5" />
+                          Automático
+                        </Button>
+                        <Button
+                          variant={dispatchMode === "manual" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setDispatchMode("manual")}
+                          className="flex-1"
+                        >
+                          <Hand className="mr-2 h-3.5 w-3.5" />
+                          Manual (1 a 1)
+                        </Button>
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        Mínimo 60s. O intervalo varia automaticamente (ex: 63s, 67s, 72s) para proteção anti-ban.
+                        {dispatchMode === "auto"
+                          ? "Envia automaticamente com intervalo entre mensagens."
+                          : "Você controla cada envio manualmente, um por um."}
                       </p>
                     </div>
 
-                    {/* Send button */}
-                    <Button
-                      onClick={handleSend}
-                      disabled={!selectedTemplate || !selectedList || listContactCount === 0}
-                      className="w-full"
-                      size="lg"
-                    >
-                      <Send className="mr-2 h-4 w-4" />
-                      Iniciar Disparo ({listContactCount} contatos)
-                    </Button>
+                    {/* Auto mode: interval + send */}
+                    {dispatchMode === "auto" && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Intervalo entre mensagens (segundos)</Label>
+                          <Input
+                            type="number"
+                            value={intervalSeconds}
+                            onChange={e => setIntervalSeconds(Math.max(60, parseInt(e.target.value) || 65))}
+                            min={60}
+                            className="w-32"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Mínimo 60s. O intervalo varia automaticamente (ex: 63s, 67s, 72s) para proteção anti-ban.
+                          </p>
+                        </div>
+                        <Button
+                          onClick={handleSend}
+                          disabled={!selectedTemplate || !selectedList || listContactCount === 0}
+                          className="w-full"
+                          size="lg"
+                        >
+                          <Send className="mr-2 h-4 w-4" />
+                          Iniciar Disparo Automático ({listContactCount} contatos)
+                        </Button>
+                      </>
+                    )}
+
+                    {/* Manual mode */}
+                    {dispatchMode === "manual" && (
+                      <>
+                        {manualContacts.length === 0 ? (
+                          <Button
+                            onClick={handleStartManual}
+                            disabled={!selectedTemplate || !selectedList || listContactCount === 0}
+                            className="w-full"
+                            size="lg"
+                          >
+                            <Hand className="mr-2 h-4 w-4" />
+                            Iniciar Disparo Manual ({listContactCount} contatos)
+                          </Button>
+                        ) : (
+                          <div className="space-y-3 rounded-lg border p-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-semibold text-sm">Disparo Manual</h4>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {manualIndex}/{manualContacts.length}
+                                </Badge>
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={handleManualStop}>
+                                  <X className="h-3.5 w-3.5 mr-1" /> Parar
+                                </Button>
+                              </div>
+                            </div>
+
+                            <Progress value={(manualIndex / manualContacts.length) * 100} className="h-2" />
+
+                            <div className="flex gap-3 text-xs text-muted-foreground">
+                              <span className="text-green-600 dark:text-green-400">{manualResults.sent} enviados</span>
+                              <span className="text-destructive">{manualResults.failed} falhas</span>
+                            </div>
+
+                            {manualFinished ? (
+                              <div className="text-center py-4 space-y-2">
+                                <CheckCircle className="h-8 w-8 mx-auto text-green-500" />
+                                <p className="font-medium text-sm">Disparo manual concluído!</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {manualResults.sent} enviados, {manualResults.failed} falhas
+                                </p>
+                                <Button size="sm" variant="outline" onClick={handleManualStop}>Fechar</Button>
+                              </div>
+                            ) : currentManualContact ? (
+                              <div className="space-y-3">
+                                <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                                  <p className="font-medium text-sm">{currentManualContact.name}</p>
+                                  <p className="text-xs text-muted-foreground font-mono">{currentManualContact.phone}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    onClick={handleManualSendOne}
+                                    disabled={manualSending}
+                                    className="flex-1"
+                                  >
+                                    {manualSending ? <LoadingSpinner size="sm" /> : <Send className="mr-2 h-4 w-4" />}
+                                    {manualSending ? "Enviando..." : "Enviar"}
+                                  </Button>
+                                  <Button
+                                    onClick={handleManualSkip}
+                                    disabled={manualSending}
+                                    variant="outline"
+                                  >
+                                    <SkipForward className="mr-2 h-4 w-4" />
+                                    Pular
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
