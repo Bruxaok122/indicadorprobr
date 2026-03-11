@@ -402,9 +402,10 @@ export default function OperatorDisparosPage() {
             errors: [...results.errors],
           });
 
-          // Delay with jitter (5-25% extra on base interval)
+          // Delay with jitter: always above 60s, varies 5-25% above base
           if (i < contactIds.length - 1 && !ctrl?.isCancelled) {
-            const baseDelayMs = capturedInterval * 1000;
+            const safeBase = Math.max(capturedInterval, 60);
+            const baseDelayMs = safeBase * 1000;
             const jitterMs = Math.floor(baseDelayMs * (0.05 + Math.random() * 0.20));
             const delayMs = baseDelayMs + jitterMs;
             for (let s = 0; s < Math.ceil(delayMs / 500); s++) {
