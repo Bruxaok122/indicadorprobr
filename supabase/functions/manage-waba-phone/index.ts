@@ -83,7 +83,17 @@ serve(async (req) => {
     }
 
     if (action === "register") {
-      const { cc, phone_number, verified_name, pin } = body;
+      const { cc, phone_number, verified_name } = body;
+      const normalizedCc = String(cc || "").replace(/\D/g, "");
+      const normalizedPhone = String(phone_number || "").replace(/\D/g, "");
+      const normalizedVerifiedName = String(verified_name || "").trim();
+
+      if (!normalizedCc || !normalizedPhone || !normalizedVerifiedName) {
+        return new Response(JSON.stringify({ error: "Código do país, número e nome de exibição são obrigatórios" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       const registerRes = await fetch(
         `https://graph.facebook.com/v21.0/${wabaId}/phone_numbers`,
@@ -93,13 +103,19 @@ serve(async (req) => {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ cc, phone_number, verified_name, pin }),
+          // Meta aceita somente cc, phone_number e verified_name neste endpoint
+          body: JSON.stringify({
+            cc: normalizedCc,
+            phone_number: normalizedPhone,
+            verified_name: normalizedVerifiedName,
+          }),
         }
       );
 
       const registerData = await registerRes.json();
       if (!registerRes.ok) {
-        throw new Error(registerData.error?.message || "Erro ao registrar número");
+        const metaCode = registerData?.error?.code ? ` (Meta ${registerData.error.code})` : "";
+        throw new Error(`${registerData?.error?.message || "Erro ao registrar número"}${metaCode}`);
       }
 
       // Save the number to waba_phone_numbers with created_by
@@ -108,8 +124,8 @@ serve(async (req) => {
           .from("waba_phone_numbers")
           .upsert({
             phone_number_id: registerData.id,
-            display_phone_number: `+${cc}${phone_number}`,
-            verified_name: verified_name,
+            display_phone_number: `+${normalizedCc}${normalizedPhone}`,
+            verified_name: normalizedVerifiedName,
             is_active: true,
             created_by: userId,
           }, { onConflict: "phone_number_id" })
