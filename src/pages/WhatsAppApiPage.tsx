@@ -219,13 +219,15 @@ export default function WhatsAppApiPage() {
           setVerifiedName("");
           return;
         } catch (pinErr: any) {
-          toast.info("Número registrado! PIN automático falhou, configure manualmente.", { description: pinErr.message });
+          const pinErrorMessage = await getInvokeErrorMessage(pinErr, "Falha ao configurar PIN automaticamente");
+          toast.info("Número registrado! PIN automático falhou, configure manualmente.", { description: pinErrorMessage });
         }
       }
       
       toast.success("Número registrado!", { description: "Solicite o código de verificação ou defina o PIN." });
     } catch (err: any) {
-      toast.error("Erro ao registrar", { description: err.message });
+      const errorMessage = await getInvokeErrorMessage(err, "Erro ao registrar número");
+      toast.error("Erro ao registrar", { description: errorMessage });
     } finally {
       setRegistering(false);
     }
