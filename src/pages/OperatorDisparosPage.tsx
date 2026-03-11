@@ -672,269 +672,379 @@ export default function OperatorDisparosPage() {
                       <Send className="h-5 w-5 text-accent" />
                       Configurar Disparo
                     </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Phone selection */}
-                    {phones.length > 0 && (
-                      <div className="space-y-2">
-                        <Label>Número de Disparo</Label>
-                        <Select value={selectedPhoneNumberId} onValueChange={setSelectedPhoneNumberId}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o número..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {phones.map(p => (
-                              <SelectItem key={p.phone_number_id} value={p.phone_number_id}>
-                                <span className="flex items-center gap-2">
-                                  <Phone className="h-3 w-3" />
-                                  {p.display_phone_number} {p.verified_name ? `(${p.verified_name})` : ""}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {selectedPhoneData && (
-                          <div className="space-y-1">
-                            <Label className="text-xs">Nome do advogado (variável)</Label>
-                            <Input
-                              value={customAdvogadoName}
-                              onChange={e => setCustomAdvogadoName(e.target.value)}
-                              placeholder={defaultPhoneName || "Nome do advogado..."}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Template */}
-                    <div className="space-y-2">
-                      <Label>Template</Label>
-                      <Select
-                        value={selectedTemplate?.name || ""}
-                        onValueChange={v => setSelectedTemplate(approvedTemplates.find(t => t.name === v) || null)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o template..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {approvedTemplates.map(t => (
-                            <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Template Preview */}
-                    {selectedTemplate && templateBody && (
-                      <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-xs font-semibold text-muted-foreground">Preview do Template</span>
+                    {/* Step indicators */}
+                    <div className="flex items-center gap-1 pt-2">
+                      {["Número", "Template", "Lista", "Enviar"].map((label, i) => (
+                        <div key={i} className="flex items-center gap-1 flex-1">
+                          <button
+                            onClick={() => i < wizardStep && setWizardStep(i)}
+                            className={`flex items-center justify-center h-7 w-7 rounded-full text-xs font-bold shrink-0 transition-colors ${
+                              i === wizardStep
+                                ? "bg-primary text-primary-foreground"
+                                : i < wizardStep
+                                ? "bg-primary/20 text-primary cursor-pointer"
+                                : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {i + 1}
+                          </button>
+                          <span className={`text-[11px] truncate ${i === wizardStep ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+                            {label}
+                          </span>
+                          {i < 3 && <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />}
                         </div>
-                        <p className="text-sm whitespace-pre-wrap leading-relaxed">{templateBody}</p>
-                      </div>
-                    )}
+                      ))}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="mx-auto max-w-xl">
+                      {/* Step 0: Phone selection */}
+                      {wizardStep === 0 && (
+                        <motion.div
+                          key="step-0"
+                          initial={{ opacity: 0, x: 30 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -30 }}
+                          className="space-y-4"
+                        >
+                          <div className="space-y-2">
+                            <Label>Número de Disparo</Label>
+                            {phones.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">Nenhum número disponível. Registre um número primeiro.</p>
+                            ) : (
+                              <Select value={selectedPhoneNumberId} onValueChange={setSelectedPhoneNumberId}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione o número..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {phones.map(p => (
+                                    <SelectItem key={p.phone_number_id} value={p.phone_number_id}>
+                                      <span className="flex items-center gap-2">
+                                        <Phone className="h-3 w-3" />
+                                        {p.display_phone_number} {p.verified_name ? `(${p.verified_name})` : ""}
+                                      </span>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
 
-                    {/* Variable mappings */}
-                    {templateVars.length > 0 && (
-                      <div className="space-y-2 rounded-lg border p-3">
-                        <Label className="text-xs font-semibold">Mapeamento de Variáveis</Label>
-                        {templateVars.map(v => (
-                          <div key={v} className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs shrink-0">{`{{${v}}}`}</Badge>
-                            <Select
-                              value={variableMappings[String(v)] || ""}
-                              onValueChange={val => setVariableMappings(prev => ({ ...prev, [String(v)]: val }))}
+                          {selectedPhoneData && (
+                            <div className="space-y-2 rounded-lg border p-3">
+                              <Label className="text-xs font-semibold">Nome do Advogado (variável)</Label>
+                              <Input
+                                value={customAdvogadoName}
+                                onChange={e => setCustomAdvogadoName(e.target.value)}
+                                placeholder={defaultPhoneName || "Nome do advogado..."}
+                                className="h-9"
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                Derivado do nome de exibição: <span className="font-mono">{rawDisplayName}</span>
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="flex justify-end pt-2">
+                            <Button
+                              onClick={() => setWizardStep(1)}
+                              disabled={phones.length > 0 && !selectedPhoneNumberId}
                             >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="Campo..." />
+                              Próximo <ChevronRight className="ml-2 h-4 w-4" />
+                            </Button>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Step 1: Template selection */}
+                      {wizardStep === 1 && (
+                        <motion.div
+                          key="step-1"
+                          initial={{ opacity: 0, x: 30 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -30 }}
+                          className="space-y-4"
+                        >
+                          <div className="space-y-2">
+                            <Label>Template</Label>
+                            <Select
+                              value={selectedTemplate?.name || ""}
+                              onValueChange={v => setSelectedTemplate(approvedTemplates.find(t => t.name === v) || null)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o template..." />
                               </SelectTrigger>
                               <SelectContent>
-                                {CONTACT_FIELD_OPTIONS.map(f => (
-                                  <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                                {approvedTemplates.map(t => (
+                                  <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
-                        ))}
-                      </div>
-                    )}
 
-                    {/* List selection */}
-                    <div className="space-y-2">
-                      <Label>Lista de Contatos</Label>
-                      {loadingLists ? (
-                        <LoadingSpinner size="sm" text="Carregando listas..." />
-                      ) : availableLists.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Nenhuma lista disponível. Importe contatos primeiro.</p>
-                      ) : (
-                        <Select value={selectedList} onValueChange={setSelectedList}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a lista..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableLists.map(l => (
-                              <SelectItem key={l.name} value={l.name}>
-                                {l.name} ({l.count} contatos)
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          {/* Template Preview */}
+                          {selectedTemplate && templateBody && (
+                            <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-xs font-semibold text-muted-foreground">Preview do Template</span>
+                              </div>
+                              <p className="text-sm whitespace-pre-wrap leading-relaxed">{templateBody}</p>
+                            </div>
+                          )}
+
+                          {/* Variable mappings */}
+                          {templateVars.length > 0 && (
+                            <div className="space-y-2 rounded-lg border p-3">
+                              <Label className="text-xs font-semibold">Mapeamento de Variáveis</Label>
+                              {templateVars.map(v => (
+                                <div key={v} className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs shrink-0">{`{{${v}}}`}</Badge>
+                                  <Select
+                                    value={variableMappings[String(v)] || ""}
+                                    onValueChange={val => setVariableMappings(prev => ({ ...prev, [String(v)]: val }))}
+                                  >
+                                    <SelectTrigger className="h-8 text-xs">
+                                      <SelectValue placeholder="Campo..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {CONTACT_FIELD_OPTIONS.map(f => (
+                                        <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="flex justify-between pt-2">
+                            <Button variant="outline" onClick={() => setWizardStep(0)}>
+                              <ChevronLeft className="mr-2 h-4 w-4" /> Voltar
+                            </Button>
+                            <Button onClick={() => setWizardStep(2)} disabled={!selectedTemplate}>
+                              Próximo <ChevronRight className="ml-2 h-4 w-4" />
+                            </Button>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Step 2: List + Renda filter */}
+                      {wizardStep === 2 && (
+                        <motion.div
+                          key="step-2"
+                          initial={{ opacity: 0, x: 30 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -30 }}
+                          className="space-y-4"
+                        >
+                          <div className="space-y-2">
+                            <Label>Lista de Contatos</Label>
+                            {loadingLists ? (
+                              <LoadingSpinner size="sm" text="Carregando listas..." />
+                            ) : availableLists.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">Nenhuma lista disponível. Importe contatos primeiro.</p>
+                            ) : (
+                              <Select value={selectedList} onValueChange={setSelectedList}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione a lista..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableLists.map(l => (
+                                    <SelectItem key={l.name} value={l.name}>
+                                      {l.name} ({l.count} contatos)
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Filtro de Renda</Label>
+                            <Select value={minRenda} onValueChange={setMinRenda}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Todos os contatos" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Todos (sem filtro)</SelectItem>
+                                <SelectItem value="5000">Acima de R$ 5.000</SelectItem>
+                                <SelectItem value="10000">Acima de R$ 10.000</SelectItem>
+                                <SelectItem value="15000">Acima de R$ 15.000</SelectItem>
+                                <SelectItem value="20000">Acima de R$ 20.000</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                              Filtra contatos pelo valor da causa/renda mínima.
+                            </p>
+                          </div>
+
+                          <div className="flex justify-between pt-2">
+                            <Button variant="outline" onClick={() => setWizardStep(1)}>
+                              <ChevronLeft className="mr-2 h-4 w-4" /> Voltar
+                            </Button>
+                            <Button onClick={() => setWizardStep(3)} disabled={!selectedList}>
+                              Próximo <ChevronRight className="ml-2 h-4 w-4" />
+                            </Button>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Step 3: Mode + Send */}
+                      {wizardStep === 3 && (
+                        <motion.div
+                          key="step-3"
+                          initial={{ opacity: 0, x: 30 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -30 }}
+                          className="space-y-4"
+                        >
+                          {/* Summary */}
+                          <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5 text-sm">
+                            <p><span className="font-semibold">Número:</span> {selectedPhoneData?.display_phone_number || "—"}</p>
+                            <p><span className="font-semibold">Advogado:</span> {phoneVerifiedName || "—"}</p>
+                            <p><span className="font-semibold">Template:</span> {selectedTemplate?.name || "—"}</p>
+                            <p><span className="font-semibold">Lista:</span> {selectedList} ({listContactCount} contatos)</p>
+                            {minRenda !== "all" && (
+                              <p><span className="font-semibold">Renda mín.:</span> R$ {parseInt(minRenda).toLocaleString("pt-BR")}</p>
+                            )}
+                          </div>
+
+                          {/* Mode selection */}
+                          <div className="space-y-2">
+                            <Label>Modo de Disparo</Label>
+                            <div className="flex gap-2">
+                              <Button
+                                variant={dispatchMode === "auto" ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setDispatchMode("auto")}
+                                className="flex-1"
+                              >
+                                <Send className="mr-2 h-3.5 w-3.5" />
+                                Automático
+                              </Button>
+                              <Button
+                                variant={dispatchMode === "manual" ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setDispatchMode("manual")}
+                                className="flex-1"
+                              >
+                                <Hand className="mr-2 h-3.5 w-3.5" />
+                                Manual (1 a 1)
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Auto mode */}
+                          {dispatchMode === "auto" && (
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <Label>Intervalo entre mensagens (segundos)</Label>
+                                <Input
+                                  type="number"
+                                  value={intervalSeconds}
+                                  onChange={e => setIntervalSeconds(Math.max(60, parseInt(e.target.value) || 65))}
+                                  min={60}
+                                  className="w-32"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  Mínimo 60s. Varia automaticamente para proteção anti-ban.
+                                </p>
+                              </div>
+                              <Button
+                                onClick={handleSend}
+                                disabled={!selectedTemplate || !selectedList || listContactCount === 0}
+                                className="w-full"
+                                size="lg"
+                              >
+                                <Send className="mr-2 h-4 w-4" />
+                                Iniciar Disparo Automático ({listContactCount} contatos)
+                              </Button>
+                            </div>
+                          )}
+
+                          {/* Manual mode */}
+                          {dispatchMode === "manual" && (
+                            <>
+                              {manualContacts.length === 0 ? (
+                                <Button
+                                  onClick={handleStartManual}
+                                  disabled={!selectedTemplate || !selectedList || listContactCount === 0}
+                                  className="w-full"
+                                  size="lg"
+                                >
+                                  <Hand className="mr-2 h-4 w-4" />
+                                  Iniciar Disparo Manual ({listContactCount} contatos)
+                                </Button>
+                              ) : (
+                                <div className="space-y-3 rounded-lg border p-4">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="font-semibold text-sm">Disparo Manual</h4>
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className="text-xs">
+                                        {manualIndex}/{manualContacts.length}
+                                      </Badge>
+                                      <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={handleManualStop}>
+                                        <X className="h-3.5 w-3.5 mr-1" /> Parar
+                                      </Button>
+                                    </div>
+                                  </div>
+
+                                  <Progress value={(manualIndex / manualContacts.length) * 100} className="h-2" />
+
+                                  <div className="flex gap-3 text-xs text-muted-foreground">
+                                    <span className="text-primary">{manualResults.sent} enviados</span>
+                                    <span className="text-destructive">{manualResults.failed} falhas</span>
+                                  </div>
+
+                                  {manualFinished ? (
+                                    <div className="text-center py-4 space-y-2">
+                                      <CheckCircle className="h-8 w-8 mx-auto text-primary" />
+                                      <p className="font-medium text-sm">Disparo manual concluído!</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {manualResults.sent} enviados, {manualResults.failed} falhas
+                                      </p>
+                                      <Button size="sm" variant="outline" onClick={handleManualStop}>Fechar</Button>
+                                    </div>
+                                  ) : currentManualContact ? (
+                                    <div className="space-y-3">
+                                      <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                                        <p className="font-medium text-sm">{currentManualContact.name}</p>
+                                        <p className="text-xs text-muted-foreground font-mono">{currentManualContact.phone}</p>
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <Button
+                                          onClick={handleManualSendOne}
+                                          disabled={manualSending}
+                                          className="flex-1"
+                                        >
+                                          {manualSending ? <LoadingSpinner size="sm" /> : <Send className="mr-2 h-4 w-4" />}
+                                          {manualSending ? "Enviando..." : "Enviar"}
+                                        </Button>
+                                        <Button
+                                          onClick={handleManualSkip}
+                                          disabled={manualSending}
+                                          variant="outline"
+                                        >
+                                          <SkipForward className="mr-2 h-4 w-4" />
+                                          Pular
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          <div className="flex justify-start pt-2">
+                            <Button variant="outline" onClick={() => setWizardStep(2)}>
+                              <ChevronLeft className="mr-2 h-4 w-4" /> Voltar
+                            </Button>
+                          </div>
+                        </motion.div>
                       )}
                     </div>
-
-                    {/* Income filter */}
-                    <div className="space-y-2">
-                      <Label>Filtro de Renda</Label>
-                      <Select value={minRenda} onValueChange={setMinRenda}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Todos os contatos" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos (sem filtro)</SelectItem>
-                          <SelectItem value="5000">Acima de R$ 5.000</SelectItem>
-                          <SelectItem value="10000">Acima de R$ 10.000</SelectItem>
-                          <SelectItem value="15000">Acima de R$ 15.000</SelectItem>
-                          <SelectItem value="20000">Acima de R$ 20.000</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Filtra contatos pelo valor da causa/renda mínima.
-                      </p>
-                    </div>
-
-                    {/* Mode selection */}
-                    <div className="space-y-2">
-                      <Label>Modo de Disparo</Label>
-                      <div className="flex gap-2">
-                        <Button
-                          variant={dispatchMode === "auto" ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setDispatchMode("auto")}
-                          className="flex-1"
-                        >
-                          <Send className="mr-2 h-3.5 w-3.5" />
-                          Automático
-                        </Button>
-                        <Button
-                          variant={dispatchMode === "manual" ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setDispatchMode("manual")}
-                          className="flex-1"
-                        >
-                          <Hand className="mr-2 h-3.5 w-3.5" />
-                          Manual (1 a 1)
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {dispatchMode === "auto"
-                          ? "Envia automaticamente com intervalo entre mensagens."
-                          : "Você controla cada envio manualmente, um por um."}
-                      </p>
-                    </div>
-
-                    {/* Auto mode: interval + send */}
-                    {dispatchMode === "auto" && (
-                      <>
-                        <div className="space-y-2">
-                          <Label>Intervalo entre mensagens (segundos)</Label>
-                          <Input
-                            type="number"
-                            value={intervalSeconds}
-                            onChange={e => setIntervalSeconds(Math.max(60, parseInt(e.target.value) || 65))}
-                            min={60}
-                            className="w-32"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Mínimo 60s. O intervalo varia automaticamente (ex: 63s, 67s, 72s) para proteção anti-ban.
-                          </p>
-                        </div>
-                        <Button
-                          onClick={handleSend}
-                          disabled={!selectedTemplate || !selectedList || listContactCount === 0}
-                          className="w-full"
-                          size="lg"
-                        >
-                          <Send className="mr-2 h-4 w-4" />
-                          Iniciar Disparo Automático ({listContactCount} contatos)
-                        </Button>
-                      </>
-                    )}
-
-                    {/* Manual mode */}
-                    {dispatchMode === "manual" && (
-                      <>
-                        {manualContacts.length === 0 ? (
-                          <Button
-                            onClick={handleStartManual}
-                            disabled={!selectedTemplate || !selectedList || listContactCount === 0}
-                            className="w-full"
-                            size="lg"
-                          >
-                            <Hand className="mr-2 h-4 w-4" />
-                            Iniciar Disparo Manual ({listContactCount} contatos)
-                          </Button>
-                        ) : (
-                          <div className="space-y-3 rounded-lg border p-4">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-semibold text-sm">Disparo Manual</h4>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs">
-                                  {manualIndex}/{manualContacts.length}
-                                </Badge>
-                                <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={handleManualStop}>
-                                  <X className="h-3.5 w-3.5 mr-1" /> Parar
-                                </Button>
-                              </div>
-                            </div>
-
-                            <Progress value={(manualIndex / manualContacts.length) * 100} className="h-2" />
-
-                            <div className="flex gap-3 text-xs text-muted-foreground">
-                              <span className="text-green-600 dark:text-green-400">{manualResults.sent} enviados</span>
-                              <span className="text-destructive">{manualResults.failed} falhas</span>
-                            </div>
-
-                            {manualFinished ? (
-                              <div className="text-center py-4 space-y-2">
-                                <CheckCircle className="h-8 w-8 mx-auto text-green-500" />
-                                <p className="font-medium text-sm">Disparo manual concluído!</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {manualResults.sent} enviados, {manualResults.failed} falhas
-                                </p>
-                                <Button size="sm" variant="outline" onClick={handleManualStop}>Fechar</Button>
-                              </div>
-                            ) : currentManualContact ? (
-                              <div className="space-y-3">
-                                <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-                                  <p className="font-medium text-sm">{currentManualContact.name}</p>
-                                  <p className="text-xs text-muted-foreground font-mono">{currentManualContact.phone}</p>
-                                </div>
-                                <div className="flex gap-2">
-                                  <Button
-                                    onClick={handleManualSendOne}
-                                    disabled={manualSending}
-                                    className="flex-1"
-                                  >
-                                    {manualSending ? <LoadingSpinner size="sm" /> : <Send className="mr-2 h-4 w-4" />}
-                                    {manualSending ? "Enviando..." : "Enviar"}
-                                  </Button>
-                                  <Button
-                                    onClick={handleManualSkip}
-                                    disabled={manualSending}
-                                    variant="outline"
-                                  >
-                                    <SkipForward className="mr-2 h-4 w-4" />
-                                    Pular
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : null}
-                          </div>
-                        )}
-                      </>
-                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
