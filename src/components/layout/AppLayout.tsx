@@ -10,9 +10,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   useAICompletionAlert();
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col h-screen overflow-hidden bg-background">
       <TopNav />
-      <main className="flex-1 overflow-hidden min-w-0">{children}</main>
+      <main className="flex-1 overflow-hidden min-w-0 min-h-0">{children}</main>
     </div>
   );
 }
