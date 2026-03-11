@@ -32,7 +32,6 @@ const adminNavItems = [
 ];
 
 const baseUserNavItems = [
-  { title: "Painel", href: "/", icon: BarChart3 },
   { title: "Conversas", href: "/conversas", icon: MessagesSquare },
 ];
 

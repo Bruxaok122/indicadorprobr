@@ -64,6 +64,8 @@ function getStatusInfo(status?: string) {
 }
 
 export default function WhatsAppApiPage() {
+  const { isAdmin } = useAuthContext();
+  
   // Phone Registration State
   const [cc, setCc] = useState("55");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -78,7 +80,7 @@ export default function WhatsAppApiPage() {
 
   // Phone statuses
   const { phones, allPhones, syncPhones, isSyncing, isLoading: phonesLoading } = useWabaPhones();
-  const availablePhones = allPhones.length > 0 ? allPhones : phones;
+  const availablePhones = isAdmin ? (allPhones.length > 0 ? allPhones : phones) : phones;
   const [phoneStatuses, setPhoneStatuses] = useState<Record<string, PhoneStatus>>({});
   const [checkingAllStatuses, setCheckingAllStatuses] = useState(false);
   
