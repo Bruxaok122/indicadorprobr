@@ -370,5 +370,11 @@ export default function ConversasPage() {
     return <AppLayout>{chatContent}</AppLayout>;
   }
 
-  return chatContent;
+  // Simple operators without nav — add onboarding directly
+  return (
+    <>
+      {chatContent}
+      <OnboardingGuide />
+    </>
+  );
 }
