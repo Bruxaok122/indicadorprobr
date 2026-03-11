@@ -315,8 +315,29 @@ export default function WhatsAppApiPage() {
       setSettingPin(false);
     }
   };
+  const handleDeletePhone = async (phone: typeof availablePhones[0]) => {
+    setDeletingPhoneId(phone.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
+        body: {
+          action: "delete_phone",
+          phone_number_id: phone.phone_number_id,
+          db_id: phone.id,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Número excluído com sucesso!");
+      syncPhones();
+    } catch (err: any) {
+      const errorMessage = await getInvokeErrorMessage(err, "Erro ao excluir número");
+      toast.error("Erro ao excluir número", { description: errorMessage });
+    } finally {
+      setDeletingPhoneId(null);
+    }
+  };
 
-  const handleLoadProfile = async () => {
+
     if (!selectedPhone) return;
     setProfileLoading(true);
     try {
