@@ -13,6 +13,7 @@ import { Phone, UserCircle, Send, CheckCircle, RefreshCw, Wifi, WifiOff, AlertCi
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 interface PhoneStatus {
   id: string;
@@ -63,6 +64,8 @@ function getStatusInfo(status?: string) {
 }
 
 export default function WhatsAppApiPage() {
+  const { isAdmin } = useAuthContext();
+  
   // Phone Registration State
   const [cc, setCc] = useState("55");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -77,7 +80,7 @@ export default function WhatsAppApiPage() {
 
   // Phone statuses
   const { phones, allPhones, syncPhones, isSyncing, isLoading: phonesLoading } = useWabaPhones();
-  const availablePhones = allPhones.length > 0 ? allPhones : phones;
+  const availablePhones = isAdmin ? (allPhones.length > 0 ? allPhones : phones) : phones;
   const [phoneStatuses, setPhoneStatuses] = useState<Record<string, PhoneStatus>>({});
   const [checkingAllStatuses, setCheckingAllStatuses] = useState(false);
   
@@ -384,10 +387,12 @@ export default function WhatsAppApiPage() {
                     <CardDescription>Status de conexão dos seus números</CardDescription>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => syncPhones()} disabled={isSyncing}>
-                      <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-                      Sincronizar
-                    </Button>
+                    {isAdmin && (
+                      <Button variant="outline" size="sm" onClick={() => syncPhones()} disabled={isSyncing}>
+                        <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
+                        Sincronizar
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" onClick={checkAllStatuses} disabled={checkingAllStatuses}>
                       {checkingAllStatuses ? <LoadingSpinner size="sm" /> : "Verificar Status"}
                     </Button>
@@ -401,7 +406,7 @@ export default function WhatsAppApiPage() {
                   </div>
                 ) : availablePhones.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-6">
-                    Nenhum número cadastrado. Registre um número abaixo ou sincronize da Meta.
+                    Nenhum número cadastrado. Registre um número abaixo.
                   </p>
                 ) : (
                   <div className="space-y-3">
@@ -452,29 +457,44 @@ export default function WhatsAppApiPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Código do País</Label>
-                    <Input value={cc} onChange={(e) => setCc(e.target.value)} placeholder="55" />
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label>Número de Telefone</Label>
-                    <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="11999998888" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Nome Verificado (exibido no WhatsApp)</Label>
-                  <Input value={verifiedName} onChange={(e) => setVerifiedName(e.target.value)} placeholder="Nome da Empresa" />
-                </div>
-                <div className="space-y-2">
-                  <Label>PIN de 2 Fatores (6 dígitos)</Label>
-                  <Input
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    placeholder="123456"
-                    maxLength={6}
-                  />
-                </div>
+                {isAdmin ? (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Código do País</Label>
+                        <Input value={cc} onChange={(e) => setCc(e.target.value)} placeholder="55" />
+                      </div>
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label>Número de Telefone</Label>
+                        <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="11999998888" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nome Verificado (exibido no WhatsApp)</Label>
+                      <Input value={verifiedName} onChange={(e) => setVerifiedName(e.target.value)} placeholder="Nome da Empresa" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>PIN de 2 Fatores (6 dígitos)</Label>
+                      <Input
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        placeholder="123456"
+                        maxLength={6}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Número de Telefone (com DDD)</Label>
+                      <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="11999998888" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nome de Exibição</Label>
+                      <Input value={verifiedName} onChange={(e) => setVerifiedName(e.target.value)} placeholder="Nome que aparecerá no WhatsApp" />
+                    </div>
+                  </>
+                )}
                 <Button onClick={handleRegister} disabled={registering} className="w-full">
                   {registering ? <LoadingSpinner size="sm" /> : <Send className="mr-2 h-4 w-4" />}
                   {registering ? "Registrando..." : "Registrar Número"}
@@ -521,87 +541,35 @@ export default function WhatsAppApiPage() {
               </CardContent>
             </Card>
 
-            {/* Set PIN for Existing Number */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lock className="h-5 w-5" />
-                  Definir PIN para Número Existente
-                </CardTitle>
-                <CardDescription>
-                  Defina o PIN de verificação em duas etapas para um número que já está cadastrado
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Selecione o Número</Label>
-                  <Select value={setPinPhoneId} onValueChange={setSetPinPhoneId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Escolha um número..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availablePhones.map((p) => {
-                        const ps = phoneStatuses[p.phone_number_id];
-                        const statusInfo = getStatusInfo(ps?.status);
-                        return (
-                          <SelectItem key={p.id} value={p.id}>
-                            <span className="flex items-center gap-2">
-                              <span className={`inline-block h-2 w-2 rounded-full ${ps?.status === "CONNECTED" ? "bg-green-500" : ps?.status === "PENDING" ? "bg-yellow-500" : "bg-destructive"}`} />
-                              {p.display_phone_number} {p.verified_name ? `(${p.verified_name})` : ""}
-                              {ps?.status ? ` — ${statusInfo.label}` : ""}
-                            </span>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>PIN de 2 Fatores (6 dígitos)</Label>
-                  <Input
-                    value={setPinValue}
-                    onChange={(e) => setSetPinValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    placeholder="123456"
-                    maxLength={6}
-                  />
-                </div>
-                <Button onClick={handleSetPin} disabled={settingPin} className="w-full">
-                  {settingPin ? <LoadingSpinner size="sm" /> : <Lock className="mr-2 h-4 w-4" />}
-                  {settingPin ? "Definindo PIN..." : "Definir PIN"}
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Business Profile - only when connected */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UserCircle className="h-5 w-5" />
-                  Perfil Comercial do WhatsApp
-                </CardTitle>
-                <CardDescription>
-                  {isPhoneConnected
-                    ? "Configure o perfil comercial exibido no WhatsApp"
-                    : "Selecione um número conectado para editar o perfil comercial"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1 space-y-2">
+            {/* Set PIN for Existing Number - Admin Only */}
+            {isAdmin && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lock className="h-5 w-5" />
+                    Definir PIN para Número Existente
+                  </CardTitle>
+                  <CardDescription>
+                    Defina o PIN de verificação em duas etapas para um número que já está cadastrado
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
                     <Label>Selecione o Número</Label>
-                    <Select value={selectedPhoneId} onValueChange={setSelectedPhoneId}>
+                    <Select value={setPinPhoneId} onValueChange={setSetPinPhoneId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Escolha um número..." />
                       </SelectTrigger>
                       <SelectContent>
                         {availablePhones.map((p) => {
                           const ps = phoneStatuses[p.phone_number_id];
-                          const connected = ps?.status === "CONNECTED";
+                          const statusInfo = getStatusInfo(ps?.status);
                           return (
                             <SelectItem key={p.id} value={p.id}>
                               <span className="flex items-center gap-2">
-                                <span className={`inline-block h-2 w-2 rounded-full ${connected ? "bg-green-500" : "bg-destructive"}`} />
+                                <span className={`inline-block h-2 w-2 rounded-full ${ps?.status === "CONNECTED" ? "bg-green-500" : ps?.status === "PENDING" ? "bg-yellow-500" : "bg-destructive"}`} />
                                 {p.display_phone_number} {p.verified_name ? `(${p.verified_name})` : ""}
+                                {ps?.status ? ` — ${statusInfo.label}` : ""}
                               </span>
                             </SelectItem>
                           );
@@ -609,151 +577,207 @@ export default function WhatsAppApiPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button
-                    onClick={handleLoadProfile}
-                    disabled={!selectedPhoneId || profileLoading || !isPhoneConnected}
-                    variant="outline"
-                  >
-                    {profileLoading ? <LoadingSpinner size="sm" /> : "Carregar Perfil"}
-                  </Button>
-                </div>
-
-                {selectedPhoneId && !isPhoneConnected && (
-                  <div className="flex items-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm">
-                    <AlertCircle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-                    <span>
-                      Este número não está conectado. Aguarde a conexão para editar o perfil comercial.
-                    </span>
+                  <div className="space-y-2">
+                    <Label>PIN de 2 Fatores (6 dígitos)</Label>
+                    <Input
+                      value={setPinValue}
+                      onChange={(e) => setSetPinValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="123456"
+                      maxLength={6}
+                    />
                   </div>
-                )}
+                  <Button onClick={handleSetPin} disabled={settingPin} className="w-full">
+                    {settingPin ? <LoadingSpinner size="sm" /> : <Lock className="mr-2 h-4 w-4" />}
+                    {settingPin ? "Definindo PIN..." : "Definir PIN"}
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
-                {isPhoneConnected && (
-                  <>
-                    <div className="flex items-center gap-4">
-                      {profileData.profile_picture_url ? (
-                        <img
-                          src={profileData.profile_picture_url}
-                          alt="Foto do perfil"
-                          className="h-16 w-16 rounded-full object-cover border"
-                        />
-                      ) : (
-                        <div className="h-16 w-16 rounded-full border flex items-center justify-center bg-muted">
-                          <Image className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">
-                          {profileData.profile_picture_url ? "Foto atual do perfil" : "Sem foto de perfil"}
-                        </p>
-                        <label className="cursor-pointer">
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/png"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleUploadPhoto(file);
-                              e.target.value = "";
-                            }}
-                            disabled={uploadingPhoto}
-                          />
-                          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
-                            {uploadingPhoto ? (
-                              <><LoadingSpinner size="sm" /> Enviando...</>
-                            ) : (
-                              <><Upload className="h-4 w-4" /> Alterar foto</>
-                            )}
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Sobre (até 139 caracteres)</Label>
-                      <Input
-                        value={profileData.about}
-                        onChange={(e) => setProfileData({ ...profileData, about: e.target.value.slice(0, 139) })}
-                        placeholder="Breve descrição"
-                        maxLength={139}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Descrição (até 512 caracteres)</Label>
-                      <Textarea
-                        value={profileData.description}
-                        onChange={(e) => setProfileData({ ...profileData, description: e.target.value.slice(0, 512) })}
-                        placeholder="Descrição detalhada"
-                        maxLength={512}
-                        rows={3}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Endereço</Label>
-                        <Input
-                          value={profileData.address}
-                          onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
-                          placeholder="Rua, nº - Cidade/UF"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Email</Label>
-                        <Input
-                          value={profileData.email}
-                          onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                          placeholder="contato@empresa.com"
-                          type="email"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Websites (separados por vírgula)</Label>
-                      <Input
-                        value={profileData.websites}
-                        onChange={(e) => setProfileData({ ...profileData, websites: e.target.value })}
-                        placeholder="https://empresa.com"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Categoria do Negócio</Label>
-                      <Select
-                        value={profileData.vertical}
-                        onValueChange={(v) => setProfileData({ ...profileData, vertical: v })}
-                      >
+            {/* Business Profile - admin only */}
+            {isAdmin && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCircle className="h-5 w-5" />
+                    Perfil Comercial do WhatsApp
+                  </CardTitle>
+                  <CardDescription>
+                    {isPhoneConnected
+                      ? "Configure o perfil comercial exibido no WhatsApp"
+                      : "Selecione um número conectado para editar o perfil comercial"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1 space-y-2">
+                      <Label>Selecione o Número</Label>
+                      <Select value={selectedPhoneId} onValueChange={setSelectedPhoneId}>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Escolha um número..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {VERTICALS.map((v) => (
-                            <SelectItem key={v.value} value={v.value}>
-                              {v.label}
-                            </SelectItem>
-                          ))}
+                          {availablePhones.map((p) => {
+                            const ps = phoneStatuses[p.phone_number_id];
+                            const connected = ps?.status === "CONNECTED";
+                            return (
+                              <SelectItem key={p.id} value={p.id}>
+                                <span className="flex items-center gap-2">
+                                  <span className={`inline-block h-2 w-2 rounded-full ${connected ? "bg-green-500" : "bg-destructive"}`} />
+                                  {p.display_phone_number} {p.verified_name ? `(${p.verified_name})` : ""}
+                                </span>
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     </div>
-
-                    <Button onClick={handleSaveProfile} disabled={savingProfile} className="w-full">
-                      {savingProfile ? (
-                        <>
-                          <LoadingSpinner size="sm" />
-                          Salvando...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Salvar Perfil Comercial
-                        </>
-                      )}
+                    <Button
+                      onClick={handleLoadProfile}
+                      disabled={!selectedPhoneId || profileLoading || !isPhoneConnected}
+                      variant="outline"
+                    >
+                      {profileLoading ? <LoadingSpinner size="sm" /> : "Carregar Perfil"}
                     </Button>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                  </div>
+
+                  {selectedPhoneId && !isPhoneConnected && (
+                    <div className="flex items-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm">
+                      <AlertCircle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                      <span>
+                        Este número não está conectado. Aguarde a conexão para editar o perfil comercial.
+                      </span>
+                    </div>
+                  )}
+
+                  {isPhoneConnected && (
+                    <>
+                      <div className="flex items-center gap-4">
+                        {profileData.profile_picture_url ? (
+                          <img
+                            src={profileData.profile_picture_url}
+                            alt="Foto do perfil"
+                            className="h-16 w-16 rounded-full object-cover border"
+                          />
+                        ) : (
+                          <div className="h-16 w-16 rounded-full border flex items-center justify-center bg-muted">
+                            <Image className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">
+                            {profileData.profile_picture_url ? "Foto atual do perfil" : "Sem foto de perfil"}
+                          </p>
+                          <label className="cursor-pointer">
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleUploadPhoto(file);
+                                e.target.value = "";
+                              }}
+                              disabled={uploadingPhoto}
+                            />
+                            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+                              {uploadingPhoto ? (
+                                <><LoadingSpinner size="sm" /> Enviando...</>
+                              ) : (
+                                <><Upload className="h-4 w-4" /> Alterar foto</>
+                              )}
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Sobre (até 139 caracteres)</Label>
+                        <Input
+                          value={profileData.about}
+                          onChange={(e) => setProfileData({ ...profileData, about: e.target.value.slice(0, 139) })}
+                          placeholder="Breve descrição"
+                          maxLength={139}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Descrição (até 512 caracteres)</Label>
+                        <Textarea
+                          value={profileData.description}
+                          onChange={(e) => setProfileData({ ...profileData, description: e.target.value.slice(0, 512) })}
+                          placeholder="Descrição detalhada"
+                          maxLength={512}
+                          rows={3}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Endereço</Label>
+                          <Input
+                            value={profileData.address}
+                            onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                            placeholder="Rua, nº - Cidade/UF"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Email</Label>
+                          <Input
+                            value={profileData.email}
+                            onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                            placeholder="contato@empresa.com"
+                            type="email"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Websites (separados por vírgula)</Label>
+                        <Input
+                          value={profileData.websites}
+                          onChange={(e) => setProfileData({ ...profileData, websites: e.target.value })}
+                          placeholder="https://empresa.com"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Categoria do Negócio</Label>
+                        <Select
+                          value={profileData.vertical}
+                          onValueChange={(v) => setProfileData({ ...profileData, vertical: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {VERTICALS.map((v) => (
+                              <SelectItem key={v.value} value={v.value}>
+                                {v.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <Button onClick={handleSaveProfile} disabled={savingProfile} className="w-full">
+                        {savingProfile ? (
+                          <>
+                            <LoadingSpinner size="sm" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Salvar Perfil Comercial
+                          </>
+                        )}
+                      </Button>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
