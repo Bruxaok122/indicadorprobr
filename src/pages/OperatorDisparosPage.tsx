@@ -688,6 +688,50 @@ export default function OperatorDisparosPage() {
                 </Card>
               </TabsContent>
 
+              {/* Tab: Listas */}
+              <TabsContent value="listas" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Users className="h-5 w-5 text-accent" />
+                      Minhas Listas
+                    </CardTitle>
+                    <CardDescription>
+                      Visualize os contatos das listas que você importou
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {loadingLists ? (
+                      <LoadingSpinner size="sm" text="Carregando listas..." />
+                    ) : availableLists.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-6">Nenhuma lista importada ainda.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {availableLists.map(l => (
+                          <div
+                            key={l.name}
+                            className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm truncate">{l.name}</p>
+                              <p className="text-xs text-muted-foreground">{l.count} contatos</p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => loadListContacts(l.name)}
+                            >
+                              <Eye className="mr-1.5 h-3.5 w-3.5" />
+                              Ver
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
               {/* Tab: Dispatch */}
               <TabsContent value="disparar" className="space-y-4">
                 <Card>
