@@ -19,8 +19,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useMemo } from "react";
 
-const navItems = [
+const adminNavItems = [
   { title: "Painel", href: "/", icon: BarChart3 },
   { title: "Conversas", href: "/conversas", icon: MessagesSquare },
   { title: "Contatos", href: "/contatos", icon: ContactRound },
@@ -30,10 +31,23 @@ const navItems = [
   { title: "Webhook", href: "/webhook", icon: Radio },
 ];
 
+const baseUserNavItems = [
+  { title: "Painel", href: "/", icon: BarChart3 },
+  { title: "Conversas", href: "/conversas", icon: MessagesSquare },
+];
+
+const numerosItem = { title: "Números", href: "/whatsapp-api", icon: Phone };
+
 export function TopNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut, profile } = useAuthContext();
+  const { signOut, profile, isAdmin } = useAuthContext();
+
+  const navItems = useMemo(() => {
+    if (isAdmin) return adminNavItems;
+    const canManageNumbers = (profile as any)?.can_manage_numbers;
+    return canManageNumbers ? [...baseUserNavItems, numerosItem] : baseUserNavItems;
+  }, [isAdmin, profile]);
 
   const handleLogout = async () => {
     await signOut();
