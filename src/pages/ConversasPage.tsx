@@ -363,7 +363,7 @@ export default function ConversasPage() {
     </>
   );
 
-  if (isAdmin || (profile as any)?.can_manage_numbers) {
+  if (isAdmin || (profile as any)?.can_manage_numbers || (profile as any)?.can_dispatch) {
     return <AppLayout>{chatContent}</AppLayout>;
   }
 
