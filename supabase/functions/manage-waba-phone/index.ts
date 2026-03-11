@@ -104,7 +104,7 @@ serve(async (req) => {
 
       // Save the number to waba_phone_numbers with created_by
       if (registerData.id) {
-        await serviceClient
+        const { data: upsertedPhone } = await serviceClient
           .from("waba_phone_numbers")
           .upsert({
             phone_number_id: registerData.id,
@@ -112,7 +112,22 @@ serve(async (req) => {
             verified_name: verified_name,
             is_active: true,
             created_by: userId,
-          }, { onConflict: "phone_number_id" });
+          }, { onConflict: "phone_number_id" })
+          .select("id")
+          .single();
+
+        // Auto-assign phone permission to the creator
+        if (upsertedPhone) {
+          await serviceClient
+            .from("user_phone_permissions")
+            .upsert({
+              user_id: userId,
+              phone_number_id: upsertedPhone.id,
+            }, { onConflict: "user_id,phone_number_id" })
+            .then(({ error }) => {
+              if (error) console.log("Auto-permission insert (may already exist):", error.message);
+            });
+        }
       }
 
       return new Response(JSON.stringify({ success: true, data: registerData }), {

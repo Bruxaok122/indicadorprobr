@@ -140,6 +140,7 @@ serve(async (req) => {
       if (requesterUserId) {
         const { data: isUserAdmin } = await supabase.rpc("is_admin", { _user_id: requesterUserId });
         if (!isUserAdmin) {
+          // Check user_phone_permissions OR if user created this number
           const { data: permission } = await supabase
             .from("user_phone_permissions")
             .select("id")
@@ -147,7 +148,14 @@ serve(async (req) => {
             .eq("phone_number_id", phoneRecord.id)
             .maybeSingle();
 
-          if (!permission) {
+          const { data: isCreator } = await supabase
+            .from("waba_phone_numbers")
+            .select("id")
+            .eq("id", phoneRecord.id)
+            .eq("created_by", requesterUserId)
+            .maybeSingle();
+
+          if (!permission && !isCreator) {
             return new Response(
               JSON.stringify({ error: "Você não tem permissão para usar este número de disparo." }),
               { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
