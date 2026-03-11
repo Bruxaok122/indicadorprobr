@@ -9,7 +9,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Phone, UserCircle, Send, CheckCircle, RefreshCw, Wifi, WifiOff, AlertCircle, Upload, Image, Lock } from "lucide-react";
+import { Phone, UserCircle, Send, CheckCircle, RefreshCw, Wifi, WifiOff, AlertCircle, Upload, Image, Lock, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
