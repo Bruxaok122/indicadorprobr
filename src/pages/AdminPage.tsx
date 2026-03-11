@@ -78,7 +78,7 @@ function AdminPageInner() {
 
       <main className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
         <Tabs defaultValue="apis" onValueChange={(v) => setActiveTab(v)}>
-          <AdminTabOnboarding activeTab={activeTab} />
+          
           <TabsList className="w-full sm:w-auto flex-wrap">
             <TabsTrigger value="apis" className="gap-1.5">
               <Zap className="h-4 w-4" /> APIs
