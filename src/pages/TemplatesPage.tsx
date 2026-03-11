@@ -166,11 +166,11 @@ export default function TemplatesPage() {
           description="Templates aprovados da sua conta WhatsApp Business"
         >
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => refetch()} disabled={isLoading}>
+            <Button data-onboarding="template-refresh" variant="outline" onClick={() => refetch()} disabled={isLoading}>
               <RefreshCw className={cn("mr-2 h-4 w-4", isLoading && "animate-spin")} />
               Atualizar
             </Button>
-            <Button onClick={() => setShowCreateDialog(true)}>
+            <Button data-onboarding="template-create" onClick={() => setShowCreateDialog(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Criar Template
             </Button>

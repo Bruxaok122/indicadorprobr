@@ -143,7 +143,7 @@ export default function ConfiguracaoPage() {
                 </div>
 
                 {/* WABA ID */}
-                <div className="space-y-2">
+                <div className="space-y-2" data-onboarding="config-waba">
                   <div className="flex items-center gap-2">
                     <Label htmlFor="wabaId">WABA ID (ID da Conta Business)</Label>
                     <Tooltip>

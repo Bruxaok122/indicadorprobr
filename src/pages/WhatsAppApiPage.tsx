@@ -642,7 +642,7 @@ export default function WhatsAppApiPage() {
             </Card>
 
             {/* Set PIN for Existing Number */}
-              <Card>
+            <Card data-onboarding="phone-set-pin">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Lock className="h-5 w-5" />
