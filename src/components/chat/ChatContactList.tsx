@@ -296,7 +296,7 @@ export function ChatContactList({
       </div>
 
       {/* Contact list */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1" data-onboarding="contact-list">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <LoadingSpinner size="md" />

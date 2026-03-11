@@ -99,7 +99,7 @@ export function ChatInput({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" onClick={onOpenTemplateDialog} disabled={!templatesAvailable}
+            <Button data-onboarding="template-button" variant="ghost" size="icon" onClick={onOpenTemplateDialog} disabled={!templatesAvailable}
               className="shrink-0 h-10 w-10 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800">
               <FileText className="h-5 w-5" />
             </Button>

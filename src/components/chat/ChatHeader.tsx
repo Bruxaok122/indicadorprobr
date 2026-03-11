@@ -133,7 +133,7 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
-        <button type="button" onClick={onOpenProfile}
+        <button type="button" onClick={onOpenProfile} data-onboarding="chat-header-name"
           className="flex items-center gap-3 min-w-0 flex-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors -m-1 p-1.5 cursor-pointer active:scale-[0.99]"
         >
           <div className={cn(
