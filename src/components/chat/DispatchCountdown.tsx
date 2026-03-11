@@ -1,0 +1,105 @@
+import { useState, useEffect } from "react";
+import { useDispatchContext } from "@/contexts/DispatchContext";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { Send, Timer, CheckCircle, Pause } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+
+function formatCountdown(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+export function DispatchCountdown() {
+  const { user } = useAuthContext();
+  const { activeDispatches } = useDispatchContext();
+  const [now, setNow] = useState(Date.now());
+
+  // Tick every second
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Get operator's active (non-finished) dispatches
+  const myDispatches = activeDispatches.filter(
+    (d) => d.operatorId === user?.id && !d.isFinished
+  );
+
+  if (myDispatches.length === 0) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+        className="absolute top-2 right-2 z-30 flex flex-col gap-1.5"
+      >
+        {myDispatches.map((dispatch) => {
+          const nextSendAt = dispatch.nextSendAt
+            ? new Date(dispatch.nextSendAt).getTime()
+            : null;
+          const remainingMs = nextSendAt ? Math.max(0, nextSendAt - now) : 0;
+          const remainingSec = Math.ceil(remainingMs / 1000);
+          const progress = dispatch.total > 0 ? Math.round((dispatch.current / dispatch.total) * 100) : 0;
+          const isWaiting = remainingSec > 0 && !dispatch.isPaused;
+
+          return (
+            <motion.div
+              key={dispatch.id}
+              layout
+              className={cn(
+                "flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-medium shadow-lg backdrop-blur-md border",
+                dispatch.isPaused
+                  ? "bg-warning/15 border-warning/30 text-warning"
+                  : isWaiting
+                  ? "bg-primary/10 border-primary/25 text-primary"
+                  : "bg-success/10 border-success/25 text-success"
+              )}
+            >
+              {dispatch.isPaused ? (
+                <Pause className="h-3.5 w-3.5" />
+              ) : isWaiting ? (
+                <Timer className="h-3.5 w-3.5 animate-pulse" />
+              ) : (
+                <Send className="h-3.5 w-3.5 animate-pulse" />
+              )}
+
+              <div className="flex items-center gap-1.5">
+                {dispatch.isPaused ? (
+                  <span>Pausado</span>
+                ) : isWaiting ? (
+                  <>
+                    <span className="font-mono tabular-nums text-sm">
+                      {formatCountdown(remainingSec)}
+                    </span>
+                    <span className="text-muted-foreground">próximo</span>
+                  </>
+                ) : (
+                  <span>Enviando...</span>
+                )}
+              </div>
+
+              <span className="text-[10px] text-muted-foreground/70 ml-1">
+                {dispatch.sent}/{dispatch.total}
+              </span>
+
+              {/* Mini progress bar */}
+              <div className="w-8 h-1 rounded-full bg-muted/50 overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-500",
+                    dispatch.isPaused ? "bg-warning" : "bg-primary"
+                  )}
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </motion.div>
+          );
+        })}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
