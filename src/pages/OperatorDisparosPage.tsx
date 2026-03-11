@@ -176,6 +176,9 @@ export default function OperatorDisparosPage() {
   const [minRenda, setMinRenda] = useState<string>("all");
   const [wizardStep, setWizardStep] = useState(0);
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
+  const [viewingList, setViewingList] = useState<string | null>(null);
+  const [viewingListContacts, setViewingListContacts] = useState<{ name: string; phone: string; status: string | null; cpf?: string; lawyer_name?: string }[]>([]);
+  const [loadingListContacts, setLoadingListContacts] = useState(false);
 
   // Manual dispatch state
   const [manualContacts, setManualContacts] = useState<{ id: string; name: string; phone: string; status?: string }[]>([]);
