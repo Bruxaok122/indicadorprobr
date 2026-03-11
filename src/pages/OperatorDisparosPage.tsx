@@ -180,6 +180,7 @@ export default function OperatorDisparosPage() {
   const [viewingList, setViewingList] = useState<string | null>(null);
   const [viewingListContacts, setViewingListContacts] = useState<{ name: string; phone: string; status: string | null; cpf?: string; lawyer_name?: string }[]>([]);
   const [loadingListContacts, setLoadingListContacts] = useState(false);
+  const [deletingList, setDeletingList] = useState<string | null>(null);
 
   // Manual dispatch state
   const [manualContacts, setManualContacts] = useState<{ id: string; name: string; phone: string; status?: string }[]>([]);
@@ -584,6 +585,41 @@ export default function OperatorDisparosPage() {
     setLoadingListContacts(false);
   };
 
+  const handleDeleteList = async (listNameToDelete: string) => {
+    if (!user?.id) return;
+    const confirmed = window.confirm(`Excluir a lista "${listNameToDelete}" e todos os seus contatos? Esta ação não pode ser desfeita.`);
+    if (!confirmed) return;
+    setDeletingList(listNameToDelete);
+    try {
+      // Get contact IDs first
+      const { data: contactIds } = await supabase
+        .from("contacts")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("contact_list", listNameToDelete);
+      
+      const ids = (contactIds || []).map((c: any) => c.id);
+      
+      if (ids.length > 0) {
+        // Delete messages and conversations in batches
+        for (let i = 0; i < ids.length; i += 100) {
+          const batch = ids.slice(i, i + 100);
+          await supabase.from("messages").delete().in("contact_id", batch);
+          await supabase.from("conversations").delete().in("contact_id", batch);
+          await supabase.from("contacts").delete().in("id", batch);
+        }
+      }
+      
+      toast.success(`Lista "${listNameToDelete}" excluída com sucesso`);
+      if (selectedList === listNameToDelete) setSelectedList("");
+      refreshLists();
+    } catch (err: any) {
+      toast.error("Erro ao excluir lista", { description: err.message });
+    } finally {
+      setDeletingList(null);
+    }
+  };
+
   const listContactCount = availableLists.find(l => l.name === selectedList)?.count || 0;
 
   return (
@@ -731,14 +767,25 @@ export default function OperatorDisparosPage() {
                               <p className="font-medium text-sm truncate">{l.name}</p>
                               <p className="text-xs text-muted-foreground">{l.count} contatos</p>
                             </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => loadListContacts(l.name)}
-                            >
-                              <Eye className="mr-1.5 h-3.5 w-3.5" />
-                              Ver
-                            </Button>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => loadListContacts(l.name)}
+                              >
+                                <Eye className="mr-1.5 h-3.5 w-3.5" />
+                                Ver
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteList(l.name)}
+                                disabled={deletingList === l.name}
+                              >
+                                {deletingList === l.name ? <LoadingSpinner size="sm" /> : <Trash2 className="h-3.5 w-3.5" />}
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -869,37 +916,29 @@ export default function OperatorDisparosPage() {
                                 <SelectValue placeholder="Selecione o template aprovado..." />
                               </SelectTrigger>
                               <SelectContent>
-                                {approvedTemplates.map(t => (
-                                  <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
-                                ))}
+                                {allTemplates.map(t => {
+                                  const isApproved = t.status === "APPROVED";
+                                  return (
+                                    <SelectItem key={t.id} value={t.name} disabled={!isApproved}>
+                                      <span className="flex items-center justify-between w-full gap-2">
+                                        <span className="truncate">{t.name}</span>
+                                        <span className={cn(
+                                          "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium shrink-0",
+                                          t.status === "APPROVED" && "bg-success/10 text-success",
+                                          t.status === "PENDING" && "bg-warning/10 text-warning",
+                                          t.status === "REJECTED" && "bg-destructive/10 text-destructive",
+                                        )}>
+                                          {t.status === "APPROVED" && <><CheckCircle className="h-3 w-3" /> Aprovado</>}
+                                          {t.status === "PENDING" && <><Clock className="h-3 w-3" /> Pendente</>}
+                                          {t.status === "REJECTED" && <><X className="h-3 w-3" /> Rejeitado</>}
+                                        </span>
+                                      </span>
+                                    </SelectItem>
+                                  );
+                                })}
                               </SelectContent>
                             </Select>
                           </div>
-
-                          {/* All templates with status */}
-                          {allTemplates.length > 0 && (
-                            <div className="space-y-2">
-                              <Label className="text-xs text-muted-foreground">Todos os Templates</Label>
-                              <div className="rounded-lg border divide-y max-h-[200px] overflow-auto">
-                                {allTemplates.map(t => (
-                                  <div key={t.id} className="flex items-center justify-between px-3 py-2 text-sm">
-                                    <span className="font-mono text-xs truncate flex-1 min-w-0">{t.name}</span>
-                                    <span className={cn(
-                                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 ml-2",
-                                      t.status === "APPROVED" && "bg-success/10 text-success",
-                                      t.status === "PENDING" && "bg-warning/10 text-warning",
-                                      t.status === "REJECTED" && "bg-destructive/10 text-destructive",
-                                    )}>
-                                      {t.status === "APPROVED" && <><CheckCircle className="h-3 w-3" /> Aprovado</>}
-                                      {t.status === "PENDING" && <><Clock className="h-3 w-3" /> Pendente</>}
-                                      {t.status === "REJECTED" && <><X className="h-3 w-3" /> Rejeitado</>}
-                                      {!["APPROVED","PENDING","REJECTED"].includes(t.status) && <><AlertCircle className="h-3 w-3" /> {t.status}</>}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
 
                           {/* Template Preview */}
                           {selectedTemplate && templateBody && (
