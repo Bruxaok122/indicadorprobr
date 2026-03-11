@@ -581,8 +581,7 @@ export default function WhatsAppApiPage() {
               </CardContent>
             </Card>
 
-            {/* Set PIN for Existing Number - Admin Only */}
-            {isAdmin && (
+            {/* Set PIN for Existing Number */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
