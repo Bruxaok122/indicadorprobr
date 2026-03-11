@@ -245,9 +245,9 @@ export default function ConversasPage() {
               isMobile && cn("absolute inset-0 z-20 transition-transform duration-300 h-full", !mobileShowChat && "translate-x-full")
             )}
           >
+            <DispatchCountdown />
             {selectedContact ? (
               <>
-                <DispatchCountdown />
                 <ChatHeader
                   contact={selectedContact} isMobile={isMobile} onBack={handleBackToList}
                   onToggleBlock={(contactId, blocked) => toggleContactBlock({ contactId, blocked })}
