@@ -42,6 +42,7 @@ interface UsersTableProps {
   users: Profile[];
   onToggleBlock: (params: { userId: string; isBlocked: boolean }) => void;
   onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
+  onToggleManageNumbers: (params: { userId: string; canManageNumbers: boolean }) => void;
   onDelete: (userId: string) => void;
   onClearTempBan: (userId: string) => void;
   onManagePhones: (user: Profile) => void;
