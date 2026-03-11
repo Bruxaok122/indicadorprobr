@@ -1128,6 +1128,20 @@ export default function OperatorDisparosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CreateTemplateDialog
+        open={showCreateTemplate}
+        onOpenChange={setShowCreateTemplate}
+        onSubmit={(data) => {
+          createTemplate(data, {
+            onSuccess: () => {
+              setShowCreateTemplate(false);
+              refetchTemplates();
+            },
+          });
+        }}
+        isSubmitting={isCreatingTemplate}
+      />
     </AppLayout>
   );
 }
