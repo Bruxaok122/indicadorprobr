@@ -1113,6 +1113,7 @@ export default function OperatorDisparosPage() {
                                 </p>
                               </div>
                               <Button
+                                data-onboarding="dispatch-start-button"
                                 onClick={handleSend}
                                 disabled={!selectedTemplate || !selectedList || listContactCount === 0}
                                 className="w-full"
