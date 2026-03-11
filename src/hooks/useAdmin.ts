@@ -348,6 +348,8 @@ export function useAdmin() {
     isTogglingApiPermission: toggleApiPermissionMutation.isPending,
     toggleManageNumbers: toggleManageNumbersMutation.mutate,
     isTogglingManageNumbers: toggleManageNumbersMutation.isPending,
+    toggleDispatch: toggleDispatchMutation.mutate,
+    isTogglingDispatch: toggleDispatchMutation.isPending,
     deleteUser: deleteUserMutation.mutate,
     isDeletingUser: deleteUserMutation.isPending,
     clearTempBan: clearTempBanMutation.mutate,

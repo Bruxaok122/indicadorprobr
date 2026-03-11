@@ -36,6 +36,7 @@ const baseUserNavItems = [
 ];
 
 const numerosItem = { title: "Números", href: "/whatsapp-api", icon: Phone };
+const disparosItem = { title: "Disparos", href: "/disparos", icon: Radio };
 
 export function TopNav() {
   const location = useLocation();
@@ -44,8 +45,10 @@ export function TopNav() {
 
   const navItems = useMemo(() => {
     if (isAdmin) return adminNavItems;
-    const canManageNumbers = (profile as any)?.can_manage_numbers;
-    return canManageNumbers ? [...baseUserNavItems, numerosItem] : baseUserNavItems;
+    const items = [...baseUserNavItems];
+    if ((profile as any)?.can_dispatch) items.push(disparosItem);
+    if ((profile as any)?.can_manage_numbers) items.push(numerosItem);
+    return items;
   }, [isAdmin, profile]);
 
   const handleLogout = async () => {
