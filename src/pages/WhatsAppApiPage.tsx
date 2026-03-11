@@ -875,7 +875,7 @@ export default function WhatsAppApiPage() {
           </div>
         </div>
       </div>
-      <OnboardingGuide guide={guides.numeros} />
+      
     </AppLayout>
   );
 }
