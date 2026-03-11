@@ -313,6 +313,7 @@ export default function OperatorDisparosPage() {
       query = query.gte("valor_da_causa", parseInt(minRenda));
     }
 
+    const { data: contactsData } = await query;
     const contactIds = (contactsData || []).map((c: any) => c.id);
     if (contactIds.length === 0) {
       toast.error("Nenhum contato disponível nesta lista");
