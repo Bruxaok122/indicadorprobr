@@ -225,17 +225,31 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleM
 
          {/* Actions */}
          <div className="flex items-center justify-between pt-2 border-t">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">API</span>
-            <Switch
-              checked={user.can_use_shared_api || false}
-              onCheckedChange={(checked) =>
-                onToggleApiPermission({
-                  userId: user.user_id,
-                  canUseSharedApi: checked,
-                })
-              }
-            />
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">API</span>
+              <Switch
+                checked={user.can_use_shared_api || false}
+                onCheckedChange={(checked) =>
+                  onToggleApiPermission({
+                    userId: user.user_id,
+                    canUseSharedApi: checked,
+                  })
+                }
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">Números</span>
+              <Switch
+                checked={(user as any).can_manage_numbers || false}
+                onCheckedChange={(checked) =>
+                  onToggleManageNumbers({
+                    userId: user.user_id,
+                    canManageNumbers: checked,
+                  })
+                }
+              />
+            </div>
           </div>
           <div className="flex gap-1">
             <Button
