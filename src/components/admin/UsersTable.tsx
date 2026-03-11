@@ -72,8 +72,14 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
             <TableHead>Usuário</TableHead>
              <TableHead>Status</TableHead>
              <TableHead>Plano</TableHead>
-             <TableHead>API Compartilhada</TableHead>
-             <TableHead>Gerenciar Números</TableHead>
+             <TableHead>
+               <div className="flex items-center gap-1">
+                 <ShieldCheck className="h-3.5 w-3.5" />
+                 Todas
+               </div>
+             </TableHead>
+             <TableHead>API</TableHead>
+             <TableHead>Números</TableHead>
              <TableHead>Disparos</TableHead>
             <TableHead>Dispositivo</TableHead>
             <TableHead>Mensagens</TableHead>
