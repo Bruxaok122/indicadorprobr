@@ -366,7 +366,7 @@ export default function WhatsAppApiPage() {
 
   return (
     <AppLayout>
-      <div className="flex h-screen flex-col overflow-hidden">
+      <div className="flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden">
         <PageHeader
           title="Números"
           description="Registre números e configure perfis comerciais"
@@ -485,17 +485,26 @@ export default function WhatsAppApiPage() {
                   </>
                 ) : (
                   <>
-                    <div className="space-y-2">
-                      <Label>Número de Telefone (com DDD)</Label>
-                      <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="11999998888" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Nome de Exibição</Label>
-                      <Input value={verifiedName} onChange={(e) => setVerifiedName(e.target.value)} placeholder="Nome que aparecerá no WhatsApp" />
-                    </div>
+                    {availablePhones.length >= 3 ? (
+                      <div className="flex items-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm">
+                        <AlertCircle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                        <span>Você atingiu o limite de 3 números. Exclua um número existente para registrar outro.</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Número de Telefone (com DDD)</Label>
+                          <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="11999998888" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Nome de Exibição</Label>
+                          <Input value={verifiedName} onChange={(e) => setVerifiedName(e.target.value)} placeholder="Nome que aparecerá no WhatsApp" />
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
-                <Button onClick={handleRegister} disabled={registering} className="w-full">
+                <Button onClick={handleRegister} disabled={registering || (!isAdmin && availablePhones.length >= 3)} className="w-full">
                   {registering ? <LoadingSpinner size="sm" /> : <Send className="mr-2 h-4 w-4" />}
                   {registering ? "Registrando..." : "Registrar Número"}
                 </Button>
