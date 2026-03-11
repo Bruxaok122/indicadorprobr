@@ -145,7 +145,7 @@ const CONTACT_FIELD_OPTIONS = [
 export default function OperatorDisparosPage() {
   const { user, profile } = useAuthContext();
   const { importContacts, isImporting } = useContacts();
-  const { templates, createTemplate, isCreatingTemplate, refetch: refetchTemplates } = useMetaTemplates();
+  const { templates, allTemplates, createTemplate, isCreatingTemplate, refetch: refetchTemplates } = useMetaTemplates();
   const { phones } = useWabaPhones();
   const {
     activeDispatches,
