@@ -98,6 +98,14 @@ const App = () => (
               }
             />
             <Route
+              path="/disparos"
+              element={
+                <ProtectedRoute>
+                  <OperatorDisparosPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/webhook"
               element={
                 <ProtectedRoute>
@@ -107,6 +115,7 @@ const App = () => (
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </DispatchProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
