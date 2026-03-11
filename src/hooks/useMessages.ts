@@ -14,6 +14,19 @@ export function useMessages(contactId: string | null) {
     queryFn: async () => {
       if (!contactId || !user?.id) return [];
 
+      // Admin sees all messages for a contact (no user_id filter)
+      if (isAdmin) {
+        const { data, error } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("contact_id", contactId)
+          .order("created_at", { ascending: true });
+
+        if (error) throw error;
+        return data as Message[];
+      }
+
+      // Operators see only their own messages + system messages
       const { data, error } = await supabase
         .from("messages")
         .select("*")
