@@ -782,6 +782,26 @@ export default function OperatorDisparosPage() {
                       )}
                     </div>
 
+                    {/* Income filter */}
+                    <div className="space-y-2">
+                      <Label>Filtro de Renda</Label>
+                      <Select value={minRenda} onValueChange={setMinRenda}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Todos os contatos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos (sem filtro)</SelectItem>
+                          <SelectItem value="5000">Acima de R$ 5.000</SelectItem>
+                          <SelectItem value="10000">Acima de R$ 10.000</SelectItem>
+                          <SelectItem value="15000">Acima de R$ 15.000</SelectItem>
+                          <SelectItem value="20000">Acima de R$ 20.000</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Filtra contatos pelo valor da causa/renda mínima.
+                      </p>
+                    </div>
+
                     {/* Mode selection */}
                     <div className="space-y-2">
                       <Label>Modo de Disparo</Label>
