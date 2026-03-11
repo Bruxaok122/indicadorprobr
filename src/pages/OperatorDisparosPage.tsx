@@ -915,7 +915,7 @@ export default function OperatorDisparosPage() {
                               value={selectedTemplate?.name || ""}
                               onValueChange={v => setSelectedTemplate(approvedTemplates.find(t => t.name === v) || null)}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger data-onboarding="dispatch-template-select">
                                 <SelectValue placeholder="Selecione o template aprovado..." />
                               </SelectTrigger>
                               <SelectContent>
