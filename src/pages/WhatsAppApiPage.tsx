@@ -94,6 +94,7 @@ export default function WhatsAppApiPage() {
   const availablePhones = isAdmin ? (allPhones.length > 0 ? allPhones : phones) : phones;
   const [phoneStatuses, setPhoneStatuses] = useState<Record<string, PhoneStatus>>({});
   const [checkingAllStatuses, setCheckingAllStatuses] = useState(false);
+  const [deletingPhoneId, setDeletingPhoneId] = useState<string | null>(null);
   
   // Set PIN for existing number
   const [setPinPhoneId, setSetPinPhoneId] = useState("");
