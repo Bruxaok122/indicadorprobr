@@ -329,6 +329,7 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleM
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
+         </div>
         </div>
       </CardContent>
     </Card>
