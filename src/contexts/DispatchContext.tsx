@@ -20,6 +20,7 @@ export interface ActiveDispatch {
   errors: string[];
   breathingUntil?: string; // ISO timestamp - transient UI state, not persisted
   blocksSent?: number; // number of 20-message blocks completed
+  nextSendAt?: string; // ISO timestamp of next scheduled send - transient UI state
 }
 
 interface DispatchControls {
