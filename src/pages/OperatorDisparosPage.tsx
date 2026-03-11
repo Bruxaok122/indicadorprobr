@@ -20,7 +20,7 @@ import {
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
-import { Upload, Send, List, Trash2, Pause, Play, XCircle, FileText, Phone, Radio, SkipForward, Hand, CheckCircle, X, ChevronRight, ChevronLeft, Plus } from "lucide-react";
+import { Upload, Send, List, Trash2, Pause, Play, XCircle, FileText, Phone, Radio, SkipForward, Hand, CheckCircle, X, ChevronRight, ChevronLeft, Plus, Clock, AlertCircle, Eye, Users } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useContacts } from "@/hooks/useContacts";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { ParsedContact } from "@/types/juriszap";
 import { CreateTemplateDialog } from "@/components/templates/CreateTemplateDialog";
+import { cn } from "@/lib/utils";
 
 // --- Parser for the operator's raw format ---
 // No number validation, accepts all phones as-is
@@ -145,7 +146,7 @@ const CONTACT_FIELD_OPTIONS = [
 export default function OperatorDisparosPage() {
   const { user, profile } = useAuthContext();
   const { importContacts, isImporting } = useContacts();
-  const { templates, createTemplate, isCreatingTemplate, refetch: refetchTemplates } = useMetaTemplates();
+  const { templates, allTemplates, createTemplate, isCreatingTemplate, refetch: refetchTemplates } = useMetaTemplates();
   const { phones } = useWabaPhones();
   const {
     activeDispatches,
@@ -176,6 +177,9 @@ export default function OperatorDisparosPage() {
   const [minRenda, setMinRenda] = useState<string>("all");
   const [wizardStep, setWizardStep] = useState(0);
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
+  const [viewingList, setViewingList] = useState<string | null>(null);
+  const [viewingListContacts, setViewingListContacts] = useState<{ name: string; phone: string; status: string | null; cpf?: string; lawyer_name?: string }[]>([]);
+  const [loadingListContacts, setLoadingListContacts] = useState(false);
 
   // Manual dispatch state
   const [manualContacts, setManualContacts] = useState<{ id: string; name: string; phone: string; status?: string }[]>([]);
@@ -189,7 +193,7 @@ export default function OperatorDisparosPage() {
   const [customAdvogadoName, setCustomAdvogadoName] = useState("");
   const phoneVerifiedName = customAdvogadoName || defaultPhoneName;
 
-  const approvedTemplates = templates.filter(t => (t as any).status === "APPROVED");
+  const approvedTemplates = allTemplates.filter(t => (t as any).status === "APPROVED");
   const templateBody = selectedTemplate ? getTemplateBody(selectedTemplate) : "";
   const templateVars = extractVariables(templateBody);
 
@@ -551,6 +555,21 @@ export default function OperatorDisparosPage() {
   const manualFinished = manualContacts.length > 0 && manualIndex >= manualContacts.length;
   const currentManualContact = manualContacts[manualIndex] || null;
 
+  const loadListContacts = async (listName: string) => {
+    if (!user?.id) return;
+    setViewingList(listName);
+    setLoadingListContacts(true);
+    const { data } = await supabase
+      .from("contacts")
+      .select("name, phone, status, cpf, lawyer_name")
+      .eq("user_id", user.id)
+      .eq("contact_list", listName)
+      .order("name")
+      .limit(500);
+    setViewingListContacts((data || []) as any[]);
+    setLoadingListContacts(false);
+  };
+
   const listContactCount = availableLists.find(l => l.name === selectedList)?.count || 0;
 
   return (
@@ -617,10 +636,14 @@ export default function OperatorDisparosPage() {
             )}
 
             <Tabs defaultValue="importar" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="importar" className="gap-2">
                   <Upload className="h-4 w-4" />
-                  Importar Lista
+                  Importar
+                </TabsTrigger>
+                <TabsTrigger value="listas" className="gap-2">
+                  <Users className="h-4 w-4" />
+                  Listas
                 </TabsTrigger>
                 <TabsTrigger value="disparar" className="gap-2">
                   <Send className="h-4 w-4" />
@@ -662,6 +685,50 @@ export default function OperatorDisparosPage() {
                       <Upload className="mr-2 h-4 w-4" />
                       Processar Lista
                     </Button>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Tab: Listas */}
+              <TabsContent value="listas" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Users className="h-5 w-5 text-accent" />
+                      Minhas Listas
+                    </CardTitle>
+                    <CardDescription>
+                      Visualize os contatos das listas que você importou
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {loadingLists ? (
+                      <LoadingSpinner size="sm" text="Carregando listas..." />
+                    ) : availableLists.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-6">Nenhuma lista importada ainda.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {availableLists.map(l => (
+                          <div
+                            key={l.name}
+                            className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm truncate">{l.name}</p>
+                              <p className="text-xs text-muted-foreground">{l.count} contatos</p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => loadListContacts(l.name)}
+                            >
+                              <Eye className="mr-1.5 h-3.5 w-3.5" />
+                              Ver
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -785,7 +852,7 @@ export default function OperatorDisparosPage() {
                               onValueChange={v => setSelectedTemplate(approvedTemplates.find(t => t.name === v) || null)}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder="Selecione o template..." />
+                                <SelectValue placeholder="Selecione o template aprovado..." />
                               </SelectTrigger>
                               <SelectContent>
                                 {approvedTemplates.map(t => (
@@ -794,6 +861,31 @@ export default function OperatorDisparosPage() {
                               </SelectContent>
                             </Select>
                           </div>
+
+                          {/* All templates with status */}
+                          {allTemplates.length > 0 && (
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Todos os Templates</Label>
+                              <div className="rounded-lg border divide-y max-h-[200px] overflow-auto">
+                                {allTemplates.map(t => (
+                                  <div key={t.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                                    <span className="font-mono text-xs truncate flex-1 min-w-0">{t.name}</span>
+                                    <span className={cn(
+                                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 ml-2",
+                                      t.status === "APPROVED" && "bg-success/10 text-success",
+                                      t.status === "PENDING" && "bg-warning/10 text-warning",
+                                      t.status === "REJECTED" && "bg-destructive/10 text-destructive",
+                                    )}>
+                                      {t.status === "APPROVED" && <><CheckCircle className="h-3 w-3" /> Aprovado</>}
+                                      {t.status === "PENDING" && <><Clock className="h-3 w-3" /> Pendente</>}
+                                      {t.status === "REJECTED" && <><X className="h-3 w-3" /> Rejeitado</>}
+                                      {!["APPROVED","PENDING","REJECTED"].includes(t.status) && <><AlertCircle className="h-3 w-3" /> {t.status}</>}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
 
                           {/* Template Preview */}
                           {selectedTemplate && templateBody && (
@@ -1142,6 +1234,59 @@ export default function OperatorDisparosPage() {
         }}
         isSubmitting={isCreatingTemplate}
       />
+
+      {/* View List Contacts Dialog */}
+      <Dialog open={!!viewingList} onOpenChange={(open) => { if (!open) setViewingList(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Lista: {viewingList}</DialogTitle>
+            <DialogDescription>
+              {viewingListContacts.length} contato(s) nesta lista
+            </DialogDescription>
+          </DialogHeader>
+          {loadingListContacts ? (
+            <div className="flex justify-center py-8">
+              <LoadingSpinner size="md" text="Carregando contatos..." />
+            </div>
+          ) : (
+            <ScrollArea className="max-h-[400px] rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Telefone</TableHead>
+                    <TableHead>Contra</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {viewingListContacts.map((c, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-medium text-sm">{c.name}</TableCell>
+                      <TableCell className="font-mono text-xs">{c.phone}</TableCell>
+                      <TableCell className="text-xs">{c.lawyer_name || "-"}</TableCell>
+                      <TableCell>
+                        <span className={cn(
+                          "inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium",
+                          c.status === "novo" && "bg-info/10 text-info",
+                          c.status === "aguardando" && "bg-warning/10 text-warning",
+                          c.status === "respondido" && "bg-success/10 text-success",
+                          c.status === "encerrado" && "bg-muted text-muted-foreground",
+                        )}>
+                          {c.status === "novo" ? "Novo" : c.status === "aguardando" ? "Aguardando" : c.status === "respondido" ? "Respondido" : c.status === "encerrado" ? "Encerrado" : c.status || "Novo"}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewingList(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
