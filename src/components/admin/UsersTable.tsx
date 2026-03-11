@@ -72,6 +72,7 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
              <TableHead>Status</TableHead>
              <TableHead>Plano</TableHead>
              <TableHead>API Compartilhada</TableHead>
+             <TableHead>Gerenciar Números</TableHead>
             <TableHead>Dispositivo</TableHead>
             <TableHead>Mensagens</TableHead>
             <TableHead>Último Acesso</TableHead>
