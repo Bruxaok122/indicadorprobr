@@ -851,7 +851,7 @@ export default function OperatorDisparosPage() {
                               onValueChange={v => setSelectedTemplate(approvedTemplates.find(t => t.name === v) || null)}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder="Selecione o template..." />
+                                <SelectValue placeholder="Selecione o template aprovado..." />
                               </SelectTrigger>
                               <SelectContent>
                                 {approvedTemplates.map(t => (
@@ -860,6 +860,31 @@ export default function OperatorDisparosPage() {
                               </SelectContent>
                             </Select>
                           </div>
+
+                          {/* All templates with status */}
+                          {allTemplates.length > 0 && (
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">Todos os Templates</Label>
+                              <div className="rounded-lg border divide-y max-h-[200px] overflow-auto">
+                                {allTemplates.map(t => (
+                                  <div key={t.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                                    <span className="font-mono text-xs truncate flex-1 min-w-0">{t.name}</span>
+                                    <span className={cn(
+                                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 ml-2",
+                                      t.status === "APPROVED" && "bg-success/10 text-success",
+                                      t.status === "PENDING" && "bg-warning/10 text-warning",
+                                      t.status === "REJECTED" && "bg-destructive/10 text-destructive",
+                                    )}>
+                                      {t.status === "APPROVED" && <><CheckCircle className="h-3 w-3" /> Aprovado</>}
+                                      {t.status === "PENDING" && <><Clock className="h-3 w-3" /> Pendente</>}
+                                      {t.status === "REJECTED" && <><X className="h-3 w-3" /> Rejeitado</>}
+                                      {!["APPROVED","PENDING","REJECTED"].includes(t.status) && <><AlertCircle className="h-3 w-3" /> {t.status}</>}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )
 
                           {/* Template Preview */}
                           {selectedTemplate && templateBody && (
