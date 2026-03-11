@@ -337,8 +337,7 @@ export default function WhatsAppApiPage() {
     }
   };
 
-
-    if (!selectedPhone) return;
+  const handleLoadProfile = async () => {
     setProfileLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("manage-waba-profile", {
