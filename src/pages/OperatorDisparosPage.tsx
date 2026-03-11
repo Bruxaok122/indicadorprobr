@@ -884,7 +884,7 @@ export default function OperatorDisparosPage() {
                                 ))}
                               </div>
                             </div>
-                          )
+                          )}
 
                           {/* Template Preview */}
                           {selectedTemplate && templateBody && (
