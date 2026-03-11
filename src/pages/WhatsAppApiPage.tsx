@@ -9,7 +9,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Phone, UserCircle, Send, CheckCircle, RefreshCw, Wifi, WifiOff, AlertCircle, Upload, Image, Lock } from "lucide-react";
+import { Phone, UserCircle, Send, CheckCircle, RefreshCw, Wifi, WifiOff, AlertCircle, Upload, Image, Lock, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
@@ -83,6 +94,7 @@ export default function WhatsAppApiPage() {
   const availablePhones = isAdmin ? (allPhones.length > 0 ? allPhones : phones) : phones;
   const [phoneStatuses, setPhoneStatuses] = useState<Record<string, PhoneStatus>>({});
   const [checkingAllStatuses, setCheckingAllStatuses] = useState(false);
+  const [deletingPhoneId, setDeletingPhoneId] = useState<string | null>(null);
   
   // Set PIN for existing number
   const [setPinPhoneId, setSetPinPhoneId] = useState("");
@@ -303,9 +315,29 @@ export default function WhatsAppApiPage() {
       setSettingPin(false);
     }
   };
+  const handleDeletePhone = async (phone: typeof availablePhones[0]) => {
+    setDeletingPhoneId(phone.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
+        body: {
+          action: "delete_phone",
+          phone_number_id: phone.phone_number_id,
+          db_id: phone.id,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Número excluído com sucesso!");
+      syncPhones();
+    } catch (err: any) {
+      const errorMessage = await getInvokeErrorMessage(err, "Erro ao excluir número");
+      toast.error("Erro ao excluir número", { description: errorMessage });
+    } finally {
+      setDeletingPhoneId(null);
+    }
+  };
 
   const handleLoadProfile = async () => {
-    if (!selectedPhone) return;
     setProfileLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("manage-waba-profile", {
@@ -467,6 +499,32 @@ export default function WhatsAppApiPage() {
                             ) : (
                               <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
                             )}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  disabled={deletingPhoneId === phone.id}
+                                >
+                                  {deletingPhoneId === phone.id ? <LoadingSpinner size="sm" /> : <Trash2 className="h-3.5 w-3.5" />}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir número</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja excluir permanentemente o número <strong>{phone.display_phone_number}</strong>? Esta ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeletePhone(phone)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </div>
                       );
