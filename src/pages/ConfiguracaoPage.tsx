@@ -108,7 +108,7 @@ export default function ConfiguracaoPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Access Token */}
-                <div className="space-y-2">
+                <div className="space-y-2" data-onboarding="config-token">
                   <div className="flex items-center gap-2">
                     <Label htmlFor="accessToken">Access Token</Label>
                     <Tooltip>
