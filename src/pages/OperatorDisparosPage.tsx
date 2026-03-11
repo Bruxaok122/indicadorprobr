@@ -768,7 +768,18 @@ export default function OperatorDisparosPage() {
                           className="space-y-4"
                         >
                           <div className="space-y-2">
-                            <Label>Template</Label>
+                            <div className="flex items-center justify-between">
+                              <Label>Template</Label>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => setShowCreateTemplate(true)}
+                              >
+                                <Plus className="mr-1 h-3 w-3" />
+                                Criar Template
+                              </Button>
+                            </div>
                             <Select
                               value={selectedTemplate?.name || ""}
                               onValueChange={v => setSelectedTemplate(approvedTemplates.find(t => t.name === v) || null)}
