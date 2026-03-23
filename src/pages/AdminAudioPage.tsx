@@ -74,7 +74,7 @@ export default function AdminAudioPage() {
 
       const { error: insertError } = await supabase.from("admin_audio_config" as any).insert({
         audio_url: audioUrl,
-        audio_name: file.name,
+        audio_name: convertedFile.name,
         user_id: audioTargetUserId,
       });
       if (insertError) throw insertError;
