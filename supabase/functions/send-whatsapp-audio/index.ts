@@ -133,9 +133,14 @@ serve(async (req) => {
     const audioBuffer = await audioFile.arrayBuffer();
     const audioBytes = new Uint8Array(audioBuffer);
 
-    // Force audio/ogg for OGG files to ensure Meta renders as voice note (PTT)
-    const originalMime = audioFile.type || "audio/mpeg";
-    const whatsappMime = originalMime.includes("ogg") ? "audio/ogg; codecs=opus" : originalMime;
+    // Keep Meta MIME strict and compatible for voice-note uploads
+    const originalMime = (audioFile.type || "audio/mpeg").toLowerCase();
+    const isOpusLike =
+      originalMime.includes("ogg") ||
+      originalMime.includes("opus") ||
+      audioFile.name?.toLowerCase().endsWith(".ogg") ||
+      audioFile.name?.toLowerCase().endsWith(".opus");
+    const whatsappMime = isOpusLike ? "audio/ogg" : originalMime;
 
     const mediaFormData = new FormData();
     mediaFormData.append("messaging_product", "whatsapp");
@@ -208,7 +213,7 @@ serve(async (req) => {
     // Use only basic audio MIME types accepted by storage (no codec parameters)
     const fileExt = audioFile.name?.split(".").pop() || "mp3";
     let storageMime = "audio/mpeg"; // safe default
-    if (originalMime.includes("ogg")) storageMime = "audio/ogg";
+    if (originalMime.includes("ogg") || originalMime.includes("opus")) storageMime = "audio/ogg";
     else if (originalMime.includes("wav")) storageMime = "audio/wav";
     else if (originalMime.includes("mp4") || originalMime.includes("m4a")) storageMime = "audio/mp4";
     else if (originalMime.includes("webm")) storageMime = "audio/webm";
