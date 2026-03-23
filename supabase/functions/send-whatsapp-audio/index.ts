@@ -133,17 +133,35 @@ serve(async (req) => {
     const audioBuffer = await audioFile.arrayBuffer();
     const audioBytes = new Uint8Array(audioBuffer);
 
-    // Use original MIME but strip codec params (Meta rejects "audio/ogg; codecs=opus")
-    const rawMime = (audioFile.type || "audio/mpeg").toLowerCase();
-    const whatsappMime = rawMime.split(";")[0].trim() || "audio/mpeg";
+    // Detect actual format from file magic bytes (don't trust client MIME)
+    function detectAudioMime(bytes: Uint8Array): string {
+      // OGG: starts with "OggS"
+      if (bytes[0] === 0x4F && bytes[1] === 0x67 && bytes[2] === 0x67 && bytes[3] === 0x53) return "audio/ogg";
+      // MP3: starts with ID3 tag or MPEG sync word
+      if (bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) return "audio/mpeg"; // ID3
+      if (bytes[0] === 0xFF && (bytes[1] & 0xE0) === 0xE0) return "audio/mpeg"; // MPEG sync
+      // WAV: starts with "RIFF"
+      if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) return "audio/wav";
+      // MP4/M4A: has "ftyp" at offset 4
+      if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) return "audio/mp4";
+      // WebM: starts with EBML header (0x1A45DFA3)
+      if (bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) return "audio/webm";
+      // Fallback to client MIME without codec params
+      const raw = (audioFile.type || "audio/mpeg").toLowerCase();
+      return raw.split(";")[0].trim() || "audio/mpeg";
+    }
+    const whatsappMime = detectAudioMime(audioBytes);
+    console.log("Detected audio MIME from magic bytes:", whatsappMime, "| Client MIME:", audioFile.type);
 
     const mediaFormData = new FormData();
     mediaFormData.append("messaging_product", "whatsapp");
     mediaFormData.append("type", whatsappMime);
+    const mimeToExt: Record<string, string> = { "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/wav": "wav", "audio/mp4": "m4a", "audio/webm": "webm" };
+    const detectedExt = mimeToExt[whatsappMime] || "mp3";
     mediaFormData.append(
       "file",
       new Blob([audioBytes], { type: whatsappMime }),
-      audioFile.name || "audio.mp3"
+      `audio.${detectedExt}`
     );
 
     const uploadResponse = await fetch(
@@ -204,16 +222,9 @@ serve(async (req) => {
       );
     }
 
-    // Store audio in Supabase Storage
-    // Use only basic audio MIME types accepted by storage (no codec parameters)
-    const fileExt = audioFile.name?.split(".").pop() || "mp3";
-    let storageMime = "audio/mpeg"; // safe default
-    if (rawMime.includes("ogg") || rawMime.includes("opus")) storageMime = "audio/ogg";
-    else if (rawMime.includes("wav")) storageMime = "audio/wav";
-    else if (rawMime.includes("mp4") || rawMime.includes("m4a")) storageMime = "audio/mp4";
-    else if (rawMime.includes("webm")) storageMime = "audio/webm";
-    else if (rawMime.includes("mpeg") || rawMime.includes("mp3")) storageMime = "audio/mpeg";
-    const filePath = `audio/${contactId}/${Date.now()}.${fileExt}`;
+    // Store audio in Supabase Storage — use detected MIME (not client-reported)
+    const storageMime = whatsappMime;
+    const filePath = `audio/${contactId}/${Date.now()}.${detectedExt}`;
 
     const { error: storageError } = await supabase.storage
       .from("documents")
