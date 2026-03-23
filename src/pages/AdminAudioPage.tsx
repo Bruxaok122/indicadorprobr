@@ -46,8 +46,7 @@ export default function AdminAudioPage() {
     setUploadingForUserId(audioTargetUserId);
     try {
       const filePath = `audio/admin-config/${audioTargetUserId}/${Date.now()}-${file.name}`;
-      // Normalize content type - Storage may reject some audio/* subtypes like audio/ogg
-      const contentType = file.type && file.type.startsWith("audio/") ? file.type : "audio/mpeg";
+      const contentType = "audio/ogg";
       const { error: uploadError } = await supabase.storage
         .from("documents")
         .upload(filePath, file, { contentType, upsert: true });
