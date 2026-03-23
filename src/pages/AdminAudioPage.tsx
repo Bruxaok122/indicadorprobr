@@ -31,8 +31,12 @@ export default function AdminAudioPage() {
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || audioTargetUserId === null) return;
-    if (!file.type.startsWith("audio/")) {
-      toast.error("Selecione um arquivo de áudio válido");
+    // Only accept OGG files — required for WhatsApp PTT (voice note) rendering
+    const isOgg = file.type.includes("ogg") || file.name.toLowerCase().endsWith(".ogg");
+    if (!isOgg) {
+      toast.error("Formato inválido! Use apenas arquivos .ogg (Opus)", {
+        description: "Apenas OGG com codec Opus aparece como nota de voz no WhatsApp. Converta o áudio em: convertio.co/mp3-ogg"
+      });
       return;
     }
     if (file.size > 16 * 1024 * 1024) {
