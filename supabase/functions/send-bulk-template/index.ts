@@ -298,10 +298,17 @@ serve(async (req) => {
             .select()
             .single();
           conversation = newConversation;
-        } else if (!conversation.user_id && effectiveUserId) {
+        } else {
+          // Reuse existing conversation: refresh window and update user if needed
+          const updates: any = {
+            window_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          };
+          if (!conversation.user_id && effectiveUserId) {
+            updates.user_id = effectiveUserId;
+          }
           await supabase
             .from("conversations")
-            .update({ user_id: effectiveUserId })
+            .update(updates)
             .eq("id", conversation.id);
         }
 
