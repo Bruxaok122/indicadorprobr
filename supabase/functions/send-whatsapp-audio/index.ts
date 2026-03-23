@@ -222,16 +222,9 @@ serve(async (req) => {
       );
     }
 
-    // Store audio in Supabase Storage
-    // Use only basic audio MIME types accepted by storage (no codec parameters)
-    const fileExt = audioFile.name?.split(".").pop() || "mp3";
-    let storageMime = "audio/mpeg"; // safe default
-    if (rawMime.includes("ogg") || rawMime.includes("opus")) storageMime = "audio/ogg";
-    else if (rawMime.includes("wav")) storageMime = "audio/wav";
-    else if (rawMime.includes("mp4") || rawMime.includes("m4a")) storageMime = "audio/mp4";
-    else if (rawMime.includes("webm")) storageMime = "audio/webm";
-    else if (rawMime.includes("mpeg") || rawMime.includes("mp3")) storageMime = "audio/mpeg";
-    const filePath = `audio/${contactId}/${Date.now()}.${fileExt}`;
+    // Store audio in Supabase Storage — use detected MIME (not client-reported)
+    const storageMime = whatsappMime;
+    const filePath = `audio/${contactId}/${Date.now()}.${detectedExt}`;
 
     const { error: storageError } = await supabase.storage
       .from("documents")
