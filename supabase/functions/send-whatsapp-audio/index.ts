@@ -156,10 +156,12 @@ serve(async (req) => {
     const mediaFormData = new FormData();
     mediaFormData.append("messaging_product", "whatsapp");
     mediaFormData.append("type", whatsappMime);
+    const mimeToExt: Record<string, string> = { "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/wav": "wav", "audio/mp4": "m4a", "audio/webm": "webm" };
+    const detectedExt = mimeToExt[whatsappMime] || "mp3";
     mediaFormData.append(
       "file",
       new Blob([audioBytes], { type: whatsappMime }),
-      audioFile.name || "audio.mp3"
+      `audio.${detectedExt}`
     );
 
     const uploadResponse = await fetch(
