@@ -244,7 +244,7 @@ async function convertWithWebCodecs(pcm: Float32Array, originalName: string): Pr
     codec: "opus",
     sampleRate: 48000,
     numberOfChannels: 1,
-    bitrate: 64000,
+    bitrate: 128000,
   });
 
   // Feed PCM in 20ms frames
