@@ -404,11 +404,39 @@ serve(async (req) => {
 
               // Process status updates
               const statuses = value.statuses || [];
+              // Status hierarchy — never regress to a lower status
+              const STATUS_RANK: Record<string, number> = {
+                pending: 0,
+                sent: 1,
+                delivered: 2,
+                read: 3,
+                failed: 4,
+              };
+
               for (const status of statuses) {
                 const messageId = status.id;
                 const statusValue = status.status;
 
                 console.log(`Status update for message ${messageId}: ${statusValue}`);
+
+                // Check current status to prevent regression
+                const { data: existingMsg } = await supabase
+                  .from("messages")
+                  .select("status")
+                  .eq("whatsapp_message_id", messageId)
+                  .maybeSingle();
+
+                if (existingMsg) {
+                  const currentRank = STATUS_RANK[existingMsg.status] ?? -1;
+                  const newRank = STATUS_RANK[statusValue] ?? -1;
+
+                  // Don't regress status (e.g. "read" → "delivered")
+                  // Exception: "failed" always applies
+                  if (newRank <= currentRank && statusValue !== "failed") {
+                    console.log(`Skipping status regression: ${existingMsg.status} → ${statusValue}`);
+                    continue;
+                  }
+                }
 
                 // Build update payload
                 const updatePayload: Record<string, string | null> = { status: statusValue };
