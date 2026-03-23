@@ -7,6 +7,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Mic, MicOff, Upload, Trash2, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { convertToOggOpus } from "@/lib/convertToOggOpus";
 
 export default function AdminAudioPage() {
   const { users } = useAdmin();
@@ -41,11 +42,26 @@ export default function AdminAudioPage() {
     }
     setUploadingForUserId(audioTargetUserId);
     try {
-      const filePath = `audio/admin-config/${audioTargetUserId}/${Date.now()}-${file.name}`;
-      const contentType = file.type && file.type.startsWith("audio/") ? file.type : "audio/mpeg";
+      // Convert to OGG Opus automatically
+      const toastId = toast.loading("Convertendo áudio para formato de nota de voz...");
+      let convertedFile: File;
+      try {
+        convertedFile = await convertToOggOpus(file);
+        toast.dismiss(toastId);
+        toast.success("Áudio convertido para OGG Opus ✓");
+      } catch (convErr: any) {
+        toast.dismiss(toastId);
+        toast.error("Erro na conversão do áudio", { description: convErr.message });
+        setUploadingForUserId(null);
+        setAudioTargetUserId(null);
+        return;
+      }
+
+      const filePath = `audio/admin-config/${audioTargetUserId}/${Date.now()}-${convertedFile.name}`;
+      const contentType = "audio/ogg";
       const { error: uploadError } = await supabase.storage
         .from("documents")
-        .upload(filePath, file, { contentType, upsert: true });
+        .upload(filePath, convertedFile, { contentType, upsert: true });
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from("documents").getPublicUrl(filePath);
@@ -58,7 +74,7 @@ export default function AdminAudioPage() {
 
       const { error: insertError } = await supabase.from("admin_audio_config" as any).insert({
         audio_url: audioUrl,
-        audio_name: file.name,
+        audio_name: convertedFile.name,
         user_id: audioTargetUserId,
       });
       if (insertError) throw insertError;
@@ -105,7 +121,7 @@ export default function AdminAudioPage() {
            Defina um arquivo de áudio específico para cada operador. Eles enviam com um clique no chat.
          </p>
          <p className="text-xs text-muted-foreground/70 mt-0.5">
-           💡 Para aparecer como nota de voz nativa, use formato <strong>.ogg (Opus)</strong>.
+           ✅ Qualquer formato de áudio é aceito — o sistema converte automaticamente para <strong>.ogg (Opus)</strong> para nota de voz nativa.
          </p>
       </div>
 
