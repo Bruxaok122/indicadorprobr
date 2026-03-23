@@ -31,18 +31,8 @@ export default function AdminAudioPage() {
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || audioTargetUserId === null) return;
-    // Accept Opus voice files (.ogg/.opus) to preserve native WhatsApp voice-note rendering
-    const fileName = file.name.toLowerCase();
-    const mime = file.type.toLowerCase();
-    const isOpusVoice =
-      fileName.endsWith(".ogg") ||
-      fileName.endsWith(".opus") ||
-      mime.includes("audio/ogg") ||
-      mime.includes("audio/opus");
-    if (!isOpusVoice) {
-      toast.error("Formato inválido! Use áudio Opus (.ogg ou .opus)", {
-        description: "Somente áudio Opus aparece como nota de voz nativa no WhatsApp."
-      });
+    if (!file.type.startsWith("audio/")) {
+      toast.error("Selecione um arquivo de áudio válido");
       return;
     }
     if (file.size > 16 * 1024 * 1024) {
@@ -52,7 +42,7 @@ export default function AdminAudioPage() {
     setUploadingForUserId(audioTargetUserId);
     try {
       const filePath = `audio/admin-config/${audioTargetUserId}/${Date.now()}-${file.name}`;
-      const contentType = "audio/ogg";
+      const contentType = file.type && file.type.startsWith("audio/") ? file.type : "audio/mpeg";
       const { error: uploadError } = await supabase.storage
         .from("documents")
         .upload(filePath, file, { contentType, upsert: true });
@@ -111,18 +101,18 @@ export default function AdminAudioPage() {
           <Mic className="h-5 w-5 text-primary" />
           Áudio dos Operadores
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Defina um arquivo de áudio <strong>Opus (.ogg ou .opus)</strong> para cada operador. Apenas esse formato aparece como nota de voz nativa no WhatsApp.
-        </p>
-        <p className="text-xs text-muted-foreground/70 mt-0.5">
-          Converta MP3/WAV para Opus em: <a href="https://convertio.co/mp3-ogg/" target="_blank" rel="noopener noreferrer" className="underline text-primary">convertio.co/mp3-ogg</a>
-        </p>
+         <p className="text-sm text-muted-foreground mt-1">
+           Defina um arquivo de áudio específico para cada operador. Eles enviam com um clique no chat.
+         </p>
+         <p className="text-xs text-muted-foreground/70 mt-0.5">
+           💡 Para aparecer como nota de voz nativa, use formato <strong>.ogg (Opus)</strong>.
+         </p>
       </div>
 
       <input
         ref={audioInputRef}
         type="file"
-        accept=".ogg,.opus,audio/ogg,audio/opus"
+        accept="audio/*"
         className="hidden"
         onChange={handleAudioUpload}
       />
