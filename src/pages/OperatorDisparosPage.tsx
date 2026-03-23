@@ -277,17 +277,43 @@ export default function OperatorDisparosPage() {
         let successful = 0;
         let failed = 0;
         for (const contact of contactsToImport) {
-          const { error } = await supabase.from("contacts").insert({
-            name: contact.name,
-            phone: contact.phone,
-            lawyer_name: contact.lawyer_name,
-            process_number: contact.process_number,
-            cpf: contact.cpf,
-            status: "novo",
-            user_id: user!.id,
-            contact_list: listName.trim(),
-          });
-          if (error) { failed++; console.error(error); } else successful++;
+          // Check if contact with same phone already exists for this operator
+          const { data: existing } = await supabase
+            .from("contacts")
+            .select("id")
+            .eq("phone", contact.phone)
+            .eq("user_id", user!.id)
+            .neq("status", "encerrado")
+            .order("last_message_at", { ascending: false, nullsFirst: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (existing) {
+            // Reuse existing contact: update status back to "novo" and refresh list name
+            const { error } = await supabase
+              .from("contacts")
+              .update({
+                status: "novo",
+                contact_list: listName.trim(),
+                lawyer_name: contact.lawyer_name,
+                process_number: contact.process_number,
+                cpf: contact.cpf,
+              })
+              .eq("id", existing.id);
+            if (error) { failed++; console.error(error); } else successful++;
+          } else {
+            const { error } = await supabase.from("contacts").insert({
+              name: contact.name,
+              phone: contact.phone,
+              lawyer_name: contact.lawyer_name,
+              process_number: contact.process_number,
+              cpf: contact.cpf,
+              status: "novo",
+              user_id: user!.id,
+              contact_list: listName.trim(),
+            });
+            if (error) { failed++; console.error(error); } else successful++;
+          }
         }
         toast.success(`Importação concluída! ${successful} contatos importados${failed > 0 ? `, ${failed} falhas` : ""}`);
         setRawText("");
