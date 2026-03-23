@@ -133,11 +133,9 @@ serve(async (req) => {
     const audioBuffer = await audioFile.arrayBuffer();
     const audioBytes = new Uint8Array(audioBuffer);
 
-    // Use the actual MIME type of the file — do NOT lie to Meta API.
-    // Android is lenient about mismatched MIME vs content, but iOS validates strictly.
-    // Supported by Meta: audio/aac, audio/mp4, audio/mpeg, audio/amr, audio/ogg (opus only)
+    // Force audio/ogg for OGG files to ensure Meta renders as voice note (PTT)
     const originalMime = audioFile.type || "audio/mpeg";
-    const whatsappMime = originalMime; // keep original — no spoofing
+    const whatsappMime = originalMime.includes("ogg") ? "audio/ogg; codecs=opus" : originalMime;
 
     const mediaFormData = new FormData();
     mediaFormData.append("messaging_product", "whatsapp");

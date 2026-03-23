@@ -31,8 +31,12 @@ export default function AdminAudioPage() {
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || audioTargetUserId === null) return;
-    if (!file.type.startsWith("audio/")) {
-      toast.error("Selecione um arquivo de áudio válido");
+    // Only accept OGG files — required for WhatsApp PTT (voice note) rendering
+    const isOgg = file.type.includes("ogg") || file.name.toLowerCase().endsWith(".ogg");
+    if (!isOgg) {
+      toast.error("Formato inválido! Use apenas arquivos .ogg (Opus)", {
+        description: "Apenas OGG com codec Opus aparece como nota de voz no WhatsApp. Converta o áudio em: convertio.co/mp3-ogg"
+      });
       return;
     }
     if (file.size > 16 * 1024 * 1024) {
@@ -42,8 +46,7 @@ export default function AdminAudioPage() {
     setUploadingForUserId(audioTargetUserId);
     try {
       const filePath = `audio/admin-config/${audioTargetUserId}/${Date.now()}-${file.name}`;
-      // Normalize content type - Storage may reject some audio/* subtypes like audio/ogg
-      const contentType = file.type && file.type.startsWith("audio/") ? file.type : "audio/mpeg";
+      const contentType = "audio/ogg";
       const { error: uploadError } = await supabase.storage
         .from("documents")
         .upload(filePath, file, { contentType, upsert: true });
@@ -102,15 +105,18 @@ export default function AdminAudioPage() {
           <Mic className="h-5 w-5 text-primary" />
           Áudio dos Operadores
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Defina um arquivo de áudio específico para cada operador. Eles enviam com um clique no chat.
-        </p>
+         <p className="text-sm text-muted-foreground mt-1">
+           Defina um arquivo de áudio <strong>.ogg (Opus)</strong> para cada operador. Apenas este formato aparece como nota de voz nativa no WhatsApp.
+         </p>
+         <p className="text-xs text-muted-foreground/70 mt-0.5">
+           Converta MP3/WAV para OGG em: <a href="https://convertio.co/mp3-ogg/" target="_blank" rel="noopener noreferrer" className="underline text-primary">convertio.co/mp3-ogg</a>
+         </p>
       </div>
 
       <input
         ref={audioInputRef}
         type="file"
-        accept="audio/*"
+        accept=".ogg,audio/ogg"
         className="hidden"
         onChange={handleAudioUpload}
       />
