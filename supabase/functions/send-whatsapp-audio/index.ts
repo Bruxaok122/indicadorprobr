@@ -133,14 +133,9 @@ serve(async (req) => {
     const audioBuffer = await audioFile.arrayBuffer();
     const audioBytes = new Uint8Array(audioBuffer);
 
-    // Keep Meta MIME strict and compatible for voice-note uploads
-    const originalMime = (audioFile.type || "audio/mpeg").toLowerCase();
-    const isOpusLike =
-      originalMime.includes("ogg") ||
-      originalMime.includes("opus") ||
-      audioFile.name?.toLowerCase().endsWith(".ogg") ||
-      audioFile.name?.toLowerCase().endsWith(".opus");
-    const whatsappMime = isOpusLike ? "audio/ogg" : originalMime;
+    // Use original MIME but strip codec params (Meta rejects "audio/ogg; codecs=opus")
+    const rawMime = (audioFile.type || "audio/mpeg").toLowerCase();
+    const whatsappMime = rawMime.split(";")[0].trim() || "audio/mpeg";
 
     const mediaFormData = new FormData();
     mediaFormData.append("messaging_product", "whatsapp");
