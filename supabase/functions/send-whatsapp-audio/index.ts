@@ -133,9 +133,25 @@ serve(async (req) => {
     const audioBuffer = await audioFile.arrayBuffer();
     const audioBytes = new Uint8Array(audioBuffer);
 
-    // Use original MIME but strip codec params (Meta rejects "audio/ogg; codecs=opus")
-    const rawMime = (audioFile.type || "audio/mpeg").toLowerCase();
-    const whatsappMime = rawMime.split(";")[0].trim() || "audio/mpeg";
+    // Detect actual format from file magic bytes (don't trust client MIME)
+    function detectAudioMime(bytes: Uint8Array): string {
+      // OGG: starts with "OggS"
+      if (bytes[0] === 0x4F && bytes[1] === 0x67 && bytes[2] === 0x67 && bytes[3] === 0x53) return "audio/ogg";
+      // MP3: starts with ID3 tag or MPEG sync word
+      if (bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) return "audio/mpeg"; // ID3
+      if (bytes[0] === 0xFF && (bytes[1] & 0xE0) === 0xE0) return "audio/mpeg"; // MPEG sync
+      // WAV: starts with "RIFF"
+      if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) return "audio/wav";
+      // MP4/M4A: has "ftyp" at offset 4
+      if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) return "audio/mp4";
+      // WebM: starts with EBML header (0x1A45DFA3)
+      if (bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) return "audio/webm";
+      // Fallback to client MIME without codec params
+      const raw = (audioFile.type || "audio/mpeg").toLowerCase();
+      return raw.split(";")[0].trim() || "audio/mpeg";
+    }
+    const whatsappMime = detectAudioMime(audioBytes);
+    console.log("Detected audio MIME from magic bytes:", whatsappMime, "| Client MIME:", audioFile.type);
 
     const mediaFormData = new FormData();
     mediaFormData.append("messaging_product", "whatsapp");
