@@ -208,11 +208,11 @@ serve(async (req) => {
     // Use only basic audio MIME types accepted by storage (no codec parameters)
     const fileExt = audioFile.name?.split(".").pop() || "mp3";
     let storageMime = "audio/mpeg"; // safe default
-    if (originalMime.includes("ogg") || originalMime.includes("opus")) storageMime = "audio/ogg";
-    else if (originalMime.includes("wav")) storageMime = "audio/wav";
-    else if (originalMime.includes("mp4") || originalMime.includes("m4a")) storageMime = "audio/mp4";
-    else if (originalMime.includes("webm")) storageMime = "audio/webm";
-    else if (originalMime.includes("mpeg") || originalMime.includes("mp3")) storageMime = "audio/mpeg";
+    if (rawMime.includes("ogg") || rawMime.includes("opus")) storageMime = "audio/ogg";
+    else if (rawMime.includes("wav")) storageMime = "audio/wav";
+    else if (rawMime.includes("mp4") || rawMime.includes("m4a")) storageMime = "audio/mp4";
+    else if (rawMime.includes("webm")) storageMime = "audio/webm";
+    else if (rawMime.includes("mpeg") || rawMime.includes("mp3")) storageMime = "audio/mpeg";
     const filePath = `audio/${contactId}/${Date.now()}.${fileExt}`;
 
     const { error: storageError } = await supabase.storage
