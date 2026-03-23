@@ -31,18 +31,8 @@ export default function AdminAudioPage() {
   const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || audioTargetUserId === null) return;
-    // Accept Opus voice files (.ogg/.opus) to preserve native WhatsApp voice-note rendering
-    const fileName = file.name.toLowerCase();
-    const mime = file.type.toLowerCase();
-    const isOpusVoice =
-      fileName.endsWith(".ogg") ||
-      fileName.endsWith(".opus") ||
-      mime.includes("audio/ogg") ||
-      mime.includes("audio/opus");
-    if (!isOpusVoice) {
-      toast.error("Formato inválido! Use áudio Opus (.ogg ou .opus)", {
-        description: "Somente áudio Opus aparece como nota de voz nativa no WhatsApp."
-      });
+    if (!file.type.startsWith("audio/")) {
+      toast.error("Selecione um arquivo de áudio válido");
       return;
     }
     if (file.size > 16 * 1024 * 1024) {
