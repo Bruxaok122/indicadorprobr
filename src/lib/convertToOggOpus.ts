@@ -280,7 +280,7 @@ async function convertWithWebCodecs(pcm: Float32Array, originalName: string): Pr
   const oggData = buildOggOpusFile(opusFrames, 1, preSkip);
 
   const baseName = originalName.replace(/\.[^.]+$/, "");
-  return new File([oggData], `${baseName}.ogg`, { type: "audio/ogg" });
+  return new File([oggData.buffer], `${baseName}.ogg`, { type: "audio/ogg" });
 }
 
 // ─── Main Export ─────────────────────────────────────────────────────────────
