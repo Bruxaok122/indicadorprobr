@@ -41,9 +41,7 @@ export function AudioRecorder({ onSendAudio, isSending }: AudioRecorderProps) {
     try {
       const response = await fetch(audioConfig.audio_url);
       if (!response.ok) throw new Error("Falha ao carregar o áudio");
-      const originalBlob = await response.blob();
-      // Force OGG MIME type to ensure Meta API renders it as voice note (PTT)
-      const blob = new Blob([originalBlob], { type: "audio/ogg; codecs=opus" });
+      const blob = await response.blob();
       onSendAudio(blob);
     } catch (err: any) {
       toast.error("Erro ao carregar áudio", { description: err.message });
