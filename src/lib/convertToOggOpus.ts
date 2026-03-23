@@ -203,7 +203,7 @@ async function convertWithMediaRecorder(pcm: Float32Array, originalName: string)
 
   const recorder = new MediaRecorder(dest.stream, {
     mimeType: "audio/ogg; codecs=opus",
-    audioBitsPerSecond: 64000,
+    audioBitsPerSecond: 128000,
   });
 
   const chunks: Blob[] = [];
