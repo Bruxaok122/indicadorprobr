@@ -7,6 +7,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Mic, MicOff, Upload, Trash2, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { convertToOggOpus } from "@/lib/convertToOggOpus";
 
 export default function AdminAudioPage() {
   const { users } = useAdmin();
