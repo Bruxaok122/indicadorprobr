@@ -42,11 +42,26 @@ export default function AdminAudioPage() {
     }
     setUploadingForUserId(audioTargetUserId);
     try {
-      const filePath = `audio/admin-config/${audioTargetUserId}/${Date.now()}-${file.name}`;
-      const contentType = file.type && file.type.startsWith("audio/") ? file.type : "audio/mpeg";
+      // Convert to OGG Opus automatically
+      const toastId = toast.loading("Convertendo áudio para formato de nota de voz...");
+      let convertedFile: File;
+      try {
+        convertedFile = await convertToOggOpus(file);
+        toast.dismiss(toastId);
+        toast.success("Áudio convertido para OGG Opus ✓");
+      } catch (convErr: any) {
+        toast.dismiss(toastId);
+        toast.error("Erro na conversão do áudio", { description: convErr.message });
+        setUploadingForUserId(null);
+        setAudioTargetUserId(null);
+        return;
+      }
+
+      const filePath = `audio/admin-config/${audioTargetUserId}/${Date.now()}-${convertedFile.name}`;
+      const contentType = "audio/ogg";
       const { error: uploadError } = await supabase.storage
         .from("documents")
-        .upload(filePath, file, { contentType, upsert: true });
+        .upload(filePath, convertedFile, { contentType, upsert: true });
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from("documents").getPublicUrl(filePath);
