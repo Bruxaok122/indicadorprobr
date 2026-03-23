@@ -14,12 +14,12 @@ export function useContacts() {
     queryFn: async () => {
       if (!user?.id) return [];
 
-      // Admin sees ONLY orphan contacts (user_id = null) — never operator contacts
+      // Admin sees orphan contacts (pool) + contacts assigned to themselves (takeover)
       if (isAdmin) {
         const { data, error } = await supabase
           .from("contacts")
           .select("*")
-          .is("user_id", null)
+          .or(`user_id.is.null,user_id.eq.${user.id}`)
           .order("last_message_at", { ascending: false, nullsFirst: false })
           .order("created_at", { ascending: false });
 
