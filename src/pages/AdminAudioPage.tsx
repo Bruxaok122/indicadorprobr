@@ -116,7 +116,7 @@ export default function AdminAudioPage() {
       <input
         ref={audioInputRef}
         type="file"
-        accept="audio/*"
+        accept=".ogg,audio/ogg"
         className="hidden"
         onChange={handleAudioUpload}
       />
