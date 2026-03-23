@@ -121,7 +121,7 @@ export default function AdminAudioPage() {
            Defina um arquivo de áudio específico para cada operador. Eles enviam com um clique no chat.
          </p>
          <p className="text-xs text-muted-foreground/70 mt-0.5">
-           💡 Para aparecer como nota de voz nativa, use formato <strong>.ogg (Opus)</strong>.
+           ✅ Qualquer formato de áudio é aceito — o sistema converte automaticamente para <strong>.ogg (Opus)</strong> para nota de voz nativa.
          </p>
       </div>
 
