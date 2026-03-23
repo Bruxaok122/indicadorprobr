@@ -101,18 +101,18 @@ export default function AdminAudioPage() {
           <Mic className="h-5 w-5 text-primary" />
           Áudio dos Operadores
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Defina um arquivo de áudio <strong>Opus (.ogg ou .opus)</strong> para cada operador. Apenas esse formato aparece como nota de voz nativa no WhatsApp.
-        </p>
-        <p className="text-xs text-muted-foreground/70 mt-0.5">
-          Converta MP3/WAV para Opus em: <a href="https://convertio.co/mp3-ogg/" target="_blank" rel="noopener noreferrer" className="underline text-primary">convertio.co/mp3-ogg</a>
-        </p>
+         <p className="text-sm text-muted-foreground mt-1">
+           Defina um arquivo de áudio específico para cada operador. Eles enviam com um clique no chat.
+         </p>
+         <p className="text-xs text-muted-foreground/70 mt-0.5">
+           💡 Para aparecer como nota de voz nativa, use formato <strong>.ogg (Opus)</strong>.
+         </p>
       </div>
 
       <input
         ref={audioInputRef}
         type="file"
-        accept=".ogg,.opus,audio/ogg,audio/opus"
+        accept="audio/*"
         className="hidden"
         onChange={handleAudioUpload}
       />
