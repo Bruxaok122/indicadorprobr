@@ -94,9 +94,38 @@ serve(async (req) => {
 
     const effectiveUserId = contact.user_id || userId || null;
 
-    // Determine phone_number_id to use
+    // Determine phone_number_id to use — mirror logic from send-whatsapp-message
+    // When contact has a dispatched phone, ALWAYS use that to keep the conversation window
     let finalPhoneNumberId = config.phone_number_id;
-    if (selectedPhoneNumberId) {
+
+    if (contact.dispatched_phone_number_id) {
+      finalPhoneNumberId = contact.dispatched_phone_number_id;
+
+      const { data: phoneWithApi } = await supabase
+        .from("waba_phone_numbers")
+        .select("api_config_id, is_active")
+        .eq("phone_number_id", contact.dispatched_phone_number_id)
+        .maybeSingle();
+
+      if (!phoneWithApi || !phoneWithApi.is_active) {
+        return new Response(
+          JSON.stringify({ error: "O número original deste atendimento está inativo." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (phoneWithApi.api_config_id) {
+        const { data: apiConfig } = await supabase
+          .from("api_configs")
+          .select("access_token")
+          .eq("id", phoneWithApi.api_config_id)
+          .single();
+
+        if (apiConfig?.access_token) {
+          config = { ...config, access_token: apiConfig.access_token };
+        }
+      }
+    } else if (selectedPhoneNumberId) {
       finalPhoneNumberId = selectedPhoneNumberId;
     }
 
