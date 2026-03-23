@@ -142,7 +142,7 @@ function buildOggOpusFile(opusFrames: Uint8Array[], channels: number, preSkip: n
 
   // Audio pages — batch up to 100 frames (~2 seconds) per page
   const FRAMES_PER_PAGE = 100;
-  let granulePos = 0;
+  let granulePos = preSkip; // RFC 7845: granule includes pre-skip offset
 
   for (let i = 0; i < opusFrames.length; i += FRAMES_PER_PAGE) {
     const batch = opusFrames.slice(i, i + FRAMES_PER_PAGE);
