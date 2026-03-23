@@ -142,7 +142,7 @@ function buildOggOpusFile(opusFrames: Uint8Array[], channels: number, preSkip: n
 
   // Audio pages — batch up to 100 frames (~2 seconds) per page
   const FRAMES_PER_PAGE = 100;
-  let granulePos = 0;
+  let granulePos = preSkip; // RFC 7845: granule includes pre-skip offset
 
   for (let i = 0; i < opusFrames.length; i += FRAMES_PER_PAGE) {
     const batch = opusFrames.slice(i, i + FRAMES_PER_PAGE);
@@ -203,7 +203,7 @@ async function convertWithMediaRecorder(pcm: Float32Array, originalName: string)
 
   const recorder = new MediaRecorder(dest.stream, {
     mimeType: "audio/ogg; codecs=opus",
-    audioBitsPerSecond: 64000,
+    audioBitsPerSecond: 128000,
   });
 
   const chunks: Blob[] = [];
@@ -244,7 +244,7 @@ async function convertWithWebCodecs(pcm: Float32Array, originalName: string): Pr
     codec: "opus",
     sampleRate: 48000,
     numberOfChannels: 1,
-    bitrate: 64000,
+    bitrate: 128000,
   });
 
   // Feed PCM in 20ms frames
