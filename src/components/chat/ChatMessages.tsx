@@ -15,9 +15,10 @@ interface ChatMessagesProps {
   isSending: boolean;
   templatesAvailable: boolean;
   onOpenTemplateDialog: () => void;
+  onDeleteMessage?: (messageId: string) => void;
 }
 
-export function ChatMessages({ messages, isLoading, isSending, templatesAvailable, onOpenTemplateDialog }: ChatMessagesProps) {
+export function ChatMessages({ messages, isLoading, isSending, templatesAvailable, onOpenTemplateDialog, onDeleteMessage }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessageCount = useRef(0);
 
@@ -71,7 +72,7 @@ export function ChatMessages({ messages, isLoading, isSending, templatesAvailabl
         elements.push(<ChatDateSeparator key={`date-${message.id}`} date={msgDate} />);
         lastDate = msgDate;
       }
-      elements.push(<ChatBubble key={message.id} message={message} />);
+      elements.push(<ChatBubble key={message.id} message={message} onDeleteMessage={onDeleteMessage} />);
     });
     return elements;
   };

@@ -58,7 +58,7 @@ export default function ConversasPage() {
   const prevIncomingCountRef = useRef<number | null>(null);
 
   const {
-    messages, isLoading: messagesLoading, sendMessage, isSending, canSendFreeText, hasMessages, sendAudio, isSendingAudio,
+    messages, isLoading: messagesLoading, sendMessage, isSending, canSendFreeText, hasMessages, sendAudio, isSendingAudio, deleteMessage,
   } = useMessages(selectedContactId);
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
@@ -270,6 +270,7 @@ export default function ConversasPage() {
                 <ChatMessages
                   messages={messages} isLoading={messagesLoading} isSending={isSending}
                   templatesAvailable={templates.length > 0} onOpenTemplateDialog={() => setShowTemplateDialog(true)}
+                  onDeleteMessage={deleteMessage}
                 />
                 <ChatInput
                   messageText={messageText} setMessageText={setMessageText} canSendFreeText={canSendFreeText}

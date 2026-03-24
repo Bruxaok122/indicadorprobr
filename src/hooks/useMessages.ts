@@ -196,6 +196,22 @@ export function useMessages(contactId: string | null) {
     },
   });
 
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      const { error } = await supabase
+        .from("messages")
+        .update({ is_deleted: true, content: "Mensagem apagada" })
+        .eq("id", messageId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["messages", contactId, user?.id], exact: true });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao apagar mensagem", { description: error.message });
+    },
+  });
+
   return {
     messages,
     isLoading,
@@ -207,5 +223,6 @@ export function useMessages(contactId: string | null) {
     isSendingDocument: sendDocumentMutation.isPending,
     sendAudio: sendAudioMutation.mutate,
     isSendingAudio: sendAudioMutation.isPending,
+    deleteMessage: deleteMessageMutation.mutate,
   };
 }
