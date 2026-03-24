@@ -72,7 +72,7 @@ export function ChatMessages({ messages, isLoading, isSending, templatesAvailabl
         elements.push(<ChatDateSeparator key={`date-${message.id}`} date={msgDate} />);
         lastDate = msgDate;
       }
-      elements.push(<ChatBubble key={message.id} message={message} />);
+      elements.push(<ChatBubble key={message.id} message={message} onDeleteMessage={onDeleteMessage} />);
     });
     return elements;
   };
