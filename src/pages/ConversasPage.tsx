@@ -270,6 +270,7 @@ export default function ConversasPage() {
                 <ChatMessages
                   messages={messages} isLoading={messagesLoading} isSending={isSending}
                   templatesAvailable={templates.length > 0} onOpenTemplateDialog={() => setShowTemplateDialog(true)}
+                  onDeleteMessage={deleteMessage}
                 />
                 <ChatInput
                   messageText={messageText} setMessageText={setMessageText} canSendFreeText={canSendFreeText}
