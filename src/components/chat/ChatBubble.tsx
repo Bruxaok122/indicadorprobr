@@ -42,9 +42,10 @@ function getErrorLabel(errorCode?: string | null): string | null {
   }
 }
 
-export function ChatBubble({ message }: ChatBubbleProps) {
+export function ChatBubble({ message, onDeleteMessage }: ChatBubbleProps) {
   const isOutgoing = message.direction === "outgoing";
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const canDelete = isOutgoing && !message.is_deleted;
 
   const renderContent = () => {
     // Deleted message
