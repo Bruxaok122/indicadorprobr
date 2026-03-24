@@ -1,0 +1,1 @@
+UPDATE contacts SET status = 'respondido' WHERE id = 'a8f533fc-f024-4114-a311-e1313c83783e';
