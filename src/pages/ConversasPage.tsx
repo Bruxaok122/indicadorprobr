@@ -58,7 +58,7 @@ export default function ConversasPage() {
   const prevIncomingCountRef = useRef<number | null>(null);
 
   const {
-    messages, isLoading: messagesLoading, sendMessage, isSending, canSendFreeText, hasMessages, sendAudio, isSendingAudio,
+    messages, isLoading: messagesLoading, sendMessage, isSending, canSendFreeText, hasMessages, sendAudio, isSendingAudio, deleteMessage,
   } = useMessages(selectedContactId);
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
