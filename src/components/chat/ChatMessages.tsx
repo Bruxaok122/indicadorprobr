@@ -15,9 +15,10 @@ interface ChatMessagesProps {
   isSending: boolean;
   templatesAvailable: boolean;
   onOpenTemplateDialog: () => void;
+  onDeleteMessage?: (messageId: string) => void;
 }
 
-export function ChatMessages({ messages, isLoading, isSending, templatesAvailable, onOpenTemplateDialog }: ChatMessagesProps) {
+export function ChatMessages({ messages, isLoading, isSending, templatesAvailable, onOpenTemplateDialog, onDeleteMessage }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessageCount = useRef(0);
 
