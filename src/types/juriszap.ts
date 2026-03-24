@@ -48,6 +48,7 @@ export interface Message {
   status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
   error_code?: string | null;
   error_details?: string | null;
+  is_deleted?: boolean;
   created_at: string;
 }
 
