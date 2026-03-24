@@ -124,29 +124,44 @@ export function ChatBubble({ message, onDeleteMessage }: ChatBubbleProps) {
 
   return (
     <>
-      <motion.div
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
-        className={cn("flex mb-0.5 px-3 md:px-4", isOutgoing ? "justify-end" : "justify-start")}
-      >
-        <div className={cn(
-          "relative max-w-[85%] md:max-w-[65%] px-2.5 py-1.5 shadow-sm chat-selectable overflow-hidden break-words",
-          isOutgoing
-            ? "bubble-outgoing bg-[#d9fdd3] dark:bg-[#005c4b] text-gray-900 dark:text-gray-100"
-            : "bubble-incoming bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100"
-        )}>
-          {renderContent()}
-          <div className="flex items-center justify-end gap-1 mt-0.5 -mb-0.5 text-[11px] text-gray-500 dark:text-gray-400">
-            <span>{format(new Date(message.created_at), "HH:mm", { locale: ptBR })}</span>
-            {isOutgoing && getStatusIcon(message.status)}
-          </div>
-          {message.status === "failed" && isOutgoing && (
-            <div className="mt-1 rounded bg-red-50 dark:bg-red-900/20 px-2 py-1 text-[11px] text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40">
-              {getErrorLabel(message.error_code) || message.error_details || "Falha no envio"}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild disabled={!canDelete}>
+          <motion.div
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className={cn("flex mb-0.5 px-3 md:px-4 group", isOutgoing ? "justify-end" : "justify-start", canDelete && "cursor-context-menu")}
+          >
+            <div className={cn(
+              "relative max-w-[85%] md:max-w-[65%] px-2.5 py-1.5 shadow-sm chat-selectable overflow-hidden break-words",
+              isOutgoing
+                ? "bubble-outgoing bg-[#d9fdd3] dark:bg-[#005c4b] text-gray-900 dark:text-gray-100"
+                : "bubble-incoming bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100"
+            )}>
+              {renderContent()}
+              <div className="flex items-center justify-end gap-1 mt-0.5 -mb-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                <span>{format(new Date(message.created_at), "HH:mm", { locale: ptBR })}</span>
+                {isOutgoing && getStatusIcon(message.status)}
+              </div>
+              {message.status === "failed" && isOutgoing && (
+                <div className="mt-1 rounded bg-red-50 dark:bg-red-900/20 px-2 py-1 text-[11px] text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40">
+                  {getErrorLabel(message.error_code) || message.error_details || "Falha no envio"}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </motion.div>
+          </motion.div>
+        </DropdownMenuTrigger>
+        {canDelete && (
+          <DropdownMenuContent side="left" align="start" className="min-w-[160px]">
+            <DropdownMenuItem
+              onClick={() => onDeleteMessage?.(message.id)}
+              className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Apagar para todos
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        )}
+      </DropdownMenu>
 
       {message.message_type === "image" && message.image_url && (
         <ImageLightbox src={message.image_url} alt="Imagem" open={lightboxOpen} onClose={() => setLightboxOpen(false)} />
