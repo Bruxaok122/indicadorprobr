@@ -3,12 +3,14 @@ import { Message } from "@/types/juriszap";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, Check, CheckCheck, X, FileText, ZoomIn, Mic, Ban } from "lucide-react";
+import { Clock, Check, CheckCheck, X, FileText, ZoomIn, Mic, Ban, Trash2 } from "lucide-react";
 import { ImageLightbox } from "./ImageLightbox";
 import { motion } from "framer-motion";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface ChatBubbleProps {
   message: Message;
+  onDeleteMessage?: (messageId: string) => void;
 }
 
 function getStatusIcon(status: Message["status"]) {
