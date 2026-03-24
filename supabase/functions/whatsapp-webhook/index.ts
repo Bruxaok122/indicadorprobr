@@ -426,6 +426,16 @@ serve(async (req) => {
 
                 console.log(`Status update for message ${messageId}: ${statusValue}`);
 
+                // Handle "deleted" status — mark the message as deleted
+                if (statusValue === "deleted") {
+                  await supabase
+                    .from("messages")
+                    .update({ is_deleted: true, content: "Mensagem apagada" })
+                    .eq("whatsapp_message_id", messageId);
+                  console.log(`🗑️ Message ${messageId} marked as deleted via status update`);
+                  continue;
+                }
+
                 // Check current status to prevent regression
                 const { data: existingMsg } = await supabase
                   .from("messages")
