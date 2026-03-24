@@ -343,33 +343,17 @@ serve(async (req) => {
                   console.error("Error saving message:", messageError);
                 }
 
-                // === Anti-ban: Auto-block contacts with negative responses ===
+                // === Mark contact as "respondido" when client replies ===
+                // Previously auto-blocked negative responses, but this hid contacts from operators.
+                // Now all replies mark as "respondido" so the operator can see and handle them.
                 if (message.type === "text" && content) {
-                  const NEGATIVE_KEYWORDS = [
-                    "não é aqui", "nao e aqui", "numero errado", "número errado",
-                    "não conheço", "nao conheço", "engano", "pare de mandar",
-                    "não quero", "nao quero", "desconheço", "desconheco",
-                    "parar", "não me mande", "nao me mande", "errou",
-                    "telefone errado", "não tenho interesse", "nao tenho interesse",
-                    "me tire dessa lista", "sai dessa lista", "não autorizo", "nao autorizo",
-                    "denunciar", "vou denunciar", "bloquear", "quem é você",
-                    "quem e voce", "errado", "parar de mandar", "spam",
-                    "não solicitei", "nao solicitei", "golpe",
-                  ];
-                  
-                  const lowerContent = content.toLowerCase()
-                    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                  
-                  const isNegative = NEGATIVE_KEYWORDS.some(kw => {
-                    const normalizedKw = kw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                    return lowerContent.includes(normalizedKw);
-                  });
-                  
-                  if (isNegative) {
-                    console.log(`🚫 Auto-blocking contact ${contactId} due to negative response: "${content}"`);
+                  // Only update to "respondido" if currently "aguardando" or "novo"
+                  const currentStatus = existingContact?.status;
+                  if (currentStatus === "aguardando" || currentStatus === "novo") {
+                    console.log(`✅ Marking contact ${contactId} as respondido (was: ${currentStatus})`);
                     await supabase
                       .from("contacts")
-                      .update({ status: "encerrado" })
+                      .update({ status: "respondido" })
                       .eq("id", contactId);
                   }
                 }
