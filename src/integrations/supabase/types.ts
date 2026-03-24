@@ -490,6 +490,7 @@ export type Database = {
           error_details: string | null
           id: string
           image_url: string | null
+          is_deleted: boolean
           message_type: string
           status: string | null
           template_name: string | null
@@ -508,6 +509,7 @@ export type Database = {
           error_details?: string | null
           id?: string
           image_url?: string | null
+          is_deleted?: boolean
           message_type?: string
           status?: string | null
           template_name?: string | null
@@ -526,6 +528,7 @@ export type Database = {
           error_details?: string | null
           id?: string
           image_url?: string | null
+          is_deleted?: boolean
           message_type?: string
           status?: string | null
           template_name?: string | null

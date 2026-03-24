@@ -317,6 +317,29 @@ serve(async (req) => {
                   }
                 } else if (message.type === "video") {
                   content = "[Vídeo recebido]";
+                } else if (message.type === "unsupported") {
+                  // WhatsApp sends "unsupported" type when a message is deleted
+                  // Check if there's a reference to an existing message (context.id)
+                  const refId = message.context?.id || message.referral?.message_id;
+                  if (refId) {
+                    const { data: origMsg } = await supabase
+                      .from("messages")
+                      .select("id")
+                      .eq("whatsapp_message_id", refId)
+                      .maybeSingle();
+                    if (origMsg) {
+                      await supabase.from("messages").update({ is_deleted: true, content: "Mensagem apagada" }).eq("id", origMsg.id);
+                      console.log(`🗑️ Message ${refId} marked as deleted`);
+                      continue;
+                    }
+                  }
+                  // Also treat as possible deletion if errors contain revoke code
+                  const hasRevoke = message.errors?.some((e: any) => e.code === 131051 || e.title?.toLowerCase().includes("revoke"));
+                  if (hasRevoke) {
+                    console.log(`🗑️ Received revoke notification, skipping`);
+                    continue;
+                  }
+                  content = `[${message.type}]`;
                 } else {
                   content = `[${message.type}]`;
                 }
@@ -402,6 +425,16 @@ serve(async (req) => {
                 const statusValue = status.status;
 
                 console.log(`Status update for message ${messageId}: ${statusValue}`);
+
+                // Handle "deleted" status — mark the message as deleted
+                if (statusValue === "deleted") {
+                  await supabase
+                    .from("messages")
+                    .update({ is_deleted: true, content: "Mensagem apagada" })
+                    .eq("whatsapp_message_id", messageId);
+                  console.log(`🗑️ Message ${messageId} marked as deleted via status update`);
+                  continue;
+                }
 
                 // Check current status to prevent regression
                 const { data: existingMsg } = await supabase
