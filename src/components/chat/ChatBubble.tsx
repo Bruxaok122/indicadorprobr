@@ -45,6 +45,16 @@ export function ChatBubble({ message }: ChatBubbleProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const renderContent = () => {
+    // Deleted message
+    if (message.is_deleted) {
+      return (
+        <div className="flex items-center gap-1.5 opacity-60 italic">
+          <Ban className="h-3.5 w-3.5" />
+          <span className="text-sm">Mensagem apagada</span>
+        </div>
+      );
+    }
+
     if (message.message_type === "image" && message.image_url) {
       return (
         <div className="space-y-1">
@@ -61,7 +71,6 @@ export function ChatBubble({ message }: ChatBubbleProps) {
       );
     }
     if (message.message_type === "audio") {
-      // If we have a stored audio URL, render a player
       if (message.image_url) {
         return (
           <div className="flex items-center gap-1.5 py-0.5 min-w-[180px]">
@@ -96,16 +105,15 @@ export function ChatBubble({ message }: ChatBubbleProps) {
         </div>
       );
     }
-    // Strip any leaked AI control tags from display
     const cleanContent = (message.content || "")
       .replace(/##STAGE:\S*?##\s*/g, "")
       .replace(/##BANK_DATA:\{.*?\}##\s*/g, "")
       .replace(/##VALUE_DETECTED:\S*?##\s*/g, "")
       .replace(/##NEW_OBJECTION:\w*##\s*/g, "")
-      .replace(/##\S+?:\S*?##\s*/g, "") // catch-all for any remaining tags
-      .replace(/##STAGE:\S*/g, "") // catch unclosed tags like ##STAGE:aguardando_
-      .replace(/^##\s*/gm, "") // catch standalone ## at start of lines
-      .replace(/\s*##\s*/g, " ") // catch any remaining ## in the middle
+      .replace(/##\S+?:\S*?##\s*/g, "")
+      .replace(/##STAGE:\S*/g, "")
+      .replace(/^##\s*/gm, "")
+      .replace(/\s*##\s*/g, " ")
       .trim();
     if (!cleanContent) return null;
     return <p className="whitespace-pre-wrap text-sm leading-relaxed">{cleanContent}</p>;
