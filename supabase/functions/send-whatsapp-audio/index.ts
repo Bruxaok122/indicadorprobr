@@ -153,14 +153,16 @@ serve(async (req) => {
     const whatsappMime = detectAudioMime(audioBytes);
     console.log("Detected audio MIME from magic bytes:", whatsappMime, "| Client MIME:", audioFile.type);
 
+    // For OGG files, use "audio/ogg; codecs=opus" to ensure WhatsApp treats it as voice note
+    const uploadMime = whatsappMime === "audio/ogg" ? "audio/ogg; codecs=opus" : whatsappMime;
     const mediaFormData = new FormData();
     mediaFormData.append("messaging_product", "whatsapp");
-    mediaFormData.append("type", whatsappMime);
+    mediaFormData.append("type", uploadMime);
     const mimeToExt: Record<string, string> = { "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/wav": "wav", "audio/mp4": "m4a", "audio/webm": "webm" };
     const detectedExt = mimeToExt[whatsappMime] || "mp3";
     mediaFormData.append(
       "file",
-      new Blob([audioBytes], { type: whatsappMime }),
+      new Blob([audioBytes], { type: uploadMime }),
       `audio.${detectedExt}`
     );
 
