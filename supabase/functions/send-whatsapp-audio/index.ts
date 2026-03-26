@@ -153,19 +153,23 @@ serve(async (req) => {
     const whatsappMime = detectAudioMime(audioBytes);
     console.log("Detected audio MIME from magic bytes:", whatsappMime, "| Client MIME:", audioFile.type);
 
+    // For OGG files, use "audio/ogg; codecs=opus" to ensure WhatsApp treats it as voice note
+    const uploadMime = whatsappMime === "audio/ogg" ? "audio/ogg; codecs=opus" : whatsappMime;
     const mediaFormData = new FormData();
     mediaFormData.append("messaging_product", "whatsapp");
-    mediaFormData.append("type", whatsappMime);
+    mediaFormData.append("type", uploadMime);
     const mimeToExt: Record<string, string> = { "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/wav": "wav", "audio/mp4": "m4a", "audio/webm": "webm" };
     const detectedExt = mimeToExt[whatsappMime] || "mp3";
+    // Use "ptt.ogg" filename for OGG to hint Meta to render as voice note
+    const uploadFilename = whatsappMime === "audio/ogg" ? "ptt.ogg" : `audio.${detectedExt}`;
     mediaFormData.append(
       "file",
-      new Blob([audioBytes], { type: whatsappMime }),
-      `audio.${detectedExt}`
+      new Blob([audioBytes], { type: uploadMime }),
+      uploadFilename
     );
 
     const uploadResponse = await fetch(
-      `https://graph.facebook.com/v18.0/${finalPhoneNumberId}/media`,
+      `https://graph.facebook.com/v21.0/${finalPhoneNumberId}/media`,
       {
         method: "POST",
         headers: {
@@ -189,10 +193,8 @@ serve(async (req) => {
     const mediaId = uploadResult.id;
 
     // Step 2: Send as PTT (voice note) — this shows as a recorded voice message on iOS too
-    const whatsappUrl = `https://graph.facebook.com/v18.0/${finalPhoneNumberId}/messages`;
+    const whatsappUrl = `https://graph.facebook.com/v21.0/${finalPhoneNumberId}/messages`;
 
-    // The PTT (voice note) appearance on iOS WhatsApp is determined by the file format (OGG/Opus),
-    // NOT by any API parameter. The "ptt" field is not accepted by Meta API (Error 100).
     const requestBody = {
       messaging_product: "whatsapp",
       to: contact.phone,
