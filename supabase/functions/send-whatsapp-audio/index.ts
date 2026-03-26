@@ -191,8 +191,6 @@ serve(async (req) => {
     // Step 2: Send as PTT (voice note) — this shows as a recorded voice message on iOS too
     const whatsappUrl = `https://graph.facebook.com/v18.0/${finalPhoneNumberId}/messages`;
 
-    // The PTT (voice note) appearance on iOS WhatsApp is determined by the file format (OGG/Opus),
-    // NOT by any API parameter. The "ptt" field is not accepted by Meta API (Error 100).
     const requestBody = {
       messaging_product: "whatsapp",
       to: contact.phone,
