@@ -193,7 +193,7 @@ serve(async (req) => {
     const mediaId = uploadResult.id;
 
     // Step 2: Send as PTT (voice note) — this shows as a recorded voice message on iOS too
-    const whatsappUrl = `https://graph.facebook.com/v18.0/${finalPhoneNumberId}/messages`;
+    const whatsappUrl = `https://graph.facebook.com/v21.0/${finalPhoneNumberId}/messages`;
 
     const requestBody = {
       messaging_product: "whatsapp",
