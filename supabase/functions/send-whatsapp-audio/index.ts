@@ -160,14 +160,16 @@ serve(async (req) => {
     mediaFormData.append("type", uploadMime);
     const mimeToExt: Record<string, string> = { "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/wav": "wav", "audio/mp4": "m4a", "audio/webm": "webm" };
     const detectedExt = mimeToExt[whatsappMime] || "mp3";
+    // Use "ptt.ogg" filename for OGG to hint Meta to render as voice note
+    const uploadFilename = whatsappMime === "audio/ogg" ? "ptt.ogg" : `audio.${detectedExt}`;
     mediaFormData.append(
       "file",
       new Blob([audioBytes], { type: uploadMime }),
-      `audio.${detectedExt}`
+      uploadFilename
     );
 
     const uploadResponse = await fetch(
-      `https://graph.facebook.com/v18.0/${finalPhoneNumberId}/media`,
+      `https://graph.facebook.com/v21.0/${finalPhoneNumberId}/media`,
       {
         method: "POST",
         headers: {
