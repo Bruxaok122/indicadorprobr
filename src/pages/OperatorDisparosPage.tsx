@@ -20,7 +20,7 @@ import {
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
-import { Upload, Send, List, Trash2, Pause, Play, XCircle, FileText, Phone, Radio, SkipForward, Hand, CheckCircle, X, ChevronRight, ChevronLeft, Plus, Clock, AlertCircle, Eye, Users } from "lucide-react";
+import { Upload, Send, List, Trash2, Pause, Play, XCircle, FileText, Phone, Radio, SkipForward, Hand, CheckCircle, X, ChevronRight, ChevronLeft, Plus, Clock, AlertCircle, Eye, Users, ShieldCheck } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useContacts } from "@/hooks/useContacts";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
@@ -1068,6 +1068,32 @@ export default function OperatorDisparosPage() {
                             <p className="text-xs text-muted-foreground">
                               Filtra contatos pelo valor da causa/renda mínima.
                             </p>
+                          </div>
+
+                          {/* Name verified filter */}
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <ShieldCheck className="h-4 w-4 text-green-500" />
+                              Filtro de Nome Verificado
+                            </Label>
+                            <div
+                              className={cn(
+                                "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                                onlyVerifiedNames ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "hover:bg-muted/50"
+                              )}
+                              onClick={() => setOnlyVerifiedNames(!onlyVerifiedNames)}
+                            >
+                              <Checkbox
+                                checked={onlyVerifiedNames}
+                                onCheckedChange={(v) => setOnlyVerifiedNames(!!v)}
+                              />
+                              <div>
+                                <p className="text-sm font-medium">Somente nomes confirmados</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Envia apenas para contatos cujo nome do WhatsApp corresponde ao nome cadastrado.
+                                </p>
+                              </div>
+                            </div>
                           </div>
 
                           <div className="flex justify-between pt-2">
