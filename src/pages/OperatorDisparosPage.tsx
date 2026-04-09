@@ -1126,6 +1126,9 @@ export default function OperatorDisparosPage() {
                             {minRenda !== "all" && (
                               <p><span className="font-semibold">Renda mín.:</span> R$ {parseInt(minRenda).toLocaleString("pt-BR")}</p>
                             )}
+                            {onlyVerifiedNames && (
+                              <p className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-green-500" /><span className="font-semibold">Somente nomes verificados</span></p>
+                            )}
                           </div>
 
                           {/* Mode selection */}
