@@ -175,6 +175,7 @@ export default function OperatorDisparosPage() {
   const [intervalSeconds, setIntervalSeconds] = useState(65);
   const [dispatchMode, setDispatchMode] = useState<"auto" | "manual">("auto");
   const [minRenda, setMinRenda] = useState<string>("all");
+  const [onlyVerifiedNames, setOnlyVerifiedNames] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
   const [viewingList, setViewingList] = useState<string | null>(null);
