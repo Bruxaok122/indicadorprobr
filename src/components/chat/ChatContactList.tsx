@@ -355,12 +355,10 @@ export function ChatContactList({
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                           {contact.name}
+                          {contact.whatsapp_profile_name && contact.whatsapp_profile_name.toLowerCase() !== contact.name.toLowerCase() && (
+                            <span className="text-[11px] font-normal text-muted-foreground/70"> - ~{contact.whatsapp_profile_name}</span>
+                          )}
                         </p>
-                        {contact.whatsapp_profile_name && contact.whatsapp_profile_name !== contact.name && (
-                          <p className="truncate text-[10px] text-muted-foreground/70 leading-tight">
-                            ~{contact.whatsapp_profile_name}
-                          </p>
-                        )}
                       </div>
                       {contact.last_message_at && (
                         <span className={cn(
