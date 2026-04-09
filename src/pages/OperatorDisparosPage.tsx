@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -20,7 +21,7 @@ import {
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
-import { Upload, Send, List, Trash2, Pause, Play, XCircle, FileText, Phone, Radio, SkipForward, Hand, CheckCircle, X, ChevronRight, ChevronLeft, Plus, Clock, AlertCircle, Eye, Users } from "lucide-react";
+import { Upload, Send, List, Trash2, Pause, Play, XCircle, FileText, Phone, Radio, SkipForward, Hand, CheckCircle, X, ChevronRight, ChevronLeft, Plus, Clock, AlertCircle, Eye, Users, ShieldCheck } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useContacts } from "@/hooks/useContacts";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
@@ -175,6 +176,7 @@ export default function OperatorDisparosPage() {
   const [intervalSeconds, setIntervalSeconds] = useState(65);
   const [dispatchMode, setDispatchMode] = useState<"auto" | "manual">("auto");
   const [minRenda, setMinRenda] = useState<string>("all");
+  const [onlyVerifiedNames, setOnlyVerifiedNames] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
   const [viewingList, setViewingList] = useState<string | null>(null);
@@ -347,6 +349,9 @@ export default function OperatorDisparosPage() {
     if (minRenda !== "all") {
       query = query.gte("valor_da_causa", parseInt(minRenda));
     }
+    if (onlyVerifiedNames) {
+      query = query.eq("name_verified", true);
+    }
 
     const { data: contactsData } = await query;
     const contactIds = (contactsData || []).map((c: any) => c.id);
@@ -515,6 +520,9 @@ export default function OperatorDisparosPage() {
 
     if (minRenda !== "all") {
       manualQuery = manualQuery.gte("valor_da_causa", parseInt(minRenda));
+    }
+    if (onlyVerifiedNames) {
+      manualQuery = manualQuery.eq("name_verified", true);
     }
 
     const { data: contactsData } = await manualQuery;
@@ -1063,6 +1071,32 @@ export default function OperatorDisparosPage() {
                             </p>
                           </div>
 
+                          {/* Name verified filter */}
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <ShieldCheck className="h-4 w-4 text-green-500" />
+                              Filtro de Nome Verificado
+                            </Label>
+                            <div
+                              className={cn(
+                                "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                                onlyVerifiedNames ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "hover:bg-muted/50"
+                              )}
+                              onClick={() => setOnlyVerifiedNames(!onlyVerifiedNames)}
+                            >
+                              <Checkbox
+                                checked={onlyVerifiedNames}
+                                onCheckedChange={(v) => setOnlyVerifiedNames(!!v)}
+                              />
+                              <div>
+                                <p className="text-sm font-medium">Somente nomes confirmados</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Envia apenas para contatos cujo nome do WhatsApp corresponde ao nome cadastrado.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
                           <div className="flex justify-between pt-2">
                             <Button variant="outline" onClick={() => setWizardStep(1)}>
                               <ChevronLeft className="mr-2 h-4 w-4" /> Voltar
@@ -1091,6 +1125,9 @@ export default function OperatorDisparosPage() {
                             <p><span className="font-semibold">Lista:</span> {selectedList} ({listContactCount} contatos)</p>
                             {minRenda !== "all" && (
                               <p><span className="font-semibold">Renda mín.:</span> R$ {parseInt(minRenda).toLocaleString("pt-BR")}</p>
+                            )}
+                            {onlyVerifiedNames && (
+                              <p className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-green-500" /><span className="font-semibold">Somente nomes verificados</span></p>
                             )}
                           </div>
 
