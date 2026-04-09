@@ -348,6 +348,9 @@ export default function OperatorDisparosPage() {
     if (minRenda !== "all") {
       query = query.gte("valor_da_causa", parseInt(minRenda));
     }
+    if (onlyVerifiedNames) {
+      query = query.eq("name_verified", true);
+    }
 
     const { data: contactsData } = await query;
     const contactIds = (contactsData || []).map((c: any) => c.id);
@@ -516,6 +519,9 @@ export default function OperatorDisparosPage() {
 
     if (minRenda !== "all") {
       manualQuery = manualQuery.gte("valor_da_causa", parseInt(minRenda));
+    }
+    if (onlyVerifiedNames) {
+      manualQuery = manualQuery.eq("name_verified", true);
     }
 
     const { data: contactsData } = await manualQuery;
