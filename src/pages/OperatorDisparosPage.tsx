@@ -175,6 +175,7 @@ export default function OperatorDisparosPage() {
   const [loadingLists, setLoadingLists] = useState(false);
   const [intervalSeconds, setIntervalSeconds] = useState(65);
   const [dispatchMode, setDispatchMode] = useState<"auto" | "manual" | "smart">("auto");
+  const [smartLimit, setSmartLimit] = useState<number>(0); // 0 = sem limite
   const [minRenda, setMinRenda] = useState<string>("all");
   const [onlyVerifiedNames, setOnlyVerifiedNames] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
@@ -627,10 +628,14 @@ export default function OperatorDisparosPage() {
     if (onlyVerifiedNames) query = query.eq("name_verified", true);
 
     const { data: contactsData } = await query;
-    const contactIds = (contactsData || []).map((c: any) => c.id);
+    let contactIds = (contactsData || []).map((c: any) => c.id);
     if (contactIds.length === 0) {
       toast.error("Nenhum contato disponível nesta lista");
       return;
+    }
+    // Apply smart limit if set
+    if (smartLimit > 0 && contactIds.length > smartLimit) {
+      contactIds = contactIds.slice(0, smartLimit);
     }
 
     const dispatchId = crypto.randomUUID();
@@ -825,24 +830,12 @@ export default function OperatorDisparosPage() {
             toast.info(`📈 Avançando para fase "${SMART_PHASES[currentPhase].name}"`);
           }
 
-          // Breathing pauses
-          if (totalSentInSession > 0 && totalSentInSession % 80 === 0) {
-            // Long breathing every 80 msgs: 5-10 min
-            const longPause = randomBetween(5, 10) * 60 * 1000;
-            toast.info(`🫁 Pausa longa de ${Math.round(longPause / 60000)} minutos (proteção anti-padrão)...`);
-            updateDispatch(dispatchId, { breathingUntil: new Date(Date.now() + longPause).toISOString() });
-            for (let w = 0; w < Math.ceil(longPause / 30000); w++) {
-              const c = dispatchControlsRef.current[dispatchId];
-              if (c?.isCancelled) break;
-              await new Promise(r => setTimeout(r, 30000));
-            }
-            updateDispatch(dispatchId, { breathingUntil: undefined });
-          } else if (totalSentInSession > 0 && totalSentInSession % 20 === 0) {
-            // Short breathing every 20 msgs: 2-4 min
-            const shortPause = randomBetween(2, 4) * 60 * 1000;
-            toast.info(`🫁 Pausa de ${Math.round(shortPause / 60000)} minutos (comportamento natural)...`);
-            updateDispatch(dispatchId, { breathingUntil: new Date(Date.now() + shortPause).toISOString() });
-            for (let w = 0; w < Math.ceil(shortPause / 30000); w++) {
+          // Breathing pause: 2 minutes every 30 messages
+          if (totalSentInSession > 0 && totalSentInSession % 30 === 0) {
+            const pauseMs = 2 * 60 * 1000;
+            toast.info(`🫁 Pausa de 2 minutos a cada 30 mensagens (proteção anti-bloqueio)...`);
+            updateDispatch(dispatchId, { breathingUntil: new Date(Date.now() + pauseMs).toISOString() });
+            for (let w = 0; w < 4; w++) {
               const c = dispatchControlsRef.current[dispatchId];
               if (c?.isCancelled) break;
               await new Promise(r => setTimeout(r, 30000));
@@ -1474,11 +1467,27 @@ export default function OperatorDisparosPage() {
                                 </div>
                                 <ul className="text-xs text-muted-foreground space-y-1 pl-6 list-disc">
                                   <li><strong>Warm-up:</strong> Começa lento (45-90s) e acelera em 4 fases</li>
-                                  <li><strong>Pausas naturais:</strong> 2-4min a cada ~20 msgs, 5-10min a cada ~80</li>
+                                  <li><strong>Pausas:</strong> 2 minutos a cada 30 mensagens</li>
                                   <li><strong>Janela horária:</strong> Envia apenas 08:00-11:30 e 13:30-17:00</li>
                                   <li><strong>Limite:</strong> Máx. 800 msgs/dia por sessão</li>
                                   <li><strong>Auto-proteção:</strong> Taxa de falha {'>'} 3% = pausa de 15min</li>
                                 </ul>
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Limite de envios (0 = sem limite)</Label>
+                                <Input
+                                  type="number"
+                                  value={smartLimit}
+                                  onChange={e => setSmartLimit(Math.max(0, parseInt(e.target.value) || 0))}
+                                  min={0}
+                                  placeholder="Ex: 100"
+                                  className="w-40"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  {smartLimit > 0
+                                    ? `Enviará no máximo ${smartLimit} mensagens desta lista.`
+                                    : "Enviará para todos os contatos disponíveis (respeitando o limite diário de 800)."}
+                                </p>
                               </div>
                               <Button
                                 onClick={handleSmartSend}
@@ -1487,7 +1496,7 @@ export default function OperatorDisparosPage() {
                                 size="lg"
                               >
                                 <Brain className="mr-2 h-4 w-4" />
-                                Iniciar Disparo Inteligente ({listContactCount} contatos)
+                                Iniciar Disparo Inteligente ({smartLimit > 0 ? Math.min(smartLimit, listContactCount) : listContactCount} contatos)
                               </Button>
                             </div>
                           )}
