@@ -1421,27 +1421,76 @@ export default function OperatorDisparosPage() {
                           {/* Mode selection */}
                           <div className="space-y-2">
                             <Label>Modo de Disparo</Label>
-                            <div className="flex gap-2">
-                              <Button
-                                variant={dispatchMode === "auto" ? "default" : "outline"}
-                                size="sm"
+                            <div className="grid grid-cols-3 gap-2">
+                              <button
+                                onClick={() => setDispatchMode("smart")}
+                                className={cn(
+                                  "flex flex-col items-center gap-1 rounded-lg border p-3 text-center transition-all",
+                                  dispatchMode === "smart"
+                                    ? "border-primary bg-primary/10 ring-2 ring-primary/30"
+                                    : "hover:bg-muted/50"
+                                )}
+                              >
+                                <Brain className="h-5 w-5 text-primary" />
+                                <span className="text-xs font-semibold">Inteligente</span>
+                                <span className="text-[10px] text-muted-foreground leading-tight">Anti-bloqueio</span>
+                              </button>
+                              <button
                                 onClick={() => setDispatchMode("auto")}
-                                className="flex-1"
+                                className={cn(
+                                  "flex flex-col items-center gap-1 rounded-lg border p-3 text-center transition-all",
+                                  dispatchMode === "auto"
+                                    ? "border-primary bg-primary/10 ring-2 ring-primary/30"
+                                    : "hover:bg-muted/50"
+                                )}
                               >
-                                <Send className="mr-2 h-3.5 w-3.5" />
-                                Automático
-                              </Button>
-                              <Button
-                                variant={dispatchMode === "manual" ? "default" : "outline"}
-                                size="sm"
+                                <Send className="h-5 w-5" />
+                                <span className="text-xs font-semibold">Automático</span>
+                                <span className="text-[10px] text-muted-foreground leading-tight">Intervalo fixo</span>
+                              </button>
+                              <button
                                 onClick={() => setDispatchMode("manual")}
-                                className="flex-1"
+                                className={cn(
+                                  "flex flex-col items-center gap-1 rounded-lg border p-3 text-center transition-all",
+                                  dispatchMode === "manual"
+                                    ? "border-primary bg-primary/10 ring-2 ring-primary/30"
+                                    : "hover:bg-muted/50"
+                                )}
                               >
-                                <Hand className="mr-2 h-3.5 w-3.5" />
-                                Manual (1 a 1)
-                              </Button>
+                                <Hand className="h-5 w-5" />
+                                <span className="text-xs font-semibold">Manual</span>
+                                <span className="text-[10px] text-muted-foreground leading-tight">1 a 1</span>
+                              </button>
                             </div>
                           </div>
+
+                          {/* Smart mode info + button */}
+                          {dispatchMode === "smart" && (
+                            <div className="space-y-3">
+                              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <Shield className="h-4 w-4 text-primary" />
+                                  <span className="text-sm font-semibold">Modo Inteligente 🧠</span>
+                                </div>
+                                <ul className="text-xs text-muted-foreground space-y-1 pl-6 list-disc">
+                                  <li><strong>Warm-up:</strong> Começa lento (45-90s) e acelera em 4 fases</li>
+                                  <li><strong>Pausas naturais:</strong> 2-4min a cada ~20 msgs, 5-10min a cada ~80</li>
+                                  <li><strong>Janela horária:</strong> Envia apenas 08:00-11:30 e 13:30-17:00</li>
+                                  <li><strong>Limite:</strong> Máx. 800 msgs/dia por sessão</li>
+                                  <li><strong>Auto-proteção:</strong> Taxa de falha {'>'} 3% = pausa de 15min</li>
+                                </ul>
+                              </div>
+                              <Button
+                                onClick={handleSmartSend}
+                                disabled={!selectedTemplate || !selectedList || listContactCount === 0}
+                                className="w-full"
+                                size="lg"
+                              >
+                                <Brain className="mr-2 h-4 w-4" />
+                                Iniciar Disparo Inteligente ({listContactCount} contatos)
+                              </Button>
+                            </div>
+                          )
 
                           {/* Auto mode */}
                           {dispatchMode === "auto" && (
