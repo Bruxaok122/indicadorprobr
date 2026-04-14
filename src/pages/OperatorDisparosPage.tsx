@@ -174,7 +174,7 @@ export default function OperatorDisparosPage() {
   const [availableLists, setAvailableLists] = useState<{ name: string; count: number }[]>([]);
   const [loadingLists, setLoadingLists] = useState(false);
   const [intervalSeconds, setIntervalSeconds] = useState(65);
-  const [dispatchMode, setDispatchMode] = useState<"auto" | "manual">("auto");
+  const [dispatchMode, setDispatchMode] = useState<"auto" | "manual" | "smart">("auto");
   const [minRenda, setMinRenda] = useState<string>("all");
   const [onlyVerifiedNames, setOnlyVerifiedNames] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
