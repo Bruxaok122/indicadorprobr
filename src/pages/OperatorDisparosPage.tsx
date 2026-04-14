@@ -601,6 +601,293 @@ export default function OperatorDisparosPage() {
     toast.warning(`Manual encerrado — ${sent} enviados, ${failed} falhas`);
   };
 
+  // --- Smart Dispatch (warm-up + breathing + failure monitoring) ---
+  const SMART_PHASES = [
+    { name: "Aquecimento", minDelay: 45, maxDelay: 90, msgsInPhase: 20 },
+    { name: "Acelerando", minDelay: 25, maxDelay: 50, msgsInPhase: 30 },
+    { name: "Progressão", minDelay: 15, maxDelay: 35, msgsInPhase: 50 },
+    { name: "Cruzeiro", minDelay: 10, maxDelay: 20, msgsInPhase: Infinity },
+  ];
+
+  const handleSmartSend = async () => {
+    if (!selectedTemplate || !selectedList || !user?.id) return;
+    if (phones.length > 0 && !selectedPhoneNumberId) {
+      toast.error("Selecione um número de disparo");
+      return;
+    }
+
+    let query = supabase
+      .from("contacts")
+      .select("id")
+      .eq("contact_list", selectedList)
+      .eq("user_id", user.id)
+      .eq("status", "novo");
+
+    if (minRenda !== "all") query = query.gte("valor_da_causa", parseInt(minRenda));
+    if (onlyVerifiedNames) query = query.eq("name_verified", true);
+
+    const { data: contactsData } = await query;
+    const contactIds = (contactsData || []).map((c: any) => c.id);
+    if (contactIds.length === 0) {
+      toast.error("Nenhum contato disponível nesta lista");
+      return;
+    }
+
+    const dispatchId = crypto.randomUUID();
+    dispatchControlsRef.current[dispatchId] = { isPaused: false, isCancelled: false };
+
+    const newDispatch: ActiveDispatch = {
+      id: dispatchId,
+      operatorName: profile?.full_name || "Operador",
+      operatorId: user.id,
+      templateName: selectedTemplate.name,
+      listName: selectedList,
+      mode: "smart",
+      total: contactIds.length,
+      sent: 0,
+      failed: 0,
+      current: 0,
+      isPaused: false,
+      isCancelled: false,
+      isFinished: false,
+      errors: [],
+    };
+
+    addDispatch(newDispatch);
+
+    const capturedTemplate = selectedTemplate;
+    const capturedPhoneId = selectedPhoneNumberId;
+    const capturedMappings = { ...variableMappings };
+    const capturedPhoneVerifiedName = phoneVerifiedName;
+
+    (async () => {
+      const results = { sent: 0, failed: 0, errors: [] as string[] };
+      let consecutiveErrors = 0;
+      let currentPhase = 0;
+      let msgsInCurrentPhase = 0;
+      let totalSentInSession = 0;
+      const MAX_DAILY = 800;
+
+      try {
+        for (let i = 0; i < contactIds.length; i++) {
+          const ctrl = dispatchControlsRef.current[dispatchId];
+          if (ctrl?.isCancelled) break;
+
+          // Pause check
+          if (ctrl?.isPaused) {
+            while (ctrl?.isPaused && !ctrl?.isCancelled) {
+              await new Promise(r => setTimeout(r, 500));
+            }
+            if (ctrl?.isCancelled) break;
+          }
+
+          // Daily limit check
+          if (totalSentInSession >= MAX_DAILY) {
+            toast.warning(`🛡️ Limite diário de ${MAX_DAILY} mensagens atingido. Parando para proteger a conta.`);
+            break;
+          }
+
+          // Smart time window check (08:00-11:30, 13:30-17:00 BRT)
+          const nowBrt = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+          const hour = nowBrt.getHours();
+          const min = nowBrt.getMinutes();
+          const timeInMinutes = hour * 60 + min;
+          const morningStart = 8 * 60;    // 08:00
+          const morningEnd = 11 * 60 + 30; // 11:30
+          const afternoonStart = 13 * 60 + 30; // 13:30
+          const afternoonEnd = 17 * 60;    // 17:00
+
+          const inWindow = (timeInMinutes >= morningStart && timeInMinutes < morningEnd) ||
+                           (timeInMinutes >= afternoonStart && timeInMinutes < afternoonEnd);
+
+          if (!inWindow) {
+            // Calculate wait until next window
+            let waitMinutes = 0;
+            if (timeInMinutes < morningStart) {
+              waitMinutes = morningStart - timeInMinutes;
+            } else if (timeInMinutes >= morningEnd && timeInMinutes < afternoonStart) {
+              waitMinutes = afternoonStart - timeInMinutes;
+            } else {
+              // After 17:00, wait until next day 08:00
+              waitMinutes = (24 * 60 - timeInMinutes) + morningStart;
+            }
+
+            toast.info(`⏰ Fora da janela horária segura. Aguardando ${waitMinutes} minutos...`);
+            updateDispatch(dispatchId, {
+              breathingUntil: new Date(Date.now() + waitMinutes * 60 * 1000).toISOString(),
+            });
+
+            // Wait in 30s chunks to check for cancel
+            for (let w = 0; w < waitMinutes * 2; w++) {
+              const c = dispatchControlsRef.current[dispatchId];
+              if (c?.isCancelled) break;
+              await new Promise(r => setTimeout(r, 30000));
+            }
+            updateDispatch(dispatchId, { breathingUntil: undefined });
+            const c2 = dispatchControlsRef.current[dispatchId];
+            if (c2?.isCancelled) break;
+          }
+
+          // Send
+          const contactId = contactIds[i];
+          const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
+            body: {
+              contactIds: [contactId],
+              templateName: capturedTemplate.name,
+              templateLanguage: capturedTemplate.language,
+              userId: user?.id,
+              assignedUserId: user?.id,
+              selectedPhoneNumberId: capturedPhoneId || undefined,
+              variableMappings: capturedMappings,
+              phoneVerifiedName: capturedPhoneVerifiedName,
+            },
+          });
+
+          if (!sendError && result?.results) {
+            results.sent += result.results.sent || 0;
+            results.failed += result.results.failed || 0;
+            if (result.results.errors) results.errors.push(...result.results.errors);
+
+            // Circuit breaker for block errors
+            if (result.results.errors?.some((e: string) =>
+              e.includes("Conta Business bloqueada") || e.includes("131031") || e.includes("131051") || e.includes("131042")
+            )) {
+              // Downgrade phase
+              if (currentPhase > 0) {
+                currentPhase = Math.max(0, currentPhase - 1);
+                msgsInCurrentPhase = 0;
+                toast.warning(`🛡️ Erro de bloqueio detectado! Voltando para fase "${SMART_PHASES[currentPhase].name}". Pausa de 5 minutos...`);
+                updateDispatch(dispatchId, { breathingUntil: new Date(Date.now() + 5 * 60 * 1000).toISOString() });
+                await new Promise(r => setTimeout(r, 5 * 60 * 1000));
+                updateDispatch(dispatchId, { breathingUntil: undefined });
+              } else {
+                toast.error("🛑 Erro de bloqueio na fase de aquecimento! Encerrando para proteger a conta.");
+                break;
+              }
+              const ctrl3 = dispatchControlsRef.current[dispatchId];
+              if (ctrl3?.isCancelled) break;
+            }
+
+            if (result.results.sent > 0) {
+              consecutiveErrors = 0;
+              totalSentInSession++;
+              msgsInCurrentPhase++;
+            }
+          } else {
+            results.failed++;
+            consecutiveErrors++;
+            if (sendError) results.errors.push(sendError?.message || "Erro desconhecido");
+
+            if (consecutiveErrors >= 3) {
+              // Downgrade phase + cooldown
+              currentPhase = Math.max(0, currentPhase - 1);
+              msgsInCurrentPhase = 0;
+              toast.warning(`🚨 3 erros consecutivos! Cooldown 5 min + voltando para "${SMART_PHASES[currentPhase].name}"...`);
+              updateDispatch(dispatchId, { breathingUntil: new Date(Date.now() + 5 * 60 * 1000).toISOString() });
+              await new Promise(r => setTimeout(r, 5 * 60 * 1000));
+              updateDispatch(dispatchId, { breathingUntil: undefined });
+              consecutiveErrors = 0;
+              const ctrl4 = dispatchControlsRef.current[dispatchId];
+              if (ctrl4?.isCancelled) break;
+            }
+          }
+
+          // Failure rate check (> 3% = emergency pause 15min)
+          const totalProcessed = results.sent + results.failed;
+          if (totalProcessed > 10) {
+            const failRate = (results.failed / totalProcessed) * 100;
+            if (failRate > 3) {
+              toast.warning(`⚠️ Taxa de falha ${failRate.toFixed(1)}% (> 3%). Pausa de emergência 15 minutos...`);
+              updateDispatch(dispatchId, { breathingUntil: new Date(Date.now() + 15 * 60 * 1000).toISOString() });
+              for (let w = 0; w < 30; w++) {
+                const c = dispatchControlsRef.current[dispatchId];
+                if (c?.isCancelled) break;
+                await new Promise(r => setTimeout(r, 30000));
+              }
+              updateDispatch(dispatchId, { breathingUntil: undefined });
+              const c5 = dispatchControlsRef.current[dispatchId];
+              if (c5?.isCancelled) break;
+            }
+          }
+
+          updateDispatch(dispatchId, {
+            current: results.sent + results.failed,
+            sent: results.sent,
+            failed: results.failed,
+            errors: [...results.errors],
+          });
+
+          // Phase progression
+          const phase = SMART_PHASES[currentPhase];
+          if (msgsInCurrentPhase >= phase.msgsInPhase && currentPhase < SMART_PHASES.length - 1) {
+            currentPhase++;
+            msgsInCurrentPhase = 0;
+            toast.info(`📈 Avançando para fase "${SMART_PHASES[currentPhase].name}"`);
+          }
+
+          // Breathing pauses
+          if (totalSentInSession > 0 && totalSentInSession % 80 === 0) {
+            // Long breathing every 80 msgs: 5-10 min
+            const longPause = randomBetween(5, 10) * 60 * 1000;
+            toast.info(`🫁 Pausa longa de ${Math.round(longPause / 60000)} minutos (proteção anti-padrão)...`);
+            updateDispatch(dispatchId, { breathingUntil: new Date(Date.now() + longPause).toISOString() });
+            for (let w = 0; w < Math.ceil(longPause / 30000); w++) {
+              const c = dispatchControlsRef.current[dispatchId];
+              if (c?.isCancelled) break;
+              await new Promise(r => setTimeout(r, 30000));
+            }
+            updateDispatch(dispatchId, { breathingUntil: undefined });
+          } else if (totalSentInSession > 0 && totalSentInSession % 20 === 0) {
+            // Short breathing every 20 msgs: 2-4 min
+            const shortPause = randomBetween(2, 4) * 60 * 1000;
+            toast.info(`🫁 Pausa de ${Math.round(shortPause / 60000)} minutos (comportamento natural)...`);
+            updateDispatch(dispatchId, { breathingUntil: new Date(Date.now() + shortPause).toISOString() });
+            for (let w = 0; w < Math.ceil(shortPause / 30000); w++) {
+              const c = dispatchControlsRef.current[dispatchId];
+              if (c?.isCancelled) break;
+              await new Promise(r => setTimeout(r, 30000));
+            }
+            updateDispatch(dispatchId, { breathingUntil: undefined });
+          }
+
+          // Delay between messages (phase-based)
+          if (i < contactIds.length - 1 && !ctrl?.isCancelled) {
+            const currentPh = SMART_PHASES[currentPhase];
+            const delaySeconds = randomBetween(currentPh.minDelay, currentPh.maxDelay);
+            const delayMs = delaySeconds * 1000;
+
+            const nextAt = new Date(Date.now() + delayMs).toISOString();
+            updateDispatch(dispatchId, { nextSendAt: nextAt });
+
+            for (let s = 0; s < Math.ceil(delayMs / 500); s++) {
+              const c = dispatchControlsRef.current[dispatchId];
+              if (c?.isCancelled || c?.isPaused) break;
+              await new Promise(r => setTimeout(r, 500));
+            }
+            updateDispatch(dispatchId, { nextSendAt: undefined });
+          }
+        }
+
+        const ctrl = dispatchControlsRef.current[dispatchId];
+        if (ctrl?.isCancelled) {
+          toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas`);
+        } else if (results.failed > 0) {
+          toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas`);
+        } else {
+          toast.success(`✅ Disparo inteligente concluído — ${results.sent} enviados!`);
+        }
+      } catch (err: any) {
+        toast.error("Erro no disparo", { description: err.message });
+      } finally {
+        updateDispatch(dispatchId, { isFinished: true });
+        delete dispatchControlsRef.current[dispatchId];
+        refreshLists();
+      }
+    })();
+
+    toast.info("🧠 Disparo inteligente iniciado!");
+  };
+
   const manualFinished = manualContacts.length > 0 && manualIndex >= manualContacts.length;
   const currentManualContact = manualContacts[manualIndex] || null;
 
