@@ -1490,9 +1490,9 @@ export default function OperatorDisparosPage() {
                                 Iniciar Disparo Inteligente ({listContactCount} contatos)
                               </Button>
                             </div>
-                          )
+                          )}
 
-                          {/* Auto mode */}
+
                           {dispatchMode === "auto" && (
                             <div className="space-y-3">
                               <div className="space-y-2">
