@@ -783,7 +783,7 @@ export default function OperatorDisparosPage() {
               msgsInCurrentPhase = 0;
               toast.warning(`🚨 3 erros consecutivos! Cooldown 5 min + voltando para "${SMART_PHASES[currentPhase].name}"...`);
               updateDispatch(dispatchId, { breathingUntil: new Date(Date.now() + 5 * 60 * 1000).toISOString() });
-              await new Promise(r => setTimeout(r, 5 * 60 * 1000));
+              await resilientDelay(5 * 60 * 1000, () => dispatchControlsRef.current[dispatchId], 10000);
               updateDispatch(dispatchId, { breathingUntil: undefined });
               consecutiveErrors = 0;
               const ctrl4 = dispatchControlsRef.current[dispatchId];
