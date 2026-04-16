@@ -970,6 +970,16 @@ export default function OperatorDisparosPage() {
                             )}
                           </div>
                           <Progress value={progress} className="h-2" />
+                          {/* Countdown to next send */}
+                          {dispatch.nextSendAt && !dispatch.isFinished && !dispatch.isPaused && (
+                            <DispatchNextSendCountdown nextSendAt={dispatch.nextSendAt} />
+                          )}
+                          {dispatch.breathingUntil && !dispatch.isFinished && (
+                            <div className="flex items-center gap-1.5 text-xs text-amber-500">
+                              <Coffee className="h-3 w-3 animate-pulse" />
+                              <span>Pausa de respiração...</span>
+                            </div>
+                          )}
                           <div className="flex justify-between text-xs text-muted-foreground">
                             <span>{dispatch.sent} enviados · {dispatch.failed} falhas</span>
                             <span>{Math.round(progress)}% ({dispatch.current}/{dispatch.total})</span>
