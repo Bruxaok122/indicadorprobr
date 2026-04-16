@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { resilientDelay } from "@/lib/resilientDelay";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -473,11 +474,8 @@ export default function OperatorDisparosPage() {
               nextSendAt: nextAt,
             });
 
-            for (let s = 0; s < Math.ceil(delayMs / 500); s++) {
-              const c = dispatchControlsRef.current[dispatchId];
-              if (c?.isCancelled || c?.isPaused) break;
-              await new Promise(r => setTimeout(r, 500));
-            }
+            const waited = await resilientDelay(delayMs, () => dispatchControlsRef.current[dispatchId]);
+            if (!waited) break;
 
             // Clear nextSendAt after delay
             updateDispatch(dispatchId, { nextSendAt: undefined });
@@ -722,12 +720,8 @@ export default function OperatorDisparosPage() {
               breathingUntil: new Date(Date.now() + waitMinutes * 60 * 1000).toISOString(),
             });
 
-            // Wait in 30s chunks to check for cancel
-            for (let w = 0; w < waitMinutes * 2; w++) {
-              const c = dispatchControlsRef.current[dispatchId];
-              if (c?.isCancelled) break;
-              await new Promise(r => setTimeout(r, 30000));
-            }
+            // Wait using wall-clock time
+            await resilientDelay(waitMinutes * 60 * 1000, () => dispatchControlsRef.current[dispatchId], 10000);
             updateDispatch(dispatchId, { breathingUntil: undefined });
             const c2 = dispatchControlsRef.current[dispatchId];
             if (c2?.isCancelled) break;
@@ -789,7 +783,7 @@ export default function OperatorDisparosPage() {
               msgsInCurrentPhase = 0;
               toast.warning(`🚨 3 erros consecutivos! Cooldown 5 min + voltando para "${SMART_PHASES[currentPhase].name}"...`);
               updateDispatch(dispatchId, { breathingUntil: new Date(Date.now() + 5 * 60 * 1000).toISOString() });
-              await new Promise(r => setTimeout(r, 5 * 60 * 1000));
+              await resilientDelay(5 * 60 * 1000, () => dispatchControlsRef.current[dispatchId], 10000);
               updateDispatch(dispatchId, { breathingUntil: undefined });
               consecutiveErrors = 0;
               const ctrl4 = dispatchControlsRef.current[dispatchId];
@@ -804,11 +798,7 @@ export default function OperatorDisparosPage() {
             if (failRate > 3) {
               toast.warning(`⚠️ Taxa de falha ${failRate.toFixed(1)}% (> 3%). Pausa de emergência 15 minutos...`);
               updateDispatch(dispatchId, { breathingUntil: new Date(Date.now() + 15 * 60 * 1000).toISOString() });
-              for (let w = 0; w < 30; w++) {
-                const c = dispatchControlsRef.current[dispatchId];
-                if (c?.isCancelled) break;
-                await new Promise(r => setTimeout(r, 30000));
-              }
+              const emergencyWaited = await resilientDelay(15 * 60 * 1000, () => dispatchControlsRef.current[dispatchId], 10000);
               updateDispatch(dispatchId, { breathingUntil: undefined });
               const c5 = dispatchControlsRef.current[dispatchId];
               if (c5?.isCancelled) break;
@@ -835,11 +825,7 @@ export default function OperatorDisparosPage() {
             const pauseMs = 2 * 60 * 1000;
             toast.info(`🫁 Pausa de 2 minutos a cada 30 mensagens (proteção anti-bloqueio)...`);
             updateDispatch(dispatchId, { breathingUntil: new Date(Date.now() + pauseMs).toISOString() });
-            for (let w = 0; w < 4; w++) {
-              const c = dispatchControlsRef.current[dispatchId];
-              if (c?.isCancelled) break;
-              await new Promise(r => setTimeout(r, 30000));
-            }
+            await resilientDelay(pauseMs, () => dispatchControlsRef.current[dispatchId], 10000);
             updateDispatch(dispatchId, { breathingUntil: undefined });
           }
 
@@ -852,11 +838,8 @@ export default function OperatorDisparosPage() {
             const nextAt = new Date(Date.now() + delayMs).toISOString();
             updateDispatch(dispatchId, { nextSendAt: nextAt });
 
-            for (let s = 0; s < Math.ceil(delayMs / 500); s++) {
-              const c = dispatchControlsRef.current[dispatchId];
-              if (c?.isCancelled || c?.isPaused) break;
-              await new Promise(r => setTimeout(r, 500));
-            }
+            const waited = await resilientDelay(delayMs, () => dispatchControlsRef.current[dispatchId]);
+            if (!waited) break;
             updateDispatch(dispatchId, { nextSendAt: undefined });
           }
         }
