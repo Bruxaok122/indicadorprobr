@@ -22,7 +22,7 @@ import {
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs";
-import { Upload, Send, List, Trash2, Pause, Play, XCircle, FileText, Phone, Radio, SkipForward, Hand, CheckCircle, X, ChevronRight, ChevronLeft, Plus, Clock, AlertCircle, Eye, Users, ShieldCheck, Brain, Zap, Shield } from "lucide-react";
+import { Upload, Send, List, Trash2, Pause, Play, XCircle, FileText, Phone, Radio, SkipForward, Hand, CheckCircle, X, ChevronRight, ChevronLeft, Plus, Clock, AlertCircle, Eye, Users, ShieldCheck, Brain, Zap, Shield, Coffee, Timer } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useContacts } from "@/hooks/useContacts";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
@@ -144,6 +144,32 @@ const CONTACT_FIELD_OPTIONS = [
   { value: "cpf", label: "CPF" },
   { value: "valor_da_causa", label: "Valor da Causa" },
 ];
+
+function DispatchNextSendCountdown({ nextSendAt }: { nextSendAt: string }) {
+  const [remaining, setRemaining] = useState("");
+
+  useEffect(() => {
+    const update = () => {
+      const ms = new Date(nextSendAt).getTime() - Date.now();
+      if (ms <= 0) { setRemaining(""); return; }
+      const mins = Math.floor(ms / 60000);
+      const secs = Math.floor((ms % 60000) / 1000);
+      setRemaining(`${mins}:${secs.toString().padStart(2, "0")}`);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [nextSendAt]);
+
+  if (!remaining) return null;
+
+  return (
+    <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
+      <Timer className="h-3 w-3 animate-pulse" />
+      <span>Próximo envio em <span className="font-mono tabular-nums">{remaining}</span></span>
+    </div>
+  );
+}
 
 export default function OperatorDisparosPage() {
   const { user, profile } = useAuthContext();
@@ -970,6 +996,16 @@ export default function OperatorDisparosPage() {
                             )}
                           </div>
                           <Progress value={progress} className="h-2" />
+                          {/* Countdown to next send */}
+                          {dispatch.nextSendAt && !dispatch.isFinished && !dispatch.isPaused && (
+                            <DispatchNextSendCountdown nextSendAt={dispatch.nextSendAt} />
+                          )}
+                          {dispatch.breathingUntil && !dispatch.isFinished && (
+                            <div className="flex items-center gap-1.5 text-xs text-amber-500">
+                              <Coffee className="h-3 w-3 animate-pulse" />
+                              <span>Pausa de respiração...</span>
+                            </div>
+                          )}
                           <div className="flex justify-between text-xs text-muted-foreground">
                             <span>{dispatch.sent} enviados · {dispatch.failed} falhas</span>
                             <span>{Math.round(progress)}% ({dispatch.current}/{dispatch.total})</span>
