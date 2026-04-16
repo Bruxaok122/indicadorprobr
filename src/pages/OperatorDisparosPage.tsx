@@ -720,12 +720,8 @@ export default function OperatorDisparosPage() {
               breathingUntil: new Date(Date.now() + waitMinutes * 60 * 1000).toISOString(),
             });
 
-            // Wait in 30s chunks to check for cancel
-            for (let w = 0; w < waitMinutes * 2; w++) {
-              const c = dispatchControlsRef.current[dispatchId];
-              if (c?.isCancelled) break;
-              await new Promise(r => setTimeout(r, 30000));
-            }
+            // Wait using wall-clock time
+            await resilientDelay(waitMinutes * 60 * 1000, () => dispatchControlsRef.current[dispatchId], 10000);
             updateDispatch(dispatchId, { breathingUntil: undefined });
             const c2 = dispatchControlsRef.current[dispatchId];
             if (c2?.isCancelled) break;
