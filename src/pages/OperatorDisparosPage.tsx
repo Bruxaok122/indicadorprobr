@@ -473,11 +473,8 @@ export default function OperatorDisparosPage() {
               nextSendAt: nextAt,
             });
 
-            for (let s = 0; s < Math.ceil(delayMs / 500); s++) {
-              const c = dispatchControlsRef.current[dispatchId];
-              if (c?.isCancelled || c?.isPaused) break;
-              await new Promise(r => setTimeout(r, 500));
-            }
+            const waited = await resilientDelay(delayMs, () => dispatchControlsRef.current[dispatchId]);
+            if (!waited) break;
 
             // Clear nextSendAt after delay
             updateDispatch(dispatchId, { nextSendAt: undefined });
@@ -852,11 +849,8 @@ export default function OperatorDisparosPage() {
             const nextAt = new Date(Date.now() + delayMs).toISOString();
             updateDispatch(dispatchId, { nextSendAt: nextAt });
 
-            for (let s = 0; s < Math.ceil(delayMs / 500); s++) {
-              const c = dispatchControlsRef.current[dispatchId];
-              if (c?.isCancelled || c?.isPaused) break;
-              await new Promise(r => setTimeout(r, 500));
-            }
+            const waited = await resilientDelay(delayMs, () => dispatchControlsRef.current[dispatchId]);
+            if (!waited) break;
             updateDispatch(dispatchId, { nextSendAt: undefined });
           }
         }

@@ -591,11 +591,8 @@ export default function AdminDisparosPage() {
             const jitterMs = Math.floor(baseDelayMs * (0.05 + Math.random() * 0.20));
             const turboDelayMs = baseDelayMs + jitterMs;
             if (i < remainingIds.length && !ctrl?.isCancelled) {
-              for (let s = 0; s < Math.ceil(turboDelayMs / 500); s++) {
-                const c = dispatchControlsRef.current[dispatchId];
-                if (c?.isCancelled || c?.isPaused) break;
-                await new Promise((r) => setTimeout(r, 500));
-              }
+              const waited = await resilientDelay(turboDelayMs, () => dispatchControlsRef.current[dispatchId]);
+              if (!waited) break;
             }
           }
         } else if (capturedMode === "individual") {
@@ -726,11 +723,8 @@ export default function AdminDisparosPage() {
               const [pMin, pMax] = getProgressiveDelay(blocksCompleted, ANTI_BAN_MIN_DELAY_MS, ANTI_BAN_MAX_DELAY_MS);
               const antiBanDelayMs = randomBetween(pMin, Math.min(pMax, 15000));
               const delayMs = Math.max(userDelayMs, antiBanDelayMs);
-              for (let s = 0; s < Math.ceil(delayMs / 500); s++) {
-                const c = dispatchControlsRef.current[dispatchId];
-                if (c?.isCancelled || c?.isPaused) break;
-                await new Promise((r) => setTimeout(r, 500));
-              }
+              const waited = await resilientDelay(delayMs, () => dispatchControlsRef.current[dispatchId]);
+              if (!waited) break;
             }
           }
         } else {
