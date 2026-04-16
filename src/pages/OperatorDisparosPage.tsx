@@ -145,6 +145,32 @@ const CONTACT_FIELD_OPTIONS = [
   { value: "valor_da_causa", label: "Valor da Causa" },
 ];
 
+function DispatchNextSendCountdown({ nextSendAt }: { nextSendAt: string }) {
+  const [remaining, setRemaining] = useState("");
+
+  useEffect(() => {
+    const update = () => {
+      const ms = new Date(nextSendAt).getTime() - Date.now();
+      if (ms <= 0) { setRemaining(""); return; }
+      const mins = Math.floor(ms / 60000);
+      const secs = Math.floor((ms % 60000) / 1000);
+      setRemaining(`${mins}:${secs.toString().padStart(2, "0")}`);
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [nextSendAt]);
+
+  if (!remaining) return null;
+
+  return (
+    <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
+      <Timer className="h-3 w-3 animate-pulse" />
+      <span>Próximo envio em <span className="font-mono tabular-nums">{remaining}</span></span>
+    </div>
+  );
+}
+
 export default function OperatorDisparosPage() {
   const { user, profile } = useAuthContext();
   const { importContacts, isImporting } = useContacts();
