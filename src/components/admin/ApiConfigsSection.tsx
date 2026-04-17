@@ -24,7 +24,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, CheckCircle2, XCircle, RefreshCw, Radio, Zap, Signal, SignalHigh, SignalMedium, SignalLow } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, XCircle, RefreshCw, Radio, Zap, Signal, SignalHigh, SignalMedium, SignalLow, Gauge } from "lucide-react";
+import { getTierConfig } from "@/lib/tierLimits";
 
 export function ApiConfigsSection() {
   const {
