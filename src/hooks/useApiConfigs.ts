@@ -124,6 +124,9 @@ export function useApiConfigs() {
         }
       }
 
+      // Detect messaging tier from Meta
+      const { tier, quality } = await fetchPhoneTier(params.access_token, params.phone_number_id);
+
       const { data, error } = await supabase
         .from("api_configs" as any)
         .insert({
@@ -134,6 +137,9 @@ export function useApiConfigs() {
           is_active: params.setActive ?? false,
           is_validated: isValidated,
           status_message: statusMessage,
+          messaging_tier: tier,
+          quality_rating: quality,
+          tier_updated_at: tier ? new Date().toISOString() : null,
         } as any)
         .select()
         .single();
