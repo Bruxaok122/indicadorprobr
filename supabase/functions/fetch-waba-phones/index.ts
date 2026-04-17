@@ -57,8 +57,8 @@ serve(async (req) => {
       );
     }
 
-    // Fetch phone numbers from Meta WABA API
-    const phonesUrl = `https://graph.facebook.com/v18.0/${config.waba_id}/phone_numbers?fields=id,display_phone_number,verified_name,quality_rating`;
+    // Fetch phone numbers from Meta WABA API (include messaging tier)
+    const phonesUrl = `https://graph.facebook.com/v21.0/${config.waba_id}/phone_numbers?fields=id,display_phone_number,verified_name,quality_rating,messaging_limit_tier,throughput`;
 
     console.log("Fetching WABA phone numbers from Meta API...");
 
@@ -77,11 +77,14 @@ serve(async (req) => {
     }
 
     // Map and upsert phone numbers
+    const nowIso = new Date().toISOString();
     const phones = (result.data || []).map((phone: any) => ({
       phone_number_id: phone.id,
       display_phone_number: phone.display_phone_number,
       verified_name: phone.verified_name || null,
       quality_rating: phone.quality_rating || null,
+      messaging_tier: phone.messaging_limit_tier || phone.throughput?.level || null,
+      tier_updated_at: (phone.messaging_limit_tier || phone.throughput?.level) ? nowIso : null,
       is_active: true,
     }));
 
