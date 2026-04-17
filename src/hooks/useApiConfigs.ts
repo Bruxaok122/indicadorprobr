@@ -12,8 +12,36 @@ export interface ApiConfig {
   is_active: boolean;
   is_validated: boolean;
   status_message: string | null;
+  messaging_tier: string | null;
+  quality_rating: string | null;
+  tier_updated_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Fetch the messaging tier (TIER_50, TIER_250, TIER_1K…) for a given phone_number_id.
+ * Uses Graph API field `messaging_limit_tier`. Returns null on failure.
+ */
+async function fetchPhoneTier(
+  accessToken: string,
+  phoneNumberId: string
+): Promise<{ tier: string | null; quality: string | null }> {
+  if (!phoneNumberId) return { tier: null, quality: null };
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${phoneNumberId}?fields=messaging_limit_tier,quality_rating,throughput`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (!res.ok) return { tier: null, quality: null };
+    const data = await res.json();
+    return {
+      tier: data?.messaging_limit_tier || data?.throughput?.level || null,
+      quality: data?.quality_rating || null,
+    };
+  } catch {
+    return { tier: null, quality: null };
+  }
 }
 
 export function useApiConfigs() {
