@@ -1434,7 +1434,20 @@ export default function OperatorDisparosPage() {
                           {/* Mode selection */}
                           <div className="space-y-2">
                             <Label>Modo de Disparo</Label>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                onClick={() => setDispatchMode("tier")}
+                                className={cn(
+                                  "flex flex-col items-center gap-1 rounded-lg border p-3 text-center transition-all",
+                                  dispatchMode === "tier"
+                                    ? "border-primary bg-primary/10 ring-2 ring-primary/30"
+                                    : "hover:bg-muted/50"
+                                )}
+                              >
+                                <Zap className="h-5 w-5 text-primary" />
+                                <span className="text-xs font-semibold">Auto-Tier ⚡</span>
+                                <span className="text-[10px] text-muted-foreground leading-tight">Velocidade máx. segura</span>
+                              </button>
                               <button
                                 onClick={() => setDispatchMode("smart")}
                                 className={cn(
@@ -1476,6 +1489,49 @@ export default function OperatorDisparosPage() {
                               </button>
                             </div>
                           </div>
+
+                          {/* Auto-Tier mode: detects tier of selected number and uses safe max speed */}
+                          {dispatchMode === "tier" && (() => {
+                            const tCfg = getTierConfig(selectedPhoneData?.messaging_tier);
+                            const intervalLabel = tCfg.recommendedIntervalSec >= 60
+                              ? `${Math.round(tCfg.recommendedIntervalSec / 60)} min`
+                              : `${tCfg.recommendedIntervalSec}s`;
+                            const isUnknown = !selectedPhoneData?.messaging_tier;
+                            return (
+                              <div className="space-y-3">
+                                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Zap className="h-4 w-4 text-primary" />
+                                    <span className="text-sm font-semibold">Modo Auto-Tier ⚡</span>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground space-y-1">
+                                    <p>
+                                      Tier detectado: <strong className="text-foreground">{tCfg.label}</strong>
+                                      {isUnknown && <span className="text-amber-500"> (sincronize os números para detectar)</span>}
+                                    </p>
+                                    <p>
+                                      Limite Meta: <strong className="text-foreground">{tCfg.dailyCap === Number.MAX_SAFE_INTEGER ? "ilimitado" : `${tCfg.dailyCap.toLocaleString('pt-BR')} msgs/24h`}</strong>
+                                    </p>
+                                    <p>
+                                      Intervalo aplicado: <strong className="text-primary">{intervalLabel}</strong> entre mensagens (70% do limite, com jitter anti-ban)
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                  onClick={() => {
+                                    setIntervalSeconds(tCfg.recommendedIntervalSec);
+                                    setTimeout(() => handleSend(), 50);
+                                  }}
+                                  disabled={!selectedTemplate || !selectedList || listContactCount === 0}
+                                  className="w-full"
+                                  size="lg"
+                                >
+                                  <Zap className="mr-2 h-4 w-4" />
+                                  Iniciar Auto-Tier — {intervalLabel} ({listContactCount} contatos)
+                                </Button>
+                              </div>
+                            );
+                          })()}
 
                           {/* Smart mode info + button */}
                           {dispatchMode === "smart" && (
