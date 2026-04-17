@@ -12,8 +12,36 @@ export interface ApiConfig {
   is_active: boolean;
   is_validated: boolean;
   status_message: string | null;
+  messaging_tier: string | null;
+  quality_rating: string | null;
+  tier_updated_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Fetch the messaging tier (TIER_50, TIER_250, TIER_1K…) for a given phone_number_id.
+ * Uses Graph API field `messaging_limit_tier`. Returns null on failure.
+ */
+async function fetchPhoneTier(
+  accessToken: string,
+  phoneNumberId: string
+): Promise<{ tier: string | null; quality: string | null }> {
+  if (!phoneNumberId) return { tier: null, quality: null };
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v21.0/${phoneNumberId}?fields=messaging_limit_tier,quality_rating,throughput`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    if (!res.ok) return { tier: null, quality: null };
+    const data = await res.json();
+    return {
+      tier: data?.messaging_limit_tier || data?.throughput?.level || null,
+      quality: data?.quality_rating || null,
+    };
+  } catch {
+    return { tier: null, quality: null };
+  }
 }
 
 export function useApiConfigs() {
@@ -96,6 +124,9 @@ export function useApiConfigs() {
         }
       }
 
+      // Detect messaging tier from Meta
+      const { tier, quality } = await fetchPhoneTier(params.access_token, params.phone_number_id);
+
       const { data, error } = await supabase
         .from("api_configs" as any)
         .insert({
@@ -106,6 +137,9 @@ export function useApiConfigs() {
           is_active: params.setActive ?? false,
           is_validated: isValidated,
           status_message: statusMessage,
+          messaging_tier: tier,
+          quality_rating: quality,
+          tier_updated_at: tier ? new Date().toISOString() : null,
         } as any)
         .select()
         .single();
@@ -239,13 +273,23 @@ export function useApiConfigs() {
         }
       }
 
+      // Refresh tier on revalidation too
+      const { tier, quality } = await fetchPhoneTier(config.access_token, config.phone_number_id);
+
+      const updatePayload: any = { is_validated: isValidated, status_message: statusMessage };
+      if (tier) {
+        updatePayload.messaging_tier = tier;
+        updatePayload.quality_rating = quality;
+        updatePayload.tier_updated_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from("api_configs" as any)
-        .update({ is_validated: isValidated, status_message: statusMessage } as any)
+        .update(updatePayload)
         .eq("id", configId);
 
       if (error) throw error;
-      return { isValidated, statusMessage };
+      return { isValidated, statusMessage, tier };
     },
     onSuccess: (result) => {
       if (result.isValidated) {

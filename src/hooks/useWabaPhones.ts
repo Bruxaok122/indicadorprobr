@@ -11,6 +11,8 @@ export interface WabaPhoneNumber {
   quality_rating: string | null;
   is_active: boolean;
   lawyer_name?: string | null;
+  messaging_tier?: string | null;
+  tier_updated_at?: string | null;
 }
 
 export function useWabaPhones() {

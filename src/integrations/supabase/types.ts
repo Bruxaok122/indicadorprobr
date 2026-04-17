@@ -185,9 +185,12 @@ export type Database = {
           id: string
           is_active: boolean
           is_validated: boolean
+          messaging_tier: string | null
           name: string
           phone_number_id: string
+          quality_rating: string | null
           status_message: string | null
+          tier_updated_at: string | null
           updated_at: string
           waba_id: string
         }
@@ -197,9 +200,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_validated?: boolean
+          messaging_tier?: string | null
           name: string
           phone_number_id: string
+          quality_rating?: string | null
           status_message?: string | null
+          tier_updated_at?: string | null
           updated_at?: string
           waba_id: string
         }
@@ -209,9 +215,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_validated?: boolean
+          messaging_tier?: string | null
           name?: string
           phone_number_id?: string
+          quality_rating?: string | null
           status_message?: string | null
+          tier_updated_at?: string | null
           updated_at?: string
           waba_id?: string
         }
@@ -722,8 +731,10 @@ export type Database = {
           id: string
           is_active: boolean
           lawyer_name: string | null
+          messaging_tier: string | null
           phone_number_id: string
           quality_rating: string | null
+          tier_updated_at: string | null
           updated_at: string
           verified_name: string | null
         }
@@ -735,8 +746,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           lawyer_name?: string | null
+          messaging_tier?: string | null
           phone_number_id: string
           quality_rating?: string | null
+          tier_updated_at?: string | null
           updated_at?: string
           verified_name?: string | null
         }
@@ -748,8 +761,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           lawyer_name?: string | null
+          messaging_tier?: string | null
           phone_number_id?: string
           quality_rating?: string | null
+          tier_updated_at?: string | null
           updated_at?: string
           verified_name?: string | null
         }
