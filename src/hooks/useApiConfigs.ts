@@ -273,13 +273,23 @@ export function useApiConfigs() {
         }
       }
 
+      // Refresh tier on revalidation too
+      const { tier, quality } = await fetchPhoneTier(config.access_token, config.phone_number_id);
+
+      const updatePayload: any = { is_validated: isValidated, status_message: statusMessage };
+      if (tier) {
+        updatePayload.messaging_tier = tier;
+        updatePayload.quality_rating = quality;
+        updatePayload.tier_updated_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from("api_configs" as any)
-        .update({ is_validated: isValidated, status_message: statusMessage } as any)
+        .update(updatePayload)
         .eq("id", configId);
 
       if (error) throw error;
-      return { isValidated, statusMessage };
+      return { isValidated, statusMessage, tier };
     },
     onSuccess: (result) => {
       if (result.isValidated) {
