@@ -180,7 +180,7 @@ export function ApiConfigsSection() {
                   {/* Real Meta Quality Rating */}
                   {config.status_message && (() => {
                     const qMatch = config.status_message.match(/Qualidade:\s*(GREEN|YELLOW|RED|LOW|MEDIUM|HIGH|N\/A)/i);
-                    const quality = qMatch?.[1]?.toUpperCase();
+                    const quality = qMatch?.[1]?.toUpperCase() || config.quality_rating?.toUpperCase();
                     if (!quality || quality === "N/A") return null;
                     const qConfig = quality === "GREEN" || quality === "HIGH"
                       ? { label: "Quality: Alta", className: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30", icon: SignalHigh }
@@ -192,6 +192,26 @@ export function ApiConfigsSection() {
                       <Badge variant="outline" className={`${qConfig.className} gap-1`}>
                         <QIcon className="h-3.5 w-3.5" />
                         {qConfig.label}
+                      </Badge>
+                    );
+                  })()}
+                  {/* Messaging Tier Badge */}
+                  {(() => {
+                    const tCfg = getTierConfig(config.messaging_tier);
+                    const variantClass = {
+                      success: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30",
+                      primary: "bg-primary/10 text-primary border-primary/30",
+                      warning: "bg-amber-500/10 text-amber-500 border-amber-500/30",
+                      destructive: "bg-destructive/10 text-destructive border-destructive/30",
+                      muted: "bg-muted text-muted-foreground border-border",
+                    }[tCfg.variant];
+                    const intervalLabel = tCfg.recommendedIntervalSec >= 60
+                      ? `${Math.round(tCfg.recommendedIntervalSec / 60)}min`
+                      : `${tCfg.recommendedIntervalSec}s`;
+                    return (
+                      <Badge variant="outline" className={`${variantClass} gap-1`} title={`Limite Meta: ${tCfg.dailyCap === Number.MAX_SAFE_INTEGER ? "ilimitado" : tCfg.dailyCap + "/24h"} • Intervalo seguro: ${intervalLabel}`}>
+                        <Gauge className="h-3.5 w-3.5" />
+                        {tCfg.label}{config.messaging_tier ? ` • ${intervalLabel}` : ""}
                       </Badge>
                     );
                   })()}
