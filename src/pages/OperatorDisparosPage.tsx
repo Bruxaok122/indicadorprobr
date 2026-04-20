@@ -1658,6 +1658,19 @@ export default function OperatorDisparosPage() {
                             <Label>Modo de Disparo</Label>
                             <div className="grid grid-cols-2 gap-2">
                               <button
+                                onClick={() => setDispatchMode("conservative")}
+                                className={cn(
+                                  "flex flex-col items-center gap-1 rounded-lg border p-3 text-center transition-all",
+                                  dispatchMode === "conservative"
+                                    ? "border-primary bg-primary/10 ring-2 ring-primary/30"
+                                    : "hover:bg-muted/50"
+                                )}
+                              >
+                                <Shield className="h-5 w-5 text-emerald-500" />
+                                <span className="text-xs font-semibold">Conservador 🛡️</span>
+                                <span className="text-[10px] text-muted-foreground leading-tight">Máxima segurança</span>
+                              </button>
+                              <button
                                 onClick={() => setDispatchMode("tier")}
                                 className={cn(
                                   "flex flex-col items-center gap-1 rounded-lg border p-3 text-center transition-all",
