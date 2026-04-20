@@ -1725,6 +1725,57 @@ export default function OperatorDisparosPage() {
                             </div>
                           </div>
 
+                          {/* Conservative mode: ultra-safe, 2x tier interval, strict 9-17h, 40% cap */}
+                          {dispatchMode === "conservative" && (() => {
+                            const tCfg = getTierConfig(selectedPhoneData?.messaging_tier);
+                            const safeIntervalSec = Math.max(tCfg.recommendedIntervalSec * 2, 90);
+                            const intervalLabel = safeIntervalSec >= 60
+                              ? `${Math.round(safeIntervalSec / 60)} min`
+                              : `${safeIntervalSec}s`;
+                            const dailyCap = tCfg.dailyCap === Number.MAX_SAFE_INTEGER
+                              ? 5000
+                              : Math.max(Math.floor(tCfg.dailyCap * 0.4), 20);
+                            const planned = Math.min(dailyCap, listContactCount);
+                            const isUnknown = !selectedPhoneData?.messaging_tier;
+                            return (
+                              <div className="space-y-3">
+                                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4 text-emerald-500" />
+                                    <span className="text-sm font-semibold">Modo Conservador 🛡️</span>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground space-y-1">
+                                    <p>
+                                      Tier detectado: <strong className="text-foreground">{tCfg.label}</strong>
+                                      {isUnknown && <span className="text-amber-500"> (sincronize os números para detectar)</span>}
+                                    </p>
+                                    <p>
+                                      Intervalo aplicado: <strong className="text-emerald-500">{intervalLabel}</strong> entre mensagens (2× o intervalo seguro do tier + jitter 10-30%)
+                                    </p>
+                                    <p>
+                                      Limite diário: <strong className="text-foreground">{dailyCap.toLocaleString('pt-BR')} envios</strong> (40% da cota Meta)
+                                    </p>
+                                  </div>
+                                  <ul className="text-xs text-muted-foreground space-y-1 pl-4 list-disc pt-1">
+                                    <li>Pausa de <strong>4 minutos</strong> a cada 30 mensagens</li>
+                                    <li>Janela estrita: <strong>09:00 às 17:00 BRT</strong></li>
+                                    <li>Circuit breaker imediato em qualquer erro de bloqueio</li>
+                                    <li>Pausa de 20min se taxa de falha &gt; 2%</li>
+                                  </ul>
+                                </div>
+                                <Button
+                                  onClick={handleConservativeSend}
+                                  disabled={!selectedTemplate || !selectedList || listContactCount === 0}
+                                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  size="lg"
+                                >
+                                  <Shield className="mr-2 h-4 w-4" />
+                                  Iniciar Modo Conservador — {intervalLabel} ({planned} contatos)
+                                </Button>
+                              </div>
+                            );
+                          })()}
+
                           {/* Auto-Tier mode: detects tier of selected number and uses safe max speed */}
                           {dispatchMode === "tier" && (() => {
                             const tCfg = getTierConfig(selectedPhoneData?.messaging_tier);
