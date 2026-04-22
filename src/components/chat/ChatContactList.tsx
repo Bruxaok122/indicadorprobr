@@ -106,9 +106,13 @@ export function ChatContactList({
 
   const filteredContacts = contacts
     .filter((contact) => {
+      if (activeTab === "compartilhados") {
+        return (contact as any).dispatch_mode === "shared" && !(contact as any).claimed_by;
+      }
       if (activeTab === "ia_ativa") return contact.ai_enabled;
-      // Exclude AI-attended contacts from other tabs
+      // Exclude AI-attended and unclaimed shared contacts from other tabs
       if (contact.ai_enabled) return false;
+      if ((contact as any).dispatch_mode === "shared" && !(contact as any).claimed_by) return false;
       return contact.status === activeTab;
     })
     .filter((contact) => {
@@ -116,10 +120,8 @@ export function ChatContactList({
       return contact.name.toLowerCase().includes(q) || contact.phone.includes(search);
     })
     .sort((a, b) => {
-      // Priority contacts always on top
       if (a.is_priority && !b.is_priority) return -1;
       if (!a.is_priority && b.is_priority) return 1;
-      // In IA Ativa tab, sort by stage progress (most advanced first)
       if (activeTab === "ia_ativa") {
         const stageOrder: Record<string, number> = {
           compliance_confirmado: 5,
@@ -136,9 +138,10 @@ export function ChatContactList({
     });
 
   const tabCounts = {
-    aguardando: contacts.filter((c) => c.status === "aguardando").length,
-    respondido: contacts.filter((c) => c.status === "respondido").length,
+    aguardando: contacts.filter((c) => c.status === "aguardando" && !((c as any).dispatch_mode === "shared" && !(c as any).claimed_by) && !c.ai_enabled).length,
+    respondido: contacts.filter((c) => c.status === "respondido" && !((c as any).dispatch_mode === "shared" && !(c as any).claimed_by) && !c.ai_enabled).length,
     ia_ativa: contacts.filter((c) => c.ai_enabled).length,
+    compartilhados: contacts.filter((c) => (c as any).dispatch_mode === "shared" && !(c as any).claimed_by).length,
   };
 
   return (
