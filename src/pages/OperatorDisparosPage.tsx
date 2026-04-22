@@ -1658,6 +1658,36 @@ export default function OperatorDisparosPage() {
                             )}
                           </div>
 
+                          {/* Shared dispatch toggle: contatos vão para todos os operadores até alguém assumir */}
+                          <button
+                            type="button"
+                            onClick={() => setSharedDispatch((v) => !v)}
+                            className={cn(
+                              "w-full flex items-start gap-3 rounded-lg border p-3 text-left transition-all",
+                              sharedDispatch
+                                ? "border-violet bg-violet/10 ring-2 ring-violet/30"
+                                : "border-border hover:bg-muted/50"
+                            )}
+                          >
+                            <div className={cn(
+                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                              sharedDispatch ? "bg-violet text-white" : "bg-muted text-muted-foreground"
+                            )}>
+                              <Users className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold">Disparo Compartilhado 👥</span>
+                                {sharedDispatch && (
+                                  <span className="inline-flex items-center rounded-full bg-violet/20 px-1.5 py-0 text-[10px] font-bold text-violet">ATIVO</span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                                Os contatos aparecerão para todos os operadores em modo leitura. O primeiro a clicar em "Assumir Conversa" (após o cliente responder ao template) trava o atendimento.
+                              </p>
+                            </div>
+                          </button>
+
                           {/* Mode selection */}
                           <div className="space-y-2">
                             <Label>Modo de Disparo</Label>
