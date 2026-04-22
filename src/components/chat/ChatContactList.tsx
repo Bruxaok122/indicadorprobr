@@ -379,15 +379,25 @@ export function ChatContactList({
                       <p className="text-xs text-muted-foreground truncate min-w-0">
                         {contact.last_message_preview || contact.phone}
                       </p>
-                      <span className={cn(
-                        "shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap",
-                        contact.status === "aguardando" && "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-                        contact.status === "respondido" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-                        contact.status === "encerrado" && "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500",
-                        contact.status === "novo" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-                      )}>
-                        {getStatusLabel(contact.status)}
-                      </span>
+                      {(contact as any).dispatch_mode === "shared" && !(contact as any).claimed_by ? (
+                        <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap bg-violet/15 text-violet">
+                          <Users className="h-2.5 w-2.5" /> Compartilhado
+                        </span>
+                      ) : (contact as any).claimed_by ? (
+                        <span className="shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                          Atribuído
+                        </span>
+                      ) : (
+                        <span className={cn(
+                          "shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap",
+                          contact.status === "aguardando" && "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+                          contact.status === "respondido" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                          contact.status === "encerrado" && "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500",
+                          contact.status === "novo" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                        )}>
+                          {getStatusLabel(contact.status)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </motion.button>
