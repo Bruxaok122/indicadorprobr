@@ -227,6 +227,7 @@ export default function AdminDisparosPage() {
   const [turboLimit, setTurboLimit] = useState(100);
   // Step 4: Responsible
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [sharedDispatch, setSharedDispatch] = useState(false);
   // Scheduling
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
@@ -368,7 +369,8 @@ export default function AdminDisparosPage() {
   };
 
   const handleSend = async () => {
-    if (!selectedTemplate || !selectedList || !selectedUserId) return;
+    if (!selectedTemplate || !selectedList) return;
+    if (!sharedDispatch && !selectedUserId) return;
     if (!user?.id) {
       toast.error("Sessão inválida, faça login novamente.", { duration: 8000 });
       return;
@@ -438,7 +440,8 @@ export default function AdminDisparosPage() {
   };
 
   const executeDispatch = async () => {
-    if (!selectedTemplate || !selectedList || !selectedUserId || !user?.id) return;
+    if (!selectedTemplate || !selectedList || !user?.id) return;
+    if (!sharedDispatch && !selectedUserId) return;
 
     // Fetch remaining contacts from the list (real-time, only pool contacts)
     const isTurbo = dispatchMode === "turbo";
@@ -458,15 +461,15 @@ export default function AdminDisparosPage() {
       contactIds.splice(ANTI_BAN_DAILY_LIMIT);
     }
 
-    const operatorProfile = users.find((u) => u.user_id === selectedUserId);
+    const operatorProfile = sharedDispatch ? null : users.find((u) => u.user_id === selectedUserId);
     const dispatchId = crypto.randomUUID();
 
     dispatchControlsRef.current[dispatchId] = { isPaused: false, isCancelled: false };
 
     const newDispatch: ActiveDispatch = {
       id: dispatchId,
-      operatorName: operatorProfile?.full_name || "Operador",
-      operatorId: selectedUserId,
+      operatorName: sharedDispatch ? "Compartilhado 👥" : (operatorProfile?.full_name || "Operador"),
+      operatorId: sharedDispatch ? (user.id as string) : selectedUserId,
       templateName: selectedTemplate.name,
       listName: selectedList,
       mode: dispatchMode,
@@ -489,6 +492,7 @@ export default function AdminDisparosPage() {
     const capturedMappings = { ...variableMappings };
     const capturedPhoneVerifiedName = phoneVerifiedName;
     const capturedMode = dispatchMode;
+    const capturedShared = sharedDispatch;
     const capturedInterval = intervalSeconds;
     const capturedListName = selectedList;
     const capturedBatchMode = batchMode;
@@ -542,10 +546,11 @@ export default function AdminDisparosPage() {
                 templateName: capturedTemplate.name,
                 templateLanguage: capturedTemplate.language,
                 userId: user?.id,
-                assignedUserId: capturedUserId,
+                assignedUserId: capturedShared ? undefined : capturedUserId,
                 selectedPhoneNumberId: capturedPhoneId || undefined,
                 variableMappings: capturedMappings,
                 phoneVerifiedName: capturedPhoneVerifiedName,
+                dispatchMode: capturedShared ? "shared" : "private",
               },
             });
 
@@ -671,10 +676,11 @@ export default function AdminDisparosPage() {
                 templateName: capturedTemplate.name,
                 templateLanguage: capturedTemplate.language,
                 userId: user?.id,
-                assignedUserId: capturedUserId,
+                assignedUserId: capturedShared ? undefined : capturedUserId,
                 selectedPhoneNumberId: capturedPhoneId || undefined,
                 variableMappings: capturedMappings,
                 phoneVerifiedName: capturedPhoneVerifiedName,
+                dispatchMode: capturedShared ? "shared" : "private",
               },
             });
 
@@ -785,10 +791,11 @@ export default function AdminDisparosPage() {
                 templateName: capturedTemplate.name,
                 templateLanguage: capturedTemplate.language,
                 userId: user?.id,
-                assignedUserId: capturedUserId,
+                assignedUserId: capturedShared ? undefined : capturedUserId,
                 selectedPhoneNumberId: capturedPhoneId || undefined,
                 variableMappings: capturedMappings,
                 phoneVerifiedName: capturedPhoneVerifiedName,
+                dispatchMode: capturedShared ? "shared" : "private",
               },
             });
 
@@ -1204,8 +1211,26 @@ export default function AdminDisparosPage() {
                   <CardDescription>Revise o resumo e dispare</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                    <SelectTrigger><SelectValue placeholder="Selecione o operador..." /></SelectTrigger>
+                  {/* 👥 Shared dispatch toggle */}
+                  <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-3 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <Label htmlFor="shared-toggle" className="text-xs font-semibold cursor-pointer flex items-center gap-1.5">
+                        Disparo Compartilhado 👥
+                        {sharedDispatch && (
+                          <span className="inline-flex items-center rounded-full bg-violet-500/20 px-1.5 py-0 text-[10px] font-bold text-violet-600 dark:text-violet-400">ATIVO</span>
+                        )}
+                      </Label>
+                      <p className="text-[10px] text-muted-foreground">
+                        Visível a todos os operadores. Quem responder primeiro assume o contato.
+                      </p>
+                    </div>
+                    <Switch id="shared-toggle" checked={sharedDispatch} onCheckedChange={setSharedDispatch} />
+                  </div>
+
+                  <Select value={selectedUserId} onValueChange={setSelectedUserId} disabled={sharedDispatch}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={sharedDispatch ? "Sem operador (compartilhado)" : "Selecione o operador..."} />
+                    </SelectTrigger>
                     <SelectContent>
                       {users.filter((u) => u.user_id !== user?.id).map((u) => (
                         <SelectItem key={u.user_id} value={u.user_id}>{u.full_name}</SelectItem>
@@ -1286,7 +1311,7 @@ export default function AdminDisparosPage() {
                       { label: "Lista", value: selectedList || "—" },
                       { label: "Contatos", value: batchMode ? `${Math.min(batchSize, listContactCount)} de ${listContactCount}` : String(listContactCount) },
                       { label: "Modo", value: dispatchMode === "turbo" ? `Turbo (limite: ${turboLimit})` : dispatchMode === "individual" ? "Individual (progressivo)" : "Lote (blocos variáveis ~20)" },
-                      { label: "Responsável", value: users.find(u => u.user_id === selectedUserId)?.full_name || "—" },
+                      { label: "Responsável", value: sharedDispatch ? "Compartilhado 👥" : (users.find(u => u.user_id === selectedUserId)?.full_name || "—") },
                       ...(isScheduled && scheduledDate ? [{ label: "📅 Agendado", value: `${format(scheduledDate, "dd/MM/yyyy")} às ${scheduledHour}:${scheduledMinute} BRT` }] : []),
                     ].map((row) => (
                       <div key={row.label} className="flex justify-between text-xs">
@@ -1314,7 +1339,7 @@ export default function AdminDisparosPage() {
                   </motion.div>
 
                   <Button className="w-full gap-2" size="lg" onClick={handleSend}
-                    disabled={!selectedTemplate || !selectedList || !selectedUserId || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId) || (isScheduled && !scheduledDate)}>
+                    disabled={!selectedTemplate || !selectedList || (!sharedDispatch && !selectedUserId) || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId) || (isScheduled && !scheduledDate)}>
                     {isScheduled ? <CalendarClock className="h-4 w-4" /> : <Send className="h-4 w-4" />}
                     {isScheduled ? `Agendar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}` : `Disparar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}`}
                   </Button>
