@@ -70,8 +70,23 @@ Deno.serve(async (req) => {
 
     // Create user
     const body = await req.json();
-    const { email, password, fullName, canUseSharedApi } = body;
-    console.log("Creating user:", { email, fullName });
+    const { email: rawEmail, password, fullName, canUseSharedApi } = body;
+
+    // Sanitize email: lowercase, trim, strip accents/diacritics, fix invalid domains
+    const stripAccents = (s: string) =>
+      s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    let email = stripAccents(String(rawEmail || "").trim().toLowerCase());
+
+    // If user typed something like "name@sys" or no domain, normalize to a valid placeholder domain
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      // Take local part (before @ if present, otherwise whole string), keep only safe chars
+      const localRaw = email.includes("@") ? email.split("@")[0] : email;
+      const local = localRaw.replace(/[^a-z0-9._-]/g, "") || "user";
+      email = `${local}@juriszap.local`;
+    }
+
+    console.log("Creating user:", { email, fullName, originalEmail: rawEmail });
 
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email,
