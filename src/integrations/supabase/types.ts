@@ -232,9 +232,12 @@ export type Database = {
           ai_stage: string | null
           api_config_id: string | null
           bank_data: Json | null
+          claimed_at: string | null
+          claimed_by: string | null
           contact_list: string | null
           cpf: string | null
           created_at: string
+          dispatch_mode: string
           dispatched_phone_number_id: string | null
           has_whatsapp: boolean | null
           id: string
@@ -257,9 +260,12 @@ export type Database = {
           ai_stage?: string | null
           api_config_id?: string | null
           bank_data?: Json | null
+          claimed_at?: string | null
+          claimed_by?: string | null
           contact_list?: string | null
           cpf?: string | null
           created_at?: string
+          dispatch_mode?: string
           dispatched_phone_number_id?: string | null
           has_whatsapp?: boolean | null
           id?: string
@@ -282,9 +288,12 @@ export type Database = {
           ai_stage?: string | null
           api_config_id?: string | null
           bank_data?: Json | null
+          claimed_at?: string | null
+          claimed_by?: string | null
           contact_list?: string | null
           cpf?: string | null
           created_at?: string
+          dispatch_mode?: string
           dispatched_phone_number_id?: string | null
           has_whatsapp?: boolean | null
           id?: string
@@ -813,6 +822,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_contact: {
+        Args: { _contact_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_write_contact: {
+        Args: { _contact_id: string; _user_id: string }
+        Returns: boolean
+      }
       clear_failed_attempts: { Args: { _user_id: string }; Returns: undefined }
       has_role: {
         Args: {
