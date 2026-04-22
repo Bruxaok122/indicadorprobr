@@ -369,7 +369,8 @@ export default function AdminDisparosPage() {
   };
 
   const handleSend = async () => {
-    if (!selectedTemplate || !selectedList || !selectedUserId) return;
+    if (!selectedTemplate || !selectedList) return;
+    if (!sharedDispatch && !selectedUserId) return;
     if (!user?.id) {
       toast.error("Sessão inválida, faça login novamente.", { duration: 8000 });
       return;
@@ -439,7 +440,8 @@ export default function AdminDisparosPage() {
   };
 
   const executeDispatch = async () => {
-    if (!selectedTemplate || !selectedList || !selectedUserId || !user?.id) return;
+    if (!selectedTemplate || !selectedList || !user?.id) return;
+    if (!sharedDispatch && !selectedUserId) return;
 
     // Fetch remaining contacts from the list (real-time, only pool contacts)
     const isTurbo = dispatchMode === "turbo";
@@ -459,15 +461,15 @@ export default function AdminDisparosPage() {
       contactIds.splice(ANTI_BAN_DAILY_LIMIT);
     }
 
-    const operatorProfile = users.find((u) => u.user_id === selectedUserId);
+    const operatorProfile = sharedDispatch ? null : users.find((u) => u.user_id === selectedUserId);
     const dispatchId = crypto.randomUUID();
 
     dispatchControlsRef.current[dispatchId] = { isPaused: false, isCancelled: false };
 
     const newDispatch: ActiveDispatch = {
       id: dispatchId,
-      operatorName: operatorProfile?.full_name || "Operador",
-      operatorId: selectedUserId,
+      operatorName: sharedDispatch ? "Compartilhado 👥" : (operatorProfile?.full_name || "Operador"),
+      operatorId: sharedDispatch ? (user.id as string) : selectedUserId,
       templateName: selectedTemplate.name,
       listName: selectedList,
       mode: dispatchMode,
