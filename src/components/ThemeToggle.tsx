@@ -33,8 +33,8 @@ export function ThemeToggle() {
     } else if (savedTheme === "light") {
       setIsDark(false);
     } else {
-      // Default to dark mode
-      setIsDark(true);
+      // Default to light mode
+      setIsDark(false);
     }
   }, []);
 
