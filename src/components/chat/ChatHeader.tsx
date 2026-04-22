@@ -1,7 +1,7 @@
 import { Contact } from "@/types/juriszap";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, Phone, Lock, LockOpen, ArrowRightLeft, ClipboardCopy, Info, Star, Bot, BotOff } from "lucide-react";
+import { ArrowLeft, Phone, Lock, LockOpen, ArrowRightLeft, ClipboardCopy, Info, Star, Bot, BotOff, Hand, Users } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { useClaimContact } from "@/hooks/useClaimContact";
 
 interface ChatHeaderProps {
   contact: Contact;
@@ -75,6 +76,11 @@ export function ChatHeader({ contact, isMobile, onBack, onToggleBlock, isTogglin
   const queryClient = useQueryClient();
   const isBlocked = contact.status === "encerrado";
   const [isTransferring, setIsTransferring] = useState(false);
+  const { claimContact, isClaiming } = useClaimContact();
+
+  const isShared = (contact as any).dispatch_mode === "shared";
+  const isUnclaimed = isShared && !(contact as any).claimed_by;
+  const isMineByClaim = isShared && (contact as any).claimed_by === user?.id;
 
   const handleCopyTemplate = async () => {
     const text = buildContactTemplate(contact, lawyerName);
