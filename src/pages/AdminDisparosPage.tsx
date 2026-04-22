@@ -546,10 +546,11 @@ export default function AdminDisparosPage() {
                 templateName: capturedTemplate.name,
                 templateLanguage: capturedTemplate.language,
                 userId: user?.id,
-                assignedUserId: capturedUserId,
+                assignedUserId: capturedShared ? undefined : capturedUserId,
                 selectedPhoneNumberId: capturedPhoneId || undefined,
                 variableMappings: capturedMappings,
                 phoneVerifiedName: capturedPhoneVerifiedName,
+                dispatchMode: capturedShared ? "shared" : "private",
               },
             });
 
@@ -675,10 +676,11 @@ export default function AdminDisparosPage() {
                 templateName: capturedTemplate.name,
                 templateLanguage: capturedTemplate.language,
                 userId: user?.id,
-                assignedUserId: capturedUserId,
+                assignedUserId: capturedShared ? undefined : capturedUserId,
                 selectedPhoneNumberId: capturedPhoneId || undefined,
                 variableMappings: capturedMappings,
                 phoneVerifiedName: capturedPhoneVerifiedName,
+                dispatchMode: capturedShared ? "shared" : "private",
               },
             });
 
@@ -789,10 +791,11 @@ export default function AdminDisparosPage() {
                 templateName: capturedTemplate.name,
                 templateLanguage: capturedTemplate.language,
                 userId: user?.id,
-                assignedUserId: capturedUserId,
+                assignedUserId: capturedShared ? undefined : capturedUserId,
                 selectedPhoneNumberId: capturedPhoneId || undefined,
                 variableMappings: capturedMappings,
                 phoneVerifiedName: capturedPhoneVerifiedName,
+                dispatchMode: capturedShared ? "shared" : "private",
               },
             });
 
