@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff, Bot } from "lucide-react";
+import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff, Bot, Users } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -13,12 +13,13 @@ import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 
-type TabFilter = "aguardando" | "respondido" | "ia_ativa";
+type TabFilter = "aguardando" | "respondido" | "ia_ativa" | "compartilhados";
 
 const tabs: { id: TabFilter; label: string; icon: React.ElementType }[] = [
   { id: "aguardando", label: "Pendentes", icon: Clock },
   { id: "respondido", label: "Respondidos", icon: CheckCircle2 },
   { id: "ia_ativa", label: "IA Ativa", icon: Bot },
+  { id: "compartilhados", label: "Compartilhados", icon: Users },
 ];
 
 interface ChatContactListProps {
