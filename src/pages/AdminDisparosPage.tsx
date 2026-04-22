@@ -1339,7 +1339,7 @@ export default function AdminDisparosPage() {
                   </motion.div>
 
                   <Button className="w-full gap-2" size="lg" onClick={handleSend}
-                    disabled={!selectedTemplate || !selectedList || !selectedUserId || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId) || (isScheduled && !scheduledDate)}>
+                    disabled={!selectedTemplate || !selectedList || (!sharedDispatch && !selectedUserId) || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId) || (isScheduled && !scheduledDate)}>
                     {isScheduled ? <CalendarClock className="h-4 w-4" /> : <Send className="h-4 w-4" />}
                     {isScheduled ? `Agendar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}` : `Disparar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}`}
                   </Button>
