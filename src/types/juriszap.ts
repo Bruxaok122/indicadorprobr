@@ -20,6 +20,10 @@ export interface Contact {
     conta?: string;
     tipo?: string;
   } | null;
+  dispatch_mode?: 'private' | 'shared';
+  claimed_by?: string | null;
+  claimed_at?: string | null;
+  user_id?: string | null;
   created_at: string;
   updated_at: string;
 }

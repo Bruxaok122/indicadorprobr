@@ -206,6 +206,7 @@ export default function OperatorDisparosPage() {
   const [smartLimit, setSmartLimit] = useState<number>(0); // 0 = sem limite
   const [minRenda, setMinRenda] = useState<string>("all");
   const [onlyVerifiedNames, setOnlyVerifiedNames] = useState(false);
+  const [sharedDispatch, setSharedDispatch] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
   const [viewingList, setViewingList] = useState<string | null>(null);
@@ -443,10 +444,11 @@ export default function OperatorDisparosPage() {
               templateName: capturedTemplate.name,
               templateLanguage: capturedTemplate.language,
               userId: user?.id,
-              assignedUserId: user?.id,
+              assignedUserId: sharedDispatch ? null : user?.id,
               selectedPhoneNumberId: capturedPhoneId || undefined,
               variableMappings: capturedMappings,
               phoneVerifiedName: capturedPhoneVerifiedName,
+              dispatchMode: sharedDispatch ? "shared" : "private",
             },
           });
 
@@ -577,10 +579,11 @@ export default function OperatorDisparosPage() {
           templateName: selectedTemplate.name,
           templateLanguage: selectedTemplate.language,
           userId: user.id,
-          assignedUserId: user.id,
+          assignedUserId: sharedDispatch ? null : user.id,
           selectedPhoneNumberId: selectedPhoneNumberId || undefined,
           variableMappings,
           phoneVerifiedName,
+          dispatchMode: sharedDispatch ? "shared" : "private",
         },
       });
 
@@ -762,10 +765,11 @@ export default function OperatorDisparosPage() {
               templateName: capturedTemplate.name,
               templateLanguage: capturedTemplate.language,
               userId: user?.id,
-              assignedUserId: user?.id,
+              assignedUserId: sharedDispatch ? null : user?.id,
               selectedPhoneNumberId: capturedPhoneId || undefined,
               variableMappings: capturedMappings,
               phoneVerifiedName: capturedPhoneVerifiedName,
+              dispatchMode: sharedDispatch ? "shared" : "private",
             },
           });
 
@@ -1006,10 +1010,11 @@ export default function OperatorDisparosPage() {
               templateName: capturedTemplate.name,
               templateLanguage: capturedTemplate.language,
               userId: user?.id,
-              assignedUserId: user?.id,
+              assignedUserId: sharedDispatch ? null : user?.id,
               selectedPhoneNumberId: capturedPhoneId || undefined,
               variableMappings: capturedMappings,
               phoneVerifiedName: capturedPhoneVerifiedName,
+              dispatchMode: sharedDispatch ? "shared" : "private",
             },
           });
 
@@ -1652,6 +1657,36 @@ export default function OperatorDisparosPage() {
                               <p className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-green-500" /><span className="font-semibold">Somente nomes verificados</span></p>
                             )}
                           </div>
+
+                          {/* Shared dispatch toggle: contatos vão para todos os operadores até alguém assumir */}
+                          <button
+                            type="button"
+                            onClick={() => setSharedDispatch((v) => !v)}
+                            className={cn(
+                              "w-full flex items-start gap-3 rounded-lg border p-3 text-left transition-all",
+                              sharedDispatch
+                                ? "border-violet bg-violet/10 ring-2 ring-violet/30"
+                                : "border-border hover:bg-muted/50"
+                            )}
+                          >
+                            <div className={cn(
+                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                              sharedDispatch ? "bg-violet text-white" : "bg-muted text-muted-foreground"
+                            )}>
+                              <Users className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold">Disparo Compartilhado 👥</span>
+                                {sharedDispatch && (
+                                  <span className="inline-flex items-center rounded-full bg-violet/20 px-1.5 py-0 text-[10px] font-bold text-violet">ATIVO</span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                                Os contatos aparecerão para todos os operadores em modo leitura. O primeiro a clicar em "Assumir Conversa" (após o cliente responder ao template) trava o atendimento.
+                              </p>
+                            </div>
+                          </button>
 
                           {/* Mode selection */}
                           <div className="space-y-2">

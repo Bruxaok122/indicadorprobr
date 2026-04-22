@@ -27,11 +27,11 @@ export function useContacts() {
         return data as Contact[];
       }
 
-      // Regular users see ONLY their own contacts
+      // Regular users see: own contacts + shared dispatched contacts not yet claimed by someone else
       const { data, error } = await supabase
         .from("contacts")
         .select("*")
-        .eq("user_id", user.id)
+        .or(`user_id.eq.${user.id},and(dispatch_mode.eq.shared,or(claimed_by.is.null,claimed_by.eq.${user.id}))`)
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
 

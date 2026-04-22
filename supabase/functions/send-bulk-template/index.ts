@@ -44,7 +44,8 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { contactIds, templateName, templateLanguage, userId, assignedUserId, selectedPhoneNumberId, variableMappings, phoneVerifiedName } = await req.json();
+    const { contactIds, templateName, templateLanguage, userId, assignedUserId, selectedPhoneNumberId, variableMappings, phoneVerifiedName, dispatchMode } = await req.json();
+    const isSharedDispatch = dispatchMode === "shared";
 
     if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
       return new Response(
@@ -183,7 +184,10 @@ serve(async (req) => {
         // Admin bulk dispatch skips phone ownership check
         // The admin has authority to reassign contacts to any operator
 
-        const effectiveUserId = contact.user_id || assignedDispatchUserId || requesterUserId || null;
+        // Em modo compartilhado: contato fica sem dono até alguém assumir
+        const effectiveUserId = isSharedDispatch
+          ? null
+          : (contact.user_id || assignedDispatchUserId || requesterUserId || null);
 
         // Build template object with personalized variables
         const templateObj: any = {
@@ -324,9 +328,22 @@ serve(async (req) => {
           status: "sent",
         });
 
+        const contactUpdate: any = {
+          status: "aguardando",
+          last_message_at: new Date().toISOString(),
+          user_id: effectiveUserId,
+          dispatched_phone_number_id: finalPhoneNumberId,
+        };
+        if (isSharedDispatch) {
+          contactUpdate.dispatch_mode = "shared";
+          contactUpdate.claimed_by = null;
+          contactUpdate.claimed_at = null;
+        } else {
+          contactUpdate.dispatch_mode = "private";
+        }
         await supabase
           .from("contacts")
-          .update({ status: "aguardando", last_message_at: new Date().toISOString(), user_id: effectiveUserId, dispatched_phone_number_id: finalPhoneNumberId })
+          .update(contactUpdate)
           .eq("id", contact.id);
 
         if (effectiveUserId) {

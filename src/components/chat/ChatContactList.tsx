@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff, Bot } from "lucide-react";
+import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff, Bot, Users } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -13,12 +13,13 @@ import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 
-type TabFilter = "aguardando" | "respondido" | "ia_ativa";
+type TabFilter = "aguardando" | "respondido" | "ia_ativa" | "compartilhados";
 
 const tabs: { id: TabFilter; label: string; icon: React.ElementType }[] = [
   { id: "aguardando", label: "Pendentes", icon: Clock },
   { id: "respondido", label: "Respondidos", icon: CheckCircle2 },
   { id: "ia_ativa", label: "IA Ativa", icon: Bot },
+  { id: "compartilhados", label: "Compartilhados", icon: Users },
 ];
 
 interface ChatContactListProps {
@@ -105,9 +106,13 @@ export function ChatContactList({
 
   const filteredContacts = contacts
     .filter((contact) => {
+      if (activeTab === "compartilhados") {
+        return (contact as any).dispatch_mode === "shared" && !(contact as any).claimed_by;
+      }
       if (activeTab === "ia_ativa") return contact.ai_enabled;
-      // Exclude AI-attended contacts from other tabs
+      // Exclude AI-attended and unclaimed shared contacts from other tabs
       if (contact.ai_enabled) return false;
+      if ((contact as any).dispatch_mode === "shared" && !(contact as any).claimed_by) return false;
       return contact.status === activeTab;
     })
     .filter((contact) => {
@@ -115,10 +120,8 @@ export function ChatContactList({
       return contact.name.toLowerCase().includes(q) || contact.phone.includes(search);
     })
     .sort((a, b) => {
-      // Priority contacts always on top
       if (a.is_priority && !b.is_priority) return -1;
       if (!a.is_priority && b.is_priority) return 1;
-      // In IA Ativa tab, sort by stage progress (most advanced first)
       if (activeTab === "ia_ativa") {
         const stageOrder: Record<string, number> = {
           compliance_confirmado: 5,
@@ -135,9 +138,10 @@ export function ChatContactList({
     });
 
   const tabCounts = {
-    aguardando: contacts.filter((c) => c.status === "aguardando").length,
-    respondido: contacts.filter((c) => c.status === "respondido").length,
+    aguardando: contacts.filter((c) => c.status === "aguardando" && !((c as any).dispatch_mode === "shared" && !(c as any).claimed_by) && !c.ai_enabled).length,
+    respondido: contacts.filter((c) => c.status === "respondido" && !((c as any).dispatch_mode === "shared" && !(c as any).claimed_by) && !c.ai_enabled).length,
     ia_ativa: contacts.filter((c) => c.ai_enabled).length,
+    compartilhados: contacts.filter((c) => (c as any).dispatch_mode === "shared" && !(c as any).claimed_by).length,
   };
 
   return (
@@ -375,15 +379,25 @@ export function ChatContactList({
                       <p className="text-xs text-muted-foreground truncate min-w-0">
                         {contact.last_message_preview || contact.phone}
                       </p>
-                      <span className={cn(
-                        "shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap",
-                        contact.status === "aguardando" && "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-                        contact.status === "respondido" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-                        contact.status === "encerrado" && "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500",
-                        contact.status === "novo" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-                      )}>
-                        {getStatusLabel(contact.status)}
-                      </span>
+                      {(contact as any).dispatch_mode === "shared" && !(contact as any).claimed_by ? (
+                        <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap bg-violet/15 text-violet">
+                          <Users className="h-2.5 w-2.5" /> Compartilhado
+                        </span>
+                      ) : (contact as any).claimed_by ? (
+                        <span className="shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                          Atribuído
+                        </span>
+                      ) : (
+                        <span className={cn(
+                          "shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap",
+                          contact.status === "aguardando" && "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+                          contact.status === "respondido" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                          contact.status === "encerrado" && "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500",
+                          contact.status === "novo" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                        )}>
+                          {getStatusLabel(contact.status)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </motion.button>
