@@ -227,6 +227,7 @@ export default function AdminDisparosPage() {
   const [turboLimit, setTurboLimit] = useState(100);
   // Step 4: Responsible
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [sharedDispatch, setSharedDispatch] = useState(false);
   // Scheduling
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
@@ -489,6 +490,7 @@ export default function AdminDisparosPage() {
     const capturedMappings = { ...variableMappings };
     const capturedPhoneVerifiedName = phoneVerifiedName;
     const capturedMode = dispatchMode;
+    const capturedShared = sharedDispatch;
     const capturedInterval = intervalSeconds;
     const capturedListName = selectedList;
     const capturedBatchMode = batchMode;
