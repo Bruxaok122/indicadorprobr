@@ -444,10 +444,11 @@ export default function OperatorDisparosPage() {
               templateName: capturedTemplate.name,
               templateLanguage: capturedTemplate.language,
               userId: user?.id,
-              assignedUserId: user?.id,
+              assignedUserId: sharedDispatch ? null : user?.id,
               selectedPhoneNumberId: capturedPhoneId || undefined,
               variableMappings: capturedMappings,
               phoneVerifiedName: capturedPhoneVerifiedName,
+              dispatchMode: sharedDispatch ? "shared" : "private",
             },
           });
 
@@ -578,10 +579,11 @@ export default function OperatorDisparosPage() {
           templateName: selectedTemplate.name,
           templateLanguage: selectedTemplate.language,
           userId: user.id,
-          assignedUserId: user.id,
+          assignedUserId: sharedDispatch ? null : user.id,
           selectedPhoneNumberId: selectedPhoneNumberId || undefined,
           variableMappings,
           phoneVerifiedName,
+          dispatchMode: sharedDispatch ? "shared" : "private",
         },
       });
 
@@ -763,10 +765,11 @@ export default function OperatorDisparosPage() {
               templateName: capturedTemplate.name,
               templateLanguage: capturedTemplate.language,
               userId: user?.id,
-              assignedUserId: user?.id,
+              assignedUserId: sharedDispatch ? null : user?.id,
               selectedPhoneNumberId: capturedPhoneId || undefined,
               variableMappings: capturedMappings,
               phoneVerifiedName: capturedPhoneVerifiedName,
+              dispatchMode: sharedDispatch ? "shared" : "private",
             },
           });
 
@@ -1007,10 +1010,11 @@ export default function OperatorDisparosPage() {
               templateName: capturedTemplate.name,
               templateLanguage: capturedTemplate.language,
               userId: user?.id,
-              assignedUserId: user?.id,
+              assignedUserId: sharedDispatch ? null : user?.id,
               selectedPhoneNumberId: capturedPhoneId || undefined,
               variableMappings: capturedMappings,
               phoneVerifiedName: capturedPhoneVerifiedName,
+              dispatchMode: sharedDispatch ? "shared" : "private",
             },
           });
 
