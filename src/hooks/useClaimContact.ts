@@ -30,16 +30,17 @@ export function useClaimContact() {
       }
 
       // Claim atômico: só atualiza se ainda não foi reivindicado
-      const { data, error } = await supabase
-        .from("contacts")
-        .update({
-          claimed_by: user.id,
-          claimed_at: new Date().toISOString(),
-          user_id: user.id,
-        } as any)
+      const updatePayload: any = {
+        claimed_by: user.id,
+        claimed_at: new Date().toISOString(),
+        user_id: user.id,
+      };
+      const { data, error } = await (supabase
+        .from("contacts") as any)
+        .update(updatePayload)
         .eq("id", contactId)
-        .eq("dispatch_mode" as any, "shared")
-        .is("claimed_by" as any, null)
+        .eq("dispatch_mode", "shared")
+        .is("claimed_by", null)
         .select()
         .maybeSingle();
 
