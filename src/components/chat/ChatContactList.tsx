@@ -4,8 +4,9 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff, Bot, Users, Hand } from "lucide-react";
+import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff, Bot, Users, Hand, X } from "lucide-react";
 import { useClaimContact } from "@/hooks/useClaimContact";
+import { useDismissContact, useDismissedContacts } from "@/hooks/useDismissContact";
 import { useAuthContext } from "@/contexts/AuthContext";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -105,12 +106,19 @@ export function ChatContactList({
 }: ChatContactListProps) {
   const { user, isAdmin } = useAuthContext();
   const { claimContact, isClaiming } = useClaimContact();
+  const { dismissContact, isDismissing } = useDismissContact();
+  const dismissedSet = useDismissedContacts();
   const [activeTab, setActiveTab] = useState<TabFilter>("aguardando");
 
   const isUnclaimedShared = (c: Contact) =>
     (c as any).dispatch_mode === "shared" && !(c as any).claimed_by;
 
-  const filteredContacts = contacts
+  // Esconde contatos compartilhados que o operador atual já dispensou
+  const visibleContacts = contacts.filter(
+    (c) => !(isUnclaimedShared(c) && dismissedSet.has(c.id))
+  );
+
+  const filteredContacts = visibleContacts
     .filter((contact) => {
       if (activeTab === "compartilhados") {
         return isUnclaimedShared(contact);
@@ -131,9 +139,9 @@ export function ChatContactList({
     });
 
   const tabCounts = {
-    aguardando: contacts.filter((c) => c.status === "aguardando" && !isUnclaimedShared(c) && !c.ai_enabled).length,
-    respondido: contacts.filter((c) => c.status === "respondido" && !isUnclaimedShared(c) && !c.ai_enabled).length,
-    compartilhados: contacts.filter((c) => isUnclaimedShared(c)).length,
+    aguardando: visibleContacts.filter((c) => c.status === "aguardando" && !isUnclaimedShared(c) && !c.ai_enabled).length,
+    respondido: visibleContacts.filter((c) => c.status === "respondido" && !isUnclaimedShared(c) && !c.ai_enabled).length,
+    compartilhados: visibleContacts.filter((c) => isUnclaimedShared(c)).length,
   };
 
   return (
@@ -319,14 +327,14 @@ export function ChatContactList({
                   exit={{ opacity: 0, x: -8 }}
                   transition={{ duration: 0.15 }}
                   className={cn(
-                    "flex w-full items-center gap-3 px-3 py-3 text-left transition-all overflow-hidden",
+                    "flex w-full items-center gap-3 px-3 py-3 text-left transition-all overflow-hidden cursor-pointer",
                     "border-b border-gray-100 dark:border-gray-800/50",
-                    !unclaimedShared && "hover:bg-gray-50 dark:hover:bg-gray-800/50 active:scale-[0.99] cursor-pointer",
+                    "hover:bg-gray-50 dark:hover:bg-gray-800/50 active:scale-[0.99]",
                     unclaimedShared && "bg-violet/5 dark:bg-violet/10",
                     isSelected && "bg-green-50 dark:bg-green-900/10 border-l-[3px] border-l-green-500",
                     contact.is_priority && !isSelected && !unclaimedShared && "bg-amber-50/60 dark:bg-amber-900/10 border-l-[3px] border-l-amber-400"
                   )}
-                  onClick={() => { if (!unclaimedShared) onSelectContact(contact.id); }}
+                  onClick={() => onSelectContact(contact.id)}
                 >
                   {/* Avatar */}
                   <div className="relative shrink-0">
@@ -394,25 +402,46 @@ export function ChatContactList({
                       )}
                     </div>
 
-                    {/* Prominent claim button for unclaimed shared contacts */}
+                    {/* Action buttons for unclaimed shared contacts */}
                     {unclaimedShared && (
-                      <button
-                        type="button"
-                        disabled={isClaiming}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          claimContact(contact.id);
-                        }}
-                        className={cn(
-                          "mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg",
-                          "bg-violet hover:bg-violet/90 active:scale-[0.98]",
-                          "text-white text-xs font-semibold py-1.5 px-3 shadow-sm transition-all",
-                          "disabled:opacity-60 disabled:cursor-not-allowed"
-                        )}
-                      >
-                        <Hand className="h-3.5 w-3.5" />
-                        {isClaiming ? "Assumindo..." : "Assumir conversa"}
-                      </button>
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={isClaiming}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            claimContact(contact.id);
+                          }}
+                          title="Assumir esta conversa"
+                          className={cn(
+                            "flex-1 flex items-center justify-center gap-1.5 rounded-lg",
+                            "bg-violet hover:bg-violet/90 active:scale-[0.98]",
+                            "text-white text-xs font-semibold py-1.5 px-2 shadow-sm transition-all",
+                            "disabled:opacity-60 disabled:cursor-not-allowed"
+                          )}
+                        >
+                          <Hand className="h-3.5 w-3.5" />
+                          {isClaiming ? "Assumindo..." : "Assumir"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isDismissing}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            dismissContact(contact.id);
+                          }}
+                          title="Dispensar — esconder esta conversa para mim"
+                          className={cn(
+                            "flex items-center justify-center gap-1.5 rounded-lg",
+                            "bg-red-500 hover:bg-red-600 active:scale-[0.98]",
+                            "text-white text-xs font-semibold py-1.5 px-3 shadow-sm transition-all",
+                            "disabled:opacity-60 disabled:cursor-not-allowed"
+                          )}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Dispensar
+                        </button>
+                      </div>
                     )}
                   </div>
                 </motion.div>

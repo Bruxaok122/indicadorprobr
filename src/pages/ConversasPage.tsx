@@ -276,6 +276,11 @@ export default function ConversasPage() {
                   messageText={messageText} setMessageText={setMessageText} canSendFreeText={canSendFreeText}
                   hasMessages={hasMessages} isSending={isSending || isSendingAudio} isMobile={isMobile}
                   templatesAvailable={templates.length > 0} isContactBlocked={selectedContact.status === "encerrado"}
+                  isReadOnly={
+                    !isAdmin &&
+                    (selectedContact as any).dispatch_mode === "shared" &&
+                    !(selectedContact as any).claimed_by
+                  }
                   onSendMessage={handleSendMessage} onOpenTemplateDialog={() => setShowTemplateDialog(true)}
                   onFileSelected={handleFileSelected}
                   onSendAudio={(blob) => {

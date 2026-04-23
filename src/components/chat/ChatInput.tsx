@@ -17,6 +17,7 @@ interface ChatInputProps {
   isMobile: boolean;
   templatesAvailable: boolean;
   isContactBlocked?: boolean;
+  isReadOnly?: boolean;
   onSendMessage: () => void;
   onOpenTemplateDialog: () => void;
   onFileSelected: (file: File) => void;
@@ -25,7 +26,7 @@ interface ChatInputProps {
 
 export function ChatInput({
   messageText, setMessageText, canSendFreeText, hasMessages, isSending, isMobile,
-  templatesAvailable, isContactBlocked, onSendMessage, onOpenTemplateDialog, onFileSelected, onSendAudio,
+  templatesAvailable, isContactBlocked, isReadOnly, onSendMessage, onOpenTemplateDialog, onFileSelected, onSendAudio,
 }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -54,6 +55,17 @@ export function ChatInput({
     el.style.height = "0px";
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
   };
+
+  if (isReadOnly) {
+    return (
+      <div className={cn("bg-card dark:bg-card border-t border-violet/15 px-3 md:px-4 py-3", isMobile && "pb-[max(0.75rem,env(safe-area-inset-bottom))]")}>
+        <div className="flex items-center justify-center gap-2 rounded-xl bg-violet/10 dark:bg-violet/20 px-3 py-3">
+          <Lock className="h-4 w-4 text-violet" />
+          <p className="text-sm font-medium text-violet">Modo leitura — assuma a conversa para responder</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isContactBlocked) {
     return (
