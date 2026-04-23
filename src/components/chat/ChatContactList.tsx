@@ -4,7 +4,9 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff, Bot, Users } from "lucide-react";
+import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff, Bot, Users, Hand } from "lucide-react";
+import { useClaimContact } from "@/hooks/useClaimContact";
+import { useAuthContext } from "@/contexts/AuthContext";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -13,13 +15,12 @@ import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 
-type TabFilter = "aguardando" | "respondido" | "ia_ativa" | "compartilhados";
+type TabFilter = "aguardando" | "respondido" | "compartilhados";
 
 const tabs: { id: TabFilter; label: string; icon: React.ElementType }[] = [
   { id: "aguardando", label: "Pendentes", icon: Clock },
   { id: "respondido", label: "Respondidos", icon: CheckCircle2 },
-  { id: "ia_ativa", label: "IA Ativa", icon: Bot },
-  { id: "compartilhados", label: "Compartilhados", icon: Users },
+  { id: "compartilhados", label: "Disponíveis", icon: Users },
 ];
 
 interface ChatContactListProps {
@@ -102,17 +103,21 @@ export function ChatContactList({
   notificationEnabled,
   onToggleNotification,
 }: ChatContactListProps) {
+  const { user, isAdmin } = useAuthContext();
+  const { claimContact, isClaiming } = useClaimContact();
   const [activeTab, setActiveTab] = useState<TabFilter>("aguardando");
+
+  const isUnclaimedShared = (c: Contact) =>
+    (c as any).dispatch_mode === "shared" && !(c as any).claimed_by;
 
   const filteredContacts = contacts
     .filter((contact) => {
       if (activeTab === "compartilhados") {
-        return (contact as any).dispatch_mode === "shared" && !(contact as any).claimed_by;
+        return isUnclaimedShared(contact);
       }
-      if (activeTab === "ia_ativa") return contact.ai_enabled;
-      // Exclude AI-attended and unclaimed shared contacts from other tabs
+      // Exclude unclaimed shared contacts from other tabs (they live in "Disponíveis")
+      if (isUnclaimedShared(contact)) return false;
       if (contact.ai_enabled) return false;
-      if ((contact as any).dispatch_mode === "shared" && !(contact as any).claimed_by) return false;
       return contact.status === activeTab;
     })
     .filter((contact) => {
@@ -122,26 +127,13 @@ export function ChatContactList({
     .sort((a, b) => {
       if (a.is_priority && !b.is_priority) return -1;
       if (!a.is_priority && b.is_priority) return 1;
-      if (activeTab === "ia_ativa") {
-        const stageOrder: Record<string, number> = {
-          compliance_confirmado: 5,
-          pronto_para_compliance: 4,
-          aguardando_confirmacao_chamada: 3,
-          aguardando_dados_bancarios: 2,
-          aguardando_confirmacao_doc: 1,
-        };
-        const aStage = stageOrder[(a as any).ai_stage || ""] || 0;
-        const bStage = stageOrder[(b as any).ai_stage || ""] || 0;
-        if (bStage !== aStage) return bStage - aStage;
-      }
       return 0;
     });
 
   const tabCounts = {
-    aguardando: contacts.filter((c) => c.status === "aguardando" && !((c as any).dispatch_mode === "shared" && !(c as any).claimed_by) && !c.ai_enabled).length,
-    respondido: contacts.filter((c) => c.status === "respondido" && !((c as any).dispatch_mode === "shared" && !(c as any).claimed_by) && !c.ai_enabled).length,
-    ia_ativa: contacts.filter((c) => c.ai_enabled).length,
-    compartilhados: contacts.filter((c) => (c as any).dispatch_mode === "shared" && !(c as any).claimed_by).length,
+    aguardando: contacts.filter((c) => c.status === "aguardando" && !isUnclaimedShared(c) && !c.ai_enabled).length,
+    respondido: contacts.filter((c) => c.status === "respondido" && !isUnclaimedShared(c) && !c.ai_enabled).length,
+    compartilhados: contacts.filter((c) => isUnclaimedShared(c)).length,
   };
 
   return (
@@ -319,20 +311,22 @@ export function ChatContactList({
           <AnimatePresence mode="popLayout">
             {filteredContacts.map((contact, index) => {
               const isSelected = selectedContactId === contact.id;
+              const unclaimedShared = isUnclaimedShared(contact);
               return (
-                <motion.button
+                <motion.div
                   key={contact.id}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -8 }}
                   transition={{ duration: 0.15 }}
-                  onClick={() => onSelectContact(contact.id)}
                   className={cn(
                     "flex w-full items-center gap-3 px-3 py-3 text-left transition-all overflow-hidden",
-                    "hover:bg-gray-50 dark:hover:bg-gray-800/50 active:scale-[0.99]",
                     "border-b border-gray-100 dark:border-gray-800/50",
+                    !unclaimedShared && "hover:bg-gray-50 dark:hover:bg-gray-800/50 active:scale-[0.99] cursor-pointer",
+                    unclaimedShared && "bg-violet/5 dark:bg-violet/10",
                     isSelected && "bg-green-50 dark:bg-green-900/10 border-l-[3px] border-l-green-500",
-                    contact.is_priority && !isSelected && "bg-amber-50/60 dark:bg-amber-900/10 border-l-[3px] border-l-amber-400"
+                    contact.is_priority && !isSelected && !unclaimedShared && "bg-amber-50/60 dark:bg-amber-900/10 border-l-[3px] border-l-amber-400"
                   )}
+                  onClick={() => { if (!unclaimedShared) onSelectContact(contact.id); }}
                 >
                   {/* Avatar */}
                   <div className="relative shrink-0">
@@ -379,13 +373,13 @@ export function ChatContactList({
                       <p className="text-xs text-muted-foreground truncate min-w-0">
                         {contact.last_message_preview || contact.phone}
                       </p>
-                      {(contact as any).dispatch_mode === "shared" && !(contact as any).claimed_by ? (
+                      {unclaimedShared ? (
                         <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap bg-violet/15 text-violet">
-                          <Users className="h-2.5 w-2.5" /> Compartilhado
+                          <Users className="h-2.5 w-2.5" /> Disponível
                         </span>
                       ) : (contact as any).claimed_by ? (
                         <span className="shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                          Atribuído
+                          {(contact as any).claimed_by === user?.id ? "Meu atendimento" : "Em atendimento"}
                         </span>
                       ) : (
                         <span className={cn(
@@ -399,8 +393,29 @@ export function ChatContactList({
                         </span>
                       )}
                     </div>
+
+                    {/* Prominent claim button for unclaimed shared contacts */}
+                    {unclaimedShared && (
+                      <button
+                        type="button"
+                        disabled={isClaiming}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          claimContact(contact.id);
+                        }}
+                        className={cn(
+                          "mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg",
+                          "bg-violet hover:bg-violet/90 active:scale-[0.98]",
+                          "text-white text-xs font-semibold py-1.5 px-3 shadow-sm transition-all",
+                          "disabled:opacity-60 disabled:cursor-not-allowed"
+                        )}
+                      >
+                        <Hand className="h-3.5 w-3.5" />
+                        {isClaiming ? "Assumindo..." : "Assumir conversa"}
+                      </button>
+                    )}
                   </div>
-                </motion.button>
+                </motion.div>
               );
             })}
           </AnimatePresence>
