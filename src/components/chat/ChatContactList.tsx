@@ -356,7 +356,7 @@ export function ChatContactList({
                   </div>
 
                   {/* Info */}
-                  <div className="min-w-0 flex-1 overflow-hidden">
+                  <div className="w-0 flex-1 overflow-hidden">
                     <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                       <p className="min-w-0 truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                         {contact.name}
@@ -406,7 +406,7 @@ export function ChatContactList({
 
                     {/* Action buttons for unclaimed shared contacts */}
                     {unclaimedShared && (
-                      <div className="mt-2 flex min-w-0 items-center gap-1.5">
+                      <div className="mt-2 grid w-full min-w-0 grid-cols-2 gap-1.5">
                         <button
                           type="button"
                           disabled={isClaiming}
@@ -416,7 +416,7 @@ export function ChatContactList({
                           }}
                           title="Assumir esta conversa"
                           className={cn(
-                            "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg",
+                            "flex min-w-0 w-full items-center justify-center gap-1.5 rounded-lg",
                             "bg-violet hover:bg-violet/90 active:scale-[0.98]",
                             "text-white text-xs font-semibold py-1.5 px-2 shadow-sm transition-all",
                             "disabled:opacity-60 disabled:cursor-not-allowed"
@@ -434,14 +434,14 @@ export function ChatContactList({
                           }}
                           title="Dispensar — esconder esta conversa para mim"
                           className={cn(
-                            "flex shrink-0 items-center justify-center gap-1.5 rounded-lg",
+                            "flex min-w-0 w-full items-center justify-center gap-1.5 rounded-lg",
                             "bg-red-500 hover:bg-red-600 active:scale-[0.98]",
-                            "text-white text-xs font-semibold py-1.5 px-3 shadow-sm transition-all",
+                            "text-white text-xs font-semibold py-1.5 px-2 shadow-sm transition-all",
                             "disabled:opacity-60 disabled:cursor-not-allowed"
                           )}
                         >
                           <X className="h-3.5 w-3.5" />
-                          Dispensar
+                          <span className="truncate">Dispensar</span>
                         </button>
                       </div>
                     )}
