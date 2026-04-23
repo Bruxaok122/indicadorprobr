@@ -56,6 +56,7 @@ export default function ConversasPage() {
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
   const [isTogglingAI, setIsTogglingAI] = useState(false);
   const lastSeenMessageAtRef = useRef<number | null>(null);
+  const lastSelectedIncomingMessageRef = useRef<string | null>(null);
 
   const {
     messages, isLoading: messagesLoading, sendMessage, isSending, canSendFreeText, hasMessages, sendAudio, isSendingAudio, deleteMessage,
@@ -127,6 +128,26 @@ export default function ConversasPage() {
       playNotification();
     }
   }, [contacts, playNotification]);
+
+  useEffect(() => {
+    if (!selectedContactId || !messages || messages.length === 0) return;
+
+    const lastIncoming = [...messages]
+      .reverse()
+      .find((message) => message.direction === "incoming");
+
+    if (!lastIncoming) return;
+
+    if (lastSelectedIncomingMessageRef.current === null) {
+      lastSelectedIncomingMessageRef.current = lastIncoming.id;
+      return;
+    }
+
+    if (lastIncoming.id !== lastSelectedIncomingMessageRef.current) {
+      lastSelectedIncomingMessageRef.current = lastIncoming.id;
+      playNotification();
+    }
+  }, [messages, playNotification, selectedContactId]);
 
   const handleToggleAI = async (contactId: string, enabled: boolean) => {
     setIsTogglingAI(true);
