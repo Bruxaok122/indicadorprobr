@@ -17,6 +17,7 @@ interface ChatInputProps {
   isMobile: boolean;
   templatesAvailable: boolean;
   isContactBlocked?: boolean;
+  isReadOnly?: boolean;
   onSendMessage: () => void;
   onOpenTemplateDialog: () => void;
   onFileSelected: (file: File) => void;
@@ -25,7 +26,7 @@ interface ChatInputProps {
 
 export function ChatInput({
   messageText, setMessageText, canSendFreeText, hasMessages, isSending, isMobile,
-  templatesAvailable, isContactBlocked, onSendMessage, onOpenTemplateDialog, onFileSelected, onSendAudio,
+  templatesAvailable, isContactBlocked, isReadOnly, onSendMessage, onOpenTemplateDialog, onFileSelected, onSendAudio,
 }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
