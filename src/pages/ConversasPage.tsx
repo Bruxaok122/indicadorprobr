@@ -55,7 +55,7 @@ export default function ConversasPage() {
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
   const [isTogglingAI, setIsTogglingAI] = useState(false);
-  const prevIncomingCountRef = useRef<number | null>(null);
+  const lastSeenMessageAtRef = useRef<number | null>(null);
 
   const {
     messages, isLoading: messagesLoading, sendMessage, isSending, canSendFreeText, hasMessages, sendAudio, isSendingAudio, deleteMessage,
@@ -110,13 +110,22 @@ export default function ConversasPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContactId]);
 
-  // Play notification sound when a contact moves to "respondido" (client replied)
+  // Play notification whenever any contact receives a newer inbound message
   useEffect(() => {
-    const respondidoCount = contacts.filter(c => c.status === "respondido").length;
-    if (prevIncomingCountRef.current !== null && respondidoCount > prevIncomingCountRef.current) {
+    if (!contacts || contacts.length === 0) return;
+    const maxTs = contacts.reduce((acc, c) => {
+      const t = c.last_message_at ? new Date(c.last_message_at).getTime() : 0;
+      return t > acc ? t : acc;
+    }, 0);
+    if (lastSeenMessageAtRef.current === null) {
+      // First load: just baseline, don't play
+      lastSeenMessageAtRef.current = maxTs;
+      return;
+    }
+    if (maxTs > lastSeenMessageAtRef.current) {
+      lastSeenMessageAtRef.current = maxTs;
       playNotification();
     }
-    prevIncomingCountRef.current = respondidoCount;
   }, [contacts, playNotification]);
 
   const handleToggleAI = async (contactId: string, enabled: boolean) => {
