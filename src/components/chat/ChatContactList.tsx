@@ -4,7 +4,9 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff, Bot, Users } from "lucide-react";
+import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff, Bot, Users, Hand } from "lucide-react";
+import { useClaimContact } from "@/hooks/useClaimContact";
+import { useAuthContext } from "@/contexts/AuthContext";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -13,13 +15,12 @@ import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 
-type TabFilter = "aguardando" | "respondido" | "ia_ativa" | "compartilhados";
+type TabFilter = "aguardando" | "respondido" | "compartilhados";
 
 const tabs: { id: TabFilter; label: string; icon: React.ElementType }[] = [
   { id: "aguardando", label: "Pendentes", icon: Clock },
   { id: "respondido", label: "Respondidos", icon: CheckCircle2 },
-  { id: "ia_ativa", label: "IA Ativa", icon: Bot },
-  { id: "compartilhados", label: "Compartilhados", icon: Users },
+  { id: "compartilhados", label: "Disponíveis", icon: Users },
 ];
 
 interface ChatContactListProps {
@@ -102,17 +103,21 @@ export function ChatContactList({
   notificationEnabled,
   onToggleNotification,
 }: ChatContactListProps) {
+  const { user, isAdmin } = useAuthContext();
+  const { claimContact, isClaiming } = useClaimContact();
   const [activeTab, setActiveTab] = useState<TabFilter>("aguardando");
+
+  const isUnclaimedShared = (c: Contact) =>
+    (c as any).dispatch_mode === "shared" && !(c as any).claimed_by;
 
   const filteredContacts = contacts
     .filter((contact) => {
       if (activeTab === "compartilhados") {
-        return (contact as any).dispatch_mode === "shared" && !(contact as any).claimed_by;
+        return isUnclaimedShared(contact);
       }
-      if (activeTab === "ia_ativa") return contact.ai_enabled;
-      // Exclude AI-attended and unclaimed shared contacts from other tabs
+      // Exclude unclaimed shared contacts from other tabs (they live in "Disponíveis")
+      if (isUnclaimedShared(contact)) return false;
       if (contact.ai_enabled) return false;
-      if ((contact as any).dispatch_mode === "shared" && !(contact as any).claimed_by) return false;
       return contact.status === activeTab;
     })
     .filter((contact) => {
@@ -122,26 +127,13 @@ export function ChatContactList({
     .sort((a, b) => {
       if (a.is_priority && !b.is_priority) return -1;
       if (!a.is_priority && b.is_priority) return 1;
-      if (activeTab === "ia_ativa") {
-        const stageOrder: Record<string, number> = {
-          compliance_confirmado: 5,
-          pronto_para_compliance: 4,
-          aguardando_confirmacao_chamada: 3,
-          aguardando_dados_bancarios: 2,
-          aguardando_confirmacao_doc: 1,
-        };
-        const aStage = stageOrder[(a as any).ai_stage || ""] || 0;
-        const bStage = stageOrder[(b as any).ai_stage || ""] || 0;
-        if (bStage !== aStage) return bStage - aStage;
-      }
       return 0;
     });
 
   const tabCounts = {
-    aguardando: contacts.filter((c) => c.status === "aguardando" && !((c as any).dispatch_mode === "shared" && !(c as any).claimed_by) && !c.ai_enabled).length,
-    respondido: contacts.filter((c) => c.status === "respondido" && !((c as any).dispatch_mode === "shared" && !(c as any).claimed_by) && !c.ai_enabled).length,
-    ia_ativa: contacts.filter((c) => c.ai_enabled).length,
-    compartilhados: contacts.filter((c) => (c as any).dispatch_mode === "shared" && !(c as any).claimed_by).length,
+    aguardando: contacts.filter((c) => c.status === "aguardando" && !isUnclaimedShared(c) && !c.ai_enabled).length,
+    respondido: contacts.filter((c) => c.status === "respondido" && !isUnclaimedShared(c) && !c.ai_enabled).length,
+    compartilhados: contacts.filter((c) => isUnclaimedShared(c)).length,
   };
 
   return (
