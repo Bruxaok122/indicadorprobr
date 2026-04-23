@@ -311,20 +311,22 @@ export function ChatContactList({
           <AnimatePresence mode="popLayout">
             {filteredContacts.map((contact, index) => {
               const isSelected = selectedContactId === contact.id;
+              const unclaimedShared = isUnclaimedShared(contact);
               return (
-                <motion.button
+                <motion.div
                   key={contact.id}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -8 }}
                   transition={{ duration: 0.15 }}
-                  onClick={() => onSelectContact(contact.id)}
                   className={cn(
                     "flex w-full items-center gap-3 px-3 py-3 text-left transition-all overflow-hidden",
-                    "hover:bg-gray-50 dark:hover:bg-gray-800/50 active:scale-[0.99]",
                     "border-b border-gray-100 dark:border-gray-800/50",
+                    !unclaimedShared && "hover:bg-gray-50 dark:hover:bg-gray-800/50 active:scale-[0.99] cursor-pointer",
+                    unclaimedShared && "bg-violet/5 dark:bg-violet/10",
                     isSelected && "bg-green-50 dark:bg-green-900/10 border-l-[3px] border-l-green-500",
-                    contact.is_priority && !isSelected && "bg-amber-50/60 dark:bg-amber-900/10 border-l-[3px] border-l-amber-400"
+                    contact.is_priority && !isSelected && !unclaimedShared && "bg-amber-50/60 dark:bg-amber-900/10 border-l-[3px] border-l-amber-400"
                   )}
+                  onClick={() => { if (!unclaimedShared) onSelectContact(contact.id); }}
                 >
                   {/* Avatar */}
                   <div className="relative shrink-0">
@@ -371,13 +373,13 @@ export function ChatContactList({
                       <p className="text-xs text-muted-foreground truncate min-w-0">
                         {contact.last_message_preview || contact.phone}
                       </p>
-                      {(contact as any).dispatch_mode === "shared" && !(contact as any).claimed_by ? (
+                      {unclaimedShared ? (
                         <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap bg-violet/15 text-violet">
-                          <Users className="h-2.5 w-2.5" /> Compartilhado
+                          <Users className="h-2.5 w-2.5" /> Disponível
                         </span>
                       ) : (contact as any).claimed_by ? (
                         <span className="shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                          Atribuído
+                          {(contact as any).claimed_by === user?.id ? "Meu atendimento" : "Em atendimento"}
                         </span>
                       ) : (
                         <span className={cn(
@@ -391,8 +393,29 @@ export function ChatContactList({
                         </span>
                       )}
                     </div>
+
+                    {/* Prominent claim button for unclaimed shared contacts */}
+                    {unclaimedShared && (
+                      <button
+                        type="button"
+                        disabled={isClaiming}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          claimContact(contact.id);
+                        }}
+                        className={cn(
+                          "mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg",
+                          "bg-violet hover:bg-violet/90 active:scale-[0.98]",
+                          "text-white text-xs font-semibold py-1.5 px-3 shadow-sm transition-all",
+                          "disabled:opacity-60 disabled:cursor-not-allowed"
+                        )}
+                      >
+                        <Hand className="h-3.5 w-3.5" />
+                        {isClaiming ? "Assumindo..." : "Assumir conversa"}
+                      </button>
+                    )}
                   </div>
-                </motion.button>
+                </motion.div>
               );
             })}
           </AnimatePresence>
