@@ -327,14 +327,14 @@ export function ChatContactList({
                   exit={{ opacity: 0, x: -8 }}
                   transition={{ duration: 0.15 }}
                   className={cn(
-                    "flex w-full items-center gap-3 px-3 py-3 text-left transition-all overflow-hidden",
+                    "flex w-full items-center gap-3 px-3 py-3 text-left transition-all overflow-hidden cursor-pointer",
                     "border-b border-gray-100 dark:border-gray-800/50",
-                    !unclaimedShared && "hover:bg-gray-50 dark:hover:bg-gray-800/50 active:scale-[0.99] cursor-pointer",
+                    "hover:bg-gray-50 dark:hover:bg-gray-800/50 active:scale-[0.99]",
                     unclaimedShared && "bg-violet/5 dark:bg-violet/10",
                     isSelected && "bg-green-50 dark:bg-green-900/10 border-l-[3px] border-l-green-500",
                     contact.is_priority && !isSelected && !unclaimedShared && "bg-amber-50/60 dark:bg-amber-900/10 border-l-[3px] border-l-amber-400"
                   )}
-                  onClick={() => { if (!unclaimedShared) onSelectContact(contact.id); }}
+                  onClick={() => onSelectContact(contact.id)}
                 >
                   {/* Avatar */}
                   <div className="relative shrink-0">
