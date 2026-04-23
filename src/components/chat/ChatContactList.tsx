@@ -356,16 +356,14 @@ export function ChatContactList({
                   </div>
 
                   {/* Info */}
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 overflow-hidden">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
-                          {contact.name}
-                          {contact.whatsapp_profile_name && contact.whatsapp_profile_name.toLowerCase() !== contact.name.toLowerCase() && (
-                            <span className="text-[11px] font-normal text-muted-foreground/70"> - ~{contact.whatsapp_profile_name}</span>
-                          )}
-                        </p>
-                      </div>
+                      <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-0 flex-1">
+                        {contact.name}
+                        {contact.whatsapp_profile_name && contact.whatsapp_profile_name.toLowerCase() !== contact.name.toLowerCase() && (
+                          <span className="text-[11px] font-normal text-muted-foreground/70"> - ~{contact.whatsapp_profile_name}</span>
+                        )}
+                      </p>
                       {contact.last_message_at && (
                         <span className={cn(
                           "shrink-0 text-[11px] whitespace-nowrap",
@@ -377,21 +375,20 @@ export function ChatContactList({
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-xs text-muted-foreground truncate min-w-0">
-                        {contact.last_message_preview || contact.phone}
-                      </p>
+
+                    {/* Tag entre nome e preview */}
+                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                       {unclaimedShared ? (
-                        <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap bg-violet/15 text-violet">
+                        <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap bg-violet/15 text-violet">
                           <Users className="h-2.5 w-2.5" /> Disponível
                         </span>
                       ) : (contact as any).claimed_by ? (
-                        <span className="shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                           {(contact as any).claimed_by === user?.id ? "Meu atendimento" : "Em atendimento"}
                         </span>
                       ) : (
                         <span className={cn(
-                          "shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap",
+                          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap",
                           contact.status === "aguardando" && "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
                           contact.status === "respondido" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
                           contact.status === "encerrado" && "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500",
@@ -401,6 +398,11 @@ export function ChatContactList({
                         </span>
                       )}
                     </div>
+
+                    {/* Preview da última mensagem - truncado, nunca ultrapassa */}
+                    <p className="mt-0.5 text-xs text-muted-foreground truncate w-full">
+                      {contact.last_message_preview || contact.phone}
+                    </p>
 
                     {/* Action buttons for unclaimed shared contacts */}
                     {unclaimedShared && (
