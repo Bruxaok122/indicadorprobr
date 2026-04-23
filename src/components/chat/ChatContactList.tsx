@@ -106,12 +106,19 @@ export function ChatContactList({
 }: ChatContactListProps) {
   const { user, isAdmin } = useAuthContext();
   const { claimContact, isClaiming } = useClaimContact();
+  const { dismissContact, isDismissing } = useDismissContact();
+  const dismissedSet = useDismissedContacts();
   const [activeTab, setActiveTab] = useState<TabFilter>("aguardando");
 
   const isUnclaimedShared = (c: Contact) =>
     (c as any).dispatch_mode === "shared" && !(c as any).claimed_by;
 
-  const filteredContacts = contacts
+  // Esconde contatos compartilhados que o operador atual já dispensou
+  const visibleContacts = contacts.filter(
+    (c) => !(isUnclaimedShared(c) && dismissedSet.has(c.id))
+  );
+
+  const filteredContacts = visibleContacts
     .filter((contact) => {
       if (activeTab === "compartilhados") {
         return isUnclaimedShared(contact);
@@ -132,9 +139,9 @@ export function ChatContactList({
     });
 
   const tabCounts = {
-    aguardando: contacts.filter((c) => c.status === "aguardando" && !isUnclaimedShared(c) && !c.ai_enabled).length,
-    respondido: contacts.filter((c) => c.status === "respondido" && !isUnclaimedShared(c) && !c.ai_enabled).length,
-    compartilhados: contacts.filter((c) => isUnclaimedShared(c)).length,
+    aguardando: visibleContacts.filter((c) => c.status === "aguardando" && !isUnclaimedShared(c) && !c.ai_enabled).length,
+    respondido: visibleContacts.filter((c) => c.status === "respondido" && !isUnclaimedShared(c) && !c.ai_enabled).length,
+    compartilhados: visibleContacts.filter((c) => isUnclaimedShared(c)).length,
   };
 
   return (
