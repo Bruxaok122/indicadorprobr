@@ -402,25 +402,46 @@ export function ChatContactList({
                       )}
                     </div>
 
-                    {/* Prominent claim button for unclaimed shared contacts */}
+                    {/* Action buttons for unclaimed shared contacts */}
                     {unclaimedShared && (
-                      <button
-                        type="button"
-                        disabled={isClaiming}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          claimContact(contact.id);
-                        }}
-                        className={cn(
-                          "mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg",
-                          "bg-violet hover:bg-violet/90 active:scale-[0.98]",
-                          "text-white text-xs font-semibold py-1.5 px-3 shadow-sm transition-all",
-                          "disabled:opacity-60 disabled:cursor-not-allowed"
-                        )}
-                      >
-                        <Hand className="h-3.5 w-3.5" />
-                        {isClaiming ? "Assumindo..." : "Assumir conversa"}
-                      </button>
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={isClaiming}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            claimContact(contact.id);
+                          }}
+                          title="Assumir esta conversa"
+                          className={cn(
+                            "flex-1 flex items-center justify-center gap-1.5 rounded-lg",
+                            "bg-violet hover:bg-violet/90 active:scale-[0.98]",
+                            "text-white text-xs font-semibold py-1.5 px-2 shadow-sm transition-all",
+                            "disabled:opacity-60 disabled:cursor-not-allowed"
+                          )}
+                        >
+                          <Hand className="h-3.5 w-3.5" />
+                          {isClaiming ? "Assumindo..." : "Assumir"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isDismissing}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            dismissContact(contact.id);
+                          }}
+                          title="Dispensar — esconder esta conversa para mim"
+                          className={cn(
+                            "flex items-center justify-center gap-1.5 rounded-lg",
+                            "bg-red-500 hover:bg-red-600 active:scale-[0.98]",
+                            "text-white text-xs font-semibold py-1.5 px-3 shadow-sm transition-all",
+                            "disabled:opacity-60 disabled:cursor-not-allowed"
+                          )}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Dispensar
+                        </button>
+                      </div>
                     )}
                   </div>
                 </motion.div>
