@@ -357,8 +357,8 @@ export function ChatContactList({
 
                   {/* Info */}
                   <div className="min-w-0 flex-1 overflow-hidden">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-0 flex-1">
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                      <p className="min-w-0 truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                         {contact.name}
                         {contact.whatsapp_profile_name && contact.whatsapp_profile_name.toLowerCase() !== contact.name.toLowerCase() && (
                           <span className="text-[11px] font-normal text-muted-foreground/70"> - ~{contact.whatsapp_profile_name}</span>
@@ -377,7 +377,7 @@ export function ChatContactList({
                     </div>
 
                     {/* Tag entre nome e preview */}
-                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                    <div className="mt-1 flex min-w-0 items-center gap-1.5 flex-wrap">
                       {unclaimedShared ? (
                         <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap bg-violet/15 text-violet">
                           <Users className="h-2.5 w-2.5" /> Disponível
@@ -400,13 +400,13 @@ export function ChatContactList({
                     </div>
 
                     {/* Preview da última mensagem - truncado, nunca ultrapassa */}
-                    <p className="mt-0.5 text-xs text-muted-foreground truncate w-full">
+                    <p className="mt-0.5 block w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted-foreground">
                       {contact.last_message_preview || contact.phone}
                     </p>
 
                     {/* Action buttons for unclaimed shared contacts */}
                     {unclaimedShared && (
-                      <div className="mt-2 flex items-center gap-1.5">
+                      <div className="mt-2 flex min-w-0 items-center gap-1.5">
                         <button
                           type="button"
                           disabled={isClaiming}
@@ -416,14 +416,14 @@ export function ChatContactList({
                           }}
                           title="Assumir esta conversa"
                           className={cn(
-                            "flex-1 flex items-center justify-center gap-1.5 rounded-lg",
+                            "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg",
                             "bg-violet hover:bg-violet/90 active:scale-[0.98]",
                             "text-white text-xs font-semibold py-1.5 px-2 shadow-sm transition-all",
                             "disabled:opacity-60 disabled:cursor-not-allowed"
                           )}
                         >
                           <Hand className="h-3.5 w-3.5" />
-                          {isClaiming ? "Assumindo..." : "Assumir"}
+                          <span className="truncate">{isClaiming ? "Assumindo..." : "Assumir"}</span>
                         </button>
                         <button
                           type="button"
@@ -434,7 +434,7 @@ export function ChatContactList({
                           }}
                           title="Dispensar — esconder esta conversa para mim"
                           className={cn(
-                            "flex items-center justify-center gap-1.5 rounded-lg",
+                            "flex shrink-0 items-center justify-center gap-1.5 rounded-lg",
                             "bg-red-500 hover:bg-red-600 active:scale-[0.98]",
                             "text-white text-xs font-semibold py-1.5 px-3 shadow-sm transition-all",
                             "disabled:opacity-60 disabled:cursor-not-allowed"
