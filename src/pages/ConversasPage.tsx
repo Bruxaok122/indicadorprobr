@@ -218,16 +218,17 @@ export default function ConversasPage() {
 
   // Wrapper defined conditionally — avoid inline component to prevent remount
 
-  // Theme toggle for operator (no sidebar) — dark is default
+  // Theme toggle for operator (no sidebar) — light is default
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem("theme");
-    if (saved === "light") return false;
-    // Default to dark
-    if (!saved) {
+    if (saved === "dark") {
       document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
+      return true;
     }
-    return true;
+    // Default to light
+    document.documentElement.classList.remove("dark");
+    if (!saved) localStorage.setItem("theme", "light");
+    return false;
   });
   const toggleTheme = () => {
     const next = !isDark;
