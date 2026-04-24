@@ -224,6 +224,7 @@ export default function AdminDisparosPage() {
   const [batchMode, setBatchMode] = useState(false);
   const [batchSize, setBatchSize] = useState(50);
   const [intervalSeconds, setIntervalSeconds] = useState(5);
+  const [randomJitter412, setRandomJitter412] = useState(false); // 4-12s random per send (anti-pattern)
   const [turboLimit, setTurboLimit] = useState(100);
   // Step 4: Responsible
   const [selectedUserId, setSelectedUserId] = useState<string>("");
@@ -494,6 +495,7 @@ export default function AdminDisparosPage() {
     const capturedMode = dispatchMode;
     const capturedShared = sharedDispatch;
     const capturedInterval = intervalSeconds;
+    const capturedRandomJitter = randomJitter412;
     const capturedListName = selectedList;
     const capturedBatchMode = batchMode;
     const capturedBatchSize = batchSize;
@@ -592,10 +594,15 @@ export default function AdminDisparosPage() {
 
             i++;
 
-            // User interval + random jitter (5-25% extra) to avoid pattern detection
-            const baseDelayMs = Math.max(capturedInterval * 1000, 2000);
-            const jitterMs = Math.floor(baseDelayMs * (0.05 + Math.random() * 0.20));
-            const turboDelayMs = baseDelayMs + jitterMs;
+            // Delay: random 4-12s (anti-pattern) OR user interval + 5-25% jitter
+            let turboDelayMs: number;
+            if (capturedRandomJitter) {
+              turboDelayMs = randomBetween(4000, 12000);
+            } else {
+              const baseDelayMs = Math.max(capturedInterval * 1000, 2000);
+              const jitterMs = Math.floor(baseDelayMs * (0.05 + Math.random() * 0.20));
+              turboDelayMs = baseDelayMs + jitterMs;
+            }
             if (i < remainingIds.length && !ctrl?.isCancelled) {
               const waited = await resilientDelay(turboDelayMs, () => dispatchControlsRef.current[dispatchId]);
               if (!waited) break;
@@ -722,14 +729,19 @@ export default function AdminDisparosPage() {
 
             i++;
 
-            // 🛡️ Anti-ban: Use MAX between user interval (with jitter) and progressive delay
+            // 🛡️ Anti-ban: Random 4-12s OR MAX between user interval (with jitter) and progressive delay
             if (i < remainingIds.length && !ctrl?.isCancelled) {
-              const baseUserDelayMs = capturedInterval * 1000;
-              const userJitterMs = Math.floor(baseUserDelayMs * (0.05 + Math.random() * 0.20));
-              const userDelayMs = baseUserDelayMs + userJitterMs;
-              const [pMin, pMax] = getProgressiveDelay(blocksCompleted, ANTI_BAN_MIN_DELAY_MS, ANTI_BAN_MAX_DELAY_MS);
-              const antiBanDelayMs = randomBetween(pMin, Math.min(pMax, 15000));
-              const delayMs = Math.max(userDelayMs, antiBanDelayMs);
+              let delayMs: number;
+              if (capturedRandomJitter) {
+                delayMs = randomBetween(4000, 12000);
+              } else {
+                const baseUserDelayMs = capturedInterval * 1000;
+                const userJitterMs = Math.floor(baseUserDelayMs * (0.05 + Math.random() * 0.20));
+                const userDelayMs = baseUserDelayMs + userJitterMs;
+                const [pMin, pMax] = getProgressiveDelay(blocksCompleted, ANTI_BAN_MIN_DELAY_MS, ANTI_BAN_MAX_DELAY_MS);
+                const antiBanDelayMs = randomBetween(pMin, Math.min(pMax, 15000));
+                delayMs = Math.max(userDelayMs, antiBanDelayMs);
+              }
               const waited = await resilientDelay(delayMs, () => dispatchControlsRef.current[dispatchId]);
               if (!waited) break;
             }
@@ -1153,11 +1165,25 @@ export default function AdminDisparosPage() {
                     </div>
 
                     {dispatchMode === "individual" && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex items-center gap-2">
-                        <Label htmlFor="interval" className="text-xs text-muted-foreground whitespace-nowrap">Intervalo:</Label>
-                        <Input id="interval" type="number" min={1} max={300} value={intervalSeconds}
-                          onChange={(e) => setIntervalSeconds(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-20 text-sm" />
-                        <span className="text-xs text-muted-foreground">segundos</span>
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
+                        <div className={`flex items-center gap-2 transition-opacity ${randomJitter412 ? "opacity-40" : ""}`}>
+                          <Label htmlFor="interval" className="text-xs text-muted-foreground whitespace-nowrap">Intervalo:</Label>
+                          <Input id="interval" type="number" min={1} max={300} value={intervalSeconds}
+                            disabled={randomJitter412}
+                            onChange={(e) => setIntervalSeconds(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-20 text-sm" />
+                          <span className="text-xs text-muted-foreground">segundos</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+                          <div className="min-w-0">
+                            <Label htmlFor="random-jitter-ind" className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
+                              🎲 Jitter aleatório 4–12s
+                            </Label>
+                            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
+                              Sorteia um intervalo entre 4 e 12s a cada envio. Quebra o padrão de bot.
+                            </p>
+                          </div>
+                          <Switch id="random-jitter-ind" checked={randomJitter412} onCheckedChange={setRandomJitter412} />
+                        </div>
                       </motion.div>
                     )}
 
@@ -1186,6 +1212,17 @@ export default function AdminDisparosPage() {
                           <Label htmlFor="turbo-limit" className="text-xs text-muted-foreground whitespace-nowrap">Limite de envios:</Label>
                           <Input id="turbo-limit" type="number" min={1} max={10000} value={turboLimit}
                             onChange={(e) => setTurboLimit(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-24 text-sm" />
+                        </div>
+                        <div className="flex items-start justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+                          <div className="min-w-0">
+                            <Label htmlFor="random-jitter-turbo" className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
+                              🎲 Jitter aleatório 4–12s
+                            </Label>
+                            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
+                              Sorteia um intervalo entre 4 e 12s a cada envio. Quebra o padrão de bot.
+                            </p>
+                          </div>
+                          <Switch id="random-jitter-turbo" checked={randomJitter412} onCheckedChange={setRandomJitter412} />
                         </div>
                         <div className="rounded border border-amber-500/30 bg-amber-500/5 p-2 text-[10px] text-amber-600 dark:text-amber-400 space-y-0.5">
                           <p className="font-semibold">⚡ Modo Turbo — SEM proteções Anti-Ban</p>
