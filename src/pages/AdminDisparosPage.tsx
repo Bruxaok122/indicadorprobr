@@ -729,14 +729,19 @@ export default function AdminDisparosPage() {
 
             i++;
 
-            // 🛡️ Anti-ban: Use MAX between user interval (with jitter) and progressive delay
+            // 🛡️ Anti-ban: Random 4-12s OR MAX between user interval (with jitter) and progressive delay
             if (i < remainingIds.length && !ctrl?.isCancelled) {
-              const baseUserDelayMs = capturedInterval * 1000;
-              const userJitterMs = Math.floor(baseUserDelayMs * (0.05 + Math.random() * 0.20));
-              const userDelayMs = baseUserDelayMs + userJitterMs;
-              const [pMin, pMax] = getProgressiveDelay(blocksCompleted, ANTI_BAN_MIN_DELAY_MS, ANTI_BAN_MAX_DELAY_MS);
-              const antiBanDelayMs = randomBetween(pMin, Math.min(pMax, 15000));
-              const delayMs = Math.max(userDelayMs, antiBanDelayMs);
+              let delayMs: number;
+              if (capturedRandomJitter) {
+                delayMs = randomBetween(4000, 12000);
+              } else {
+                const baseUserDelayMs = capturedInterval * 1000;
+                const userJitterMs = Math.floor(baseUserDelayMs * (0.05 + Math.random() * 0.20));
+                const userDelayMs = baseUserDelayMs + userJitterMs;
+                const [pMin, pMax] = getProgressiveDelay(blocksCompleted, ANTI_BAN_MIN_DELAY_MS, ANTI_BAN_MAX_DELAY_MS);
+                const antiBanDelayMs = randomBetween(pMin, Math.min(pMax, 15000));
+                delayMs = Math.max(userDelayMs, antiBanDelayMs);
+              }
               const waited = await resilientDelay(delayMs, () => dispatchControlsRef.current[dispatchId]);
               if (!waited) break;
             }
