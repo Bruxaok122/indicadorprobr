@@ -113,9 +113,9 @@ export function ChatContactList({
   const isUnclaimedShared = (c: Contact) =>
     (c as any).dispatch_mode === "shared" && !(c as any).claimed_by;
 
-  // "Disponíveis" só mostra contatos compartilhados que JÁ responderam ao template
-  // (status diferente de 'novo' indica que houve interação do cliente)
-  const hasReplied = (c: Contact) => c.status !== "novo" && !!c.last_message_at;
+  // "Disponíveis" só mostra contatos compartilhados após a 1ª mensagem do cliente.
+  // O disparo deixa o contato em "aguardando"; somente o webhook de resposta marca como "respondido".
+  const hasReplied = (c: Contact) => c.status === "respondido";
   const isAvailableShared = (c: Contact) => isUnclaimedShared(c) && hasReplied(c);
   const isPendingShared = (c: Contact) => isUnclaimedShared(c) && !hasReplied(c);
 
