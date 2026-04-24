@@ -1,0 +1,1 @@
+UPDATE public.contacts SET status = 'respondido' WHERE id IN ('094d0312-a7fa-4fca-af85-234008636d3c', 'e767a097-65ef-4f4c-b36f-e924d5e3b924') AND status = 'aguardando';
