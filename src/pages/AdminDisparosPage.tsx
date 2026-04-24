@@ -1213,6 +1213,17 @@ export default function AdminDisparosPage() {
                           <Input id="turbo-limit" type="number" min={1} max={10000} value={turboLimit}
                             onChange={(e) => setTurboLimit(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-24 text-sm" />
                         </div>
+                        <div className="flex items-start justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+                          <div className="min-w-0">
+                            <Label htmlFor="random-jitter-turbo" className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
+                              🎲 Jitter aleatório 4–12s
+                            </Label>
+                            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
+                              Sorteia um intervalo entre 4 e 12s a cada envio. Quebra o padrão de bot.
+                            </p>
+                          </div>
+                          <Switch id="random-jitter-turbo" checked={randomJitter412} onCheckedChange={setRandomJitter412} />
+                        </div>
                         <div className="rounded border border-amber-500/30 bg-amber-500/5 p-2 text-[10px] text-amber-600 dark:text-amber-400 space-y-0.5">
                           <p className="font-semibold">⚡ Modo Turbo — SEM proteções Anti-Ban</p>
                           <p>• Envia continuamente sem pausas de respiro</p>
