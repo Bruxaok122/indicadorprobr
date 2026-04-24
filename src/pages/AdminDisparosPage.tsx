@@ -495,6 +495,7 @@ export default function AdminDisparosPage() {
     const capturedMode = dispatchMode;
     const capturedShared = sharedDispatch;
     const capturedInterval = intervalSeconds;
+    const capturedRandomJitter = randomJitter412;
     const capturedListName = selectedList;
     const capturedBatchMode = batchMode;
     const capturedBatchSize = batchSize;
