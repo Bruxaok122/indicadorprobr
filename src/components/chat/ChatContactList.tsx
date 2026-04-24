@@ -113,6 +113,12 @@ export function ChatContactList({
   const isUnclaimedShared = (c: Contact) =>
     (c as any).dispatch_mode === "shared" && !(c as any).claimed_by;
 
+  // "Disponíveis" só mostra contatos compartilhados que JÁ responderam ao template
+  // (status diferente de 'novo' indica que houve interação do cliente)
+  const hasReplied = (c: Contact) => c.status !== "novo" && !!c.last_message_at;
+  const isAvailableShared = (c: Contact) => isUnclaimedShared(c) && hasReplied(c);
+  const isPendingShared = (c: Contact) => isUnclaimedShared(c) && !hasReplied(c);
+
   // Esconde contatos compartilhados que o operador atual já dispensou
   const visibleContacts = contacts.filter(
     (c) => !(isUnclaimedShared(c) && dismissedSet.has(c.id))
@@ -121,11 +127,17 @@ export function ChatContactList({
   const filteredContacts = visibleContacts
     .filter((contact) => {
       if (activeTab === "compartilhados") {
-        return isUnclaimedShared(contact);
+        return isAvailableShared(contact);
       }
-      // Exclude unclaimed shared contacts from other tabs (they live in "Disponíveis")
-      if (isUnclaimedShared(contact)) return false;
       if (contact.ai_enabled) return false;
+      if (activeTab === "aguardando") {
+        // Pendentes: próprios aguardando + shared sem resposta ainda
+        if (isPendingShared(contact)) return true;
+        if (isUnclaimedShared(contact)) return false;
+        return contact.status === "aguardando";
+      }
+      // Respondidos: exclui shared não reivindicados
+      if (isUnclaimedShared(contact)) return false;
       return contact.status === activeTab;
     })
     .filter((contact) => {
@@ -139,9 +151,11 @@ export function ChatContactList({
     });
 
   const tabCounts = {
-    aguardando: visibleContacts.filter((c) => c.status === "aguardando" && !isUnclaimedShared(c) && !c.ai_enabled).length,
+    aguardando: visibleContacts.filter(
+      (c) => !c.ai_enabled && (isPendingShared(c) || (!isUnclaimedShared(c) && c.status === "aguardando"))
+    ).length,
     respondido: visibleContacts.filter((c) => c.status === "respondido" && !isUnclaimedShared(c) && !c.ai_enabled).length,
-    compartilhados: visibleContacts.filter((c) => isUnclaimedShared(c)).length,
+    compartilhados: visibleContacts.filter((c) => isAvailableShared(c)).length,
   };
 
   return (
