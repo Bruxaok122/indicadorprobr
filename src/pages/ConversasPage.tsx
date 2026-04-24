@@ -137,6 +137,11 @@ export default function ConversasPage() {
     }
   }, [contacts, playNotification, selectedContactId]);
 
+  // Reset incoming-tracking when switching contacts to avoid playing sound on chat switch
+  useEffect(() => {
+    lastSelectedIncomingMessageRef.current = null;
+  }, [selectedContactId]);
+
   useEffect(() => {
     if (!selectedContactId || !messages || messages.length === 0) return;
 
@@ -146,6 +151,7 @@ export default function ConversasPage() {
 
     if (!lastIncoming) return;
 
+    // First time we see messages for this contact — initialize without playing
     if (lastSelectedIncomingMessageRef.current === null) {
       lastSelectedIncomingMessageRef.current = lastIncoming.id;
       return;
@@ -218,16 +224,17 @@ export default function ConversasPage() {
 
   // Wrapper defined conditionally — avoid inline component to prevent remount
 
-  // Theme toggle for operator (no sidebar) — dark is default
+  // Theme toggle for operator (no sidebar) — light is default
   const [isDark, setIsDark] = useState(() => {
     const saved = localStorage.getItem("theme");
-    if (saved === "light") return false;
-    // Default to dark
-    if (!saved) {
+    if (saved === "dark") {
       document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
+      return true;
     }
-    return true;
+    // Default to light
+    document.documentElement.classList.remove("dark");
+    if (!saved) localStorage.setItem("theme", "light");
+    return false;
   });
   const toggleTheme = () => {
     const next = !isDark;

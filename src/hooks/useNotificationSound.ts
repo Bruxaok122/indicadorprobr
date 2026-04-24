@@ -9,63 +9,67 @@ export function useNotificationSound() {
     return saved === null ? true : saved === "true";
   });
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  const playWebAudioFallback = useCallback(async () => {
+  const ensureContext = useCallback(async () => {
     const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContextCtor) return;
-
+    if (!AudioContextCtor) return null;
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContextCtor();
     }
-
-    const ctx = audioContextRef.current;
-    if (ctx.state === "suspended") {
-      await ctx.resume();
+    if (audioContextRef.current.state === "suspended") {
+      await audioContextRef.current.resume();
     }
-
-    const now = ctx.currentTime;
-    const master = ctx.createGain();
-    master.gain.setValueAtTime(0.0001, now);
-    master.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
-    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
-    master.connect(ctx.destination);
-
-    const makePop = (start: number, end: number, offset: number) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(start, now + offset);
-      osc.frequency.exponentialRampToValueAtTime(end, now + offset + 0.18);
-      gain.gain.setValueAtTime(0.0001, now + offset);
-      gain.gain.exponentialRampToValueAtTime(0.22, now + offset + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.22);
-      osc.connect(gain);
-      gain.connect(master);
-      osc.start(now + offset);
-      osc.stop(now + offset + 0.24);
-    };
-
-    makePop(420, 880, 0);
-    makePop(560, 1180, 0.1);
+    return audioContextRef.current;
   }, []);
 
-  useEffect(() => {
-    audioRef.current = new Audio("/sounds/notification.mp3");
-    audioRef.current.preload = "auto";
-    audioRef.current.volume = 0.7;
-    audioRef.current.load();
+  // Classic old phone "ring ring" — dual-tone 440Hz + 480Hz bursts, twice
+  const playOldPhoneRing = useCallback(async () => {
+    const ctx = await ensureContext();
+    if (!ctx) return;
 
+    const now = ctx.currentTime;
+
+    // Two ring bursts separated by a short gap, mimicking "RING-RING"
+    const burst = (offset: number) => {
+      const duration = 0.45;
+      const master = ctx.createGain();
+      master.gain.setValueAtTime(0.0001, now + offset);
+      master.gain.exponentialRampToValueAtTime(0.28, now + offset + 0.02);
+      // Tremolo (bell-like pulsing)
+      master.gain.setValueAtTime(0.28, now + offset + duration - 0.08);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + offset + duration);
+      master.connect(ctx.destination);
+
+      // Tremolo modulator ~20Hz for that mechanical bell vibration
+      const tremolo = ctx.createOscillator();
+      const tremoloGain = ctx.createGain();
+      tremolo.frequency.setValueAtTime(20, now + offset);
+      tremoloGain.gain.setValueAtTime(0.5, now + offset);
+      tremolo.connect(tremoloGain);
+      tremoloGain.connect(master.gain);
+      tremolo.start(now + offset);
+      tremolo.stop(now + offset + duration);
+
+      // Two sine tones for the classic dual-tone ringer
+      [440, 480].forEach((freq) => {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now + offset);
+        osc.connect(master);
+        osc.start(now + offset);
+        osc.stop(now + offset + duration);
+      });
+    };
+
+    burst(0);
+    burst(0.55);
+  }, [ensureContext]);
+
+  useEffect(() => {
     const unlockAudio = async () => {
       try {
-        const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioContextCtor && !audioContextRef.current) {
-          audioContextRef.current = new AudioContextCtor();
-        }
-        if (audioContextRef.current?.state === "suspended") {
-          await audioContextRef.current.resume();
-        }
+        await ensureContext();
       } catch {
         // ignore
       }
@@ -78,7 +82,7 @@ export function useNotificationSound() {
       window.removeEventListener("pointerdown", unlockAudio);
       window.removeEventListener("keydown", unlockAudio);
     };
-  }, []);
+  }, [ensureContext]);
 
   const toggle = useCallback(() => {
     setEnabled((prev) => {
@@ -89,15 +93,11 @@ export function useNotificationSound() {
   }, []);
 
   const play = useCallback(() => {
-    if (!enabled || !audioRef.current) return;
-
-    audioRef.current.currentTime = 0;
-    audioRef.current.play().catch(() => {
-      playWebAudioFallback().catch(() => {
-        // ignore
-      });
+    if (!enabled) return;
+    playOldPhoneRing().catch(() => {
+      // ignore
     });
-  }, [enabled, playWebAudioFallback]);
+  }, [enabled, playOldPhoneRing]);
 
   return { enabled, toggle, play };
 }
