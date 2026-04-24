@@ -55,7 +55,8 @@ export default function ConversasPage() {
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
   const [isTogglingAI, setIsTogglingAI] = useState(false);
-  const lastSeenMessageAtRef = useRef<number | null>(null);
+  const lastReplyStatusByContactRef = useRef<Record<string, string | null | undefined>>({});
+  const replyStatusInitializedRef = useRef(false);
   const lastSelectedIncomingMessageRef = useRef<string | null>(null);
 
   const {
@@ -111,23 +112,30 @@ export default function ConversasPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContactId]);
 
-  // Play notification whenever any contact receives a newer inbound message
+  // Play notification only when another contact transitions to "respondido"
+  // (first customer reply after staying in pending/shared pending)
   useEffect(() => {
     if (!contacts || contacts.length === 0) return;
-    const maxTs = contacts.reduce((acc, c) => {
-      const t = c.last_message_at ? new Date(c.last_message_at).getTime() : 0;
-      return t > acc ? t : acc;
-    }, 0);
-    if (lastSeenMessageAtRef.current === null) {
-      // First load: just baseline, don't play
-      lastSeenMessageAtRef.current = maxTs;
+
+    const nextStatuses = Object.fromEntries(contacts.map((contact) => [contact.id, contact.status]));
+
+    if (!replyStatusInitializedRef.current) {
+      lastReplyStatusByContactRef.current = nextStatuses;
+      replyStatusInitializedRef.current = true;
       return;
     }
-    if (maxTs > lastSeenMessageAtRef.current) {
-      lastSeenMessageAtRef.current = maxTs;
+
+    const hasNewCustomerReply = contacts.some((contact) => {
+      const previousStatus = lastReplyStatusByContactRef.current[contact.id];
+      return contact.id !== selectedContactId && contact.status === "respondido" && previousStatus !== "respondido";
+    });
+
+    lastReplyStatusByContactRef.current = nextStatuses;
+
+    if (hasNewCustomerReply) {
       playNotification();
     }
-  }, [contacts, playNotification]);
+  }, [contacts, playNotification, selectedContactId]);
 
   useEffect(() => {
     if (!selectedContactId || !messages || messages.length === 0) return;

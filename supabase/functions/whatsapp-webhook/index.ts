@@ -8,6 +8,44 @@ const corsHeaders = {
 
 const VERIFY_TOKEN = "juriszap_webhook";
 
+function getPhoneCandidates(rawPhone: string): string[] {
+  const digits = rawPhone.replace(/\D/g, "");
+  const candidates = new Set<string>();
+
+  if (!digits) return [];
+
+  candidates.add(digits);
+
+  if (digits.startsWith("55")) {
+    const national = digits.slice(2);
+
+    if (national.length === 10) {
+      candidates.add(`55${national.slice(0, 2)}9${national.slice(2)}`);
+    }
+
+    if (national.length === 11 && national[2] === "9") {
+      candidates.add(`55${national.slice(0, 2)}${national.slice(3)}`);
+    }
+  } else {
+    candidates.add(`55${digits}`);
+
+    if (digits.length === 10) {
+      candidates.add(`55${digits.slice(0, 2)}9${digits.slice(2)}`);
+    }
+
+    if (digits.length === 11 && digits[2] === "9") {
+      candidates.add(`55${digits.slice(0, 2)}${digits.slice(3)}`);
+    }
+  }
+
+  return Array.from(candidates);
+}
+
+function getCanonicalPhone(rawPhone: string): string {
+  const candidates = getPhoneCandidates(rawPhone);
+  return candidates.sort((a, b) => b.length - a.length)[0] ?? rawPhone.replace(/\D/g, "");
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -62,6 +100,8 @@ serve(async (req) => {
 
               for (const message of messages) {
                 const phone = message.from;
+                const phoneCandidates = getPhoneCandidates(phone);
+                const canonicalPhone = getCanonicalPhone(phone);
                 const messageId = message.id;
                 const timestamp = new Date(parseInt(message.timestamp) * 1000);
 
@@ -88,7 +128,7 @@ serve(async (req) => {
                 const { data: contactsWithPhone } = await supabase
                   .from("contacts")
                   .select("*")
-                  .eq("phone", phone)
+                  .in("phone", phoneCandidates)
                   .not("status", "eq", "encerrado") // skip blocked contacts
                   .order("last_message_at", { ascending: false, nullsFirst: false }) // most recent activity first, nulls LAST
                   .order("created_at", { ascending: false });
@@ -99,17 +139,17 @@ serve(async (req) => {
                 let contactUserId: string | null = null;
 
                 if (!existingContact) {
-                  // Assign new contacts to default operator (lbuser)
-                  const DEFAULT_OPERATOR_ID = "b17bfc96-dcc1-4cef-95c0-94e3598901b9";
-                  
+                  // Unknown inbound contact enters the shared pool until someone assumes it
                   const { data: newContact, error: contactError } = await supabase
                     .from("contacts")
                     .insert({
                       name: contactName,
-                      phone: phone,
+                      phone: canonicalPhone,
                       status: "respondido",
+                      dispatch_mode: "shared",
                       last_message_at: timestamp.toISOString(),
-                      user_id: DEFAULT_OPERATOR_ID,
+                      user_id: null,
+                      has_whatsapp: true,
                     })
                     .select()
                     .single();
@@ -119,8 +159,8 @@ serve(async (req) => {
                     continue;
                   }
                   contactId = newContact.id;
-                  contactUserId = DEFAULT_OPERATOR_ID;
-                  console.log(`Created new contact: ${contactId} (assigned to lbuser)`);
+                  contactUserId = null;
+                  console.log(`Created new shared contact: ${contactId}`);
                 } else {
                   contactId = existingContact.id;
                   contactUserId = existingContact.user_id;

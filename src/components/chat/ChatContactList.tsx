@@ -118,6 +118,7 @@ export function ChatContactList({
   const hasReplied = (c: Contact) => c.status === "respondido";
   const isAvailableShared = (c: Contact) => isUnclaimedShared(c) && hasReplied(c);
   const isPendingShared = (c: Contact) => isUnclaimedShared(c) && !hasReplied(c);
+  const canShowSharedActions = (c: Contact) => isAvailableShared(c);
 
   // Esconde contatos compartilhados que o operador atual já dispensou
   const visibleContacts = contacts.filter(
@@ -392,7 +393,7 @@ export function ChatContactList({
 
                     {/* Tag entre nome e preview */}
                     <div className="mt-1 flex min-w-0 items-center gap-1.5 flex-wrap">
-                      {unclaimedShared ? (
+                      {isAvailableShared(contact) ? (
                         <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap bg-violet/15 text-violet">
                           <Users className="h-2.5 w-2.5" /> Disponível
                         </span>
@@ -419,7 +420,7 @@ export function ChatContactList({
                     </p>
 
                     {/* Action buttons for unclaimed shared contacts */}
-                    {unclaimedShared && (
+                    {canShowSharedActions(contact) && (
                       <div className="mt-2 grid w-full min-w-0 grid-cols-2 gap-1.5">
                         <button
                           type="button"
