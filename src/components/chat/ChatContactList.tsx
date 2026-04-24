@@ -125,21 +125,30 @@ export function ChatContactList({
     (c) => !(isUnclaimedShared(c) && dismissedSet.has(c.id))
   );
 
+  const claimedByMe = (c: Contact) => (c as any).claimed_by === user?.id;
+  const isMine = (c: Contact) =>
+    claimedByMe(c) || (!(c as any).claimed_by && c.user_id === user?.id && (c as any).dispatch_mode !== "shared");
+
+  // Pendentes: aguardando resposta do cliente, sem dono ativo (não assumido por ninguém)
+  // Inclui: shared sem resposta + privados meus em "aguardando" sem claim
+  const isPending = (c: Contact) => {
+    if (c.ai_enabled) return false;
+    if ((c as any).claimed_by) return false; // já assumido por alguém
+    if (c.status === "encerrado") return false;
+    if (isAvailableShared(c)) return false; // vai para "Disponíveis"
+    if (isPendingShared(c)) return true;
+    // próprio: aguardando o cliente responder
+    return c.status === "aguardando";
+  };
+
   const filteredContacts = visibleContacts
     .filter((contact) => {
-      if (activeTab === "compartilhados") {
-        return isAvailableShared(contact);
-      }
+      if (activeTab === "compartilhados") return isAvailableShared(contact);
       if (contact.ai_enabled) return false;
-      if (activeTab === "aguardando") {
-        // Pendentes: próprios aguardando + shared sem resposta ainda
-        if (isPendingShared(contact)) return true;
-        if (isUnclaimedShared(contact)) return false;
-        return contact.status === "aguardando";
-      }
-      // Respondidos: exclui shared não reivindicados
+      if (activeTab === "aguardando") return isPending(contact);
+      // "respondido" agora significa "Meus atendimentos"
       if (isUnclaimedShared(contact)) return false;
-      return contact.status === activeTab;
+      return isMine(contact) && contact.status !== "encerrado";
     })
     .filter((contact) => {
       const q = search.toLowerCase();
@@ -148,14 +157,16 @@ export function ChatContactList({
     .sort((a, b) => {
       if (a.is_priority && !b.is_priority) return -1;
       if (!a.is_priority && b.is_priority) return 1;
-      return 0;
+      const ta = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+      const tb = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+      return tb - ta;
     });
 
   const tabCounts = {
-    aguardando: visibleContacts.filter(
-      (c) => !c.ai_enabled && (isPendingShared(c) || (!isUnclaimedShared(c) && c.status === "aguardando"))
+    aguardando: visibleContacts.filter((c) => isPending(c)).length,
+    respondido: visibleContacts.filter(
+      (c) => !c.ai_enabled && !isUnclaimedShared(c) && isMine(c) && c.status !== "encerrado"
     ).length,
-    respondido: visibleContacts.filter((c) => c.status === "respondido" && !isUnclaimedShared(c) && !c.ai_enabled).length,
     compartilhados: visibleContacts.filter((c) => isAvailableShared(c)).length,
   };
 
