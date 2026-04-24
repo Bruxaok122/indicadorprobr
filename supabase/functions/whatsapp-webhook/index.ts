@@ -406,14 +406,12 @@ serve(async (req) => {
                   console.error("Error saving message:", messageError);
                 }
 
-                // === Mark contact as "respondido" when client replies ===
-                // Previously auto-blocked negative responses, but this hid contacts from operators.
-                // Now all replies mark as "respondido" so the operator can see and handle them.
-                if (message.type === "text" && content) {
-                  // Only update to "respondido" if currently "aguardando" or "novo"
+                // === Mark contact as "respondido" on ANY incoming message ===
+                // Applies to text, audio, image, document, video, sticker — any client reply.
+                {
                   const currentStatus = existingContact?.status;
                   if (currentStatus === "aguardando" || currentStatus === "novo") {
-                    console.log(`✅ Marking contact ${contactId} as respondido (was: ${currentStatus})`);
+                    console.log(`✅ Marking contact ${contactId} as respondido (was: ${currentStatus}, type: ${message.type})`);
                     await supabase
                       .from("contacts")
                       .update({ status: "respondido" })
