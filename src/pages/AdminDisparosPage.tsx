@@ -1165,11 +1165,25 @@ export default function AdminDisparosPage() {
                     </div>
 
                     {dispatchMode === "individual" && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex items-center gap-2">
-                        <Label htmlFor="interval" className="text-xs text-muted-foreground whitespace-nowrap">Intervalo:</Label>
-                        <Input id="interval" type="number" min={1} max={300} value={intervalSeconds}
-                          onChange={(e) => setIntervalSeconds(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-20 text-sm" />
-                        <span className="text-xs text-muted-foreground">segundos</span>
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
+                        <div className={`flex items-center gap-2 transition-opacity ${randomJitter412 ? "opacity-40" : ""}`}>
+                          <Label htmlFor="interval" className="text-xs text-muted-foreground whitespace-nowrap">Intervalo:</Label>
+                          <Input id="interval" type="number" min={1} max={300} value={intervalSeconds}
+                            disabled={randomJitter412}
+                            onChange={(e) => setIntervalSeconds(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-20 text-sm" />
+                          <span className="text-xs text-muted-foreground">segundos</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+                          <div className="min-w-0">
+                            <Label htmlFor="random-jitter-ind" className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
+                              🎲 Jitter aleatório 4–12s
+                            </Label>
+                            <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
+                              Sorteia um intervalo entre 4 e 12s a cada envio. Quebra o padrão de bot.
+                            </p>
+                          </div>
+                          <Switch id="random-jitter-ind" checked={randomJitter412} onCheckedChange={setRandomJitter412} />
+                        </div>
                       </motion.div>
                     )}
 
