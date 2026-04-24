@@ -20,7 +20,7 @@ type TabFilter = "aguardando" | "respondido" | "compartilhados";
 
 const tabs: { id: TabFilter; label: string; icon: React.ElementType }[] = [
   { id: "aguardando", label: "Pendentes", icon: Clock },
-  { id: "respondido", label: "Respondidos", icon: CheckCircle2 },
+  { id: "respondido", label: "Meus atendimentos", icon: CheckCircle2 },
   { id: "compartilhados", label: "Disponíveis", icon: Users },
 ];
 
