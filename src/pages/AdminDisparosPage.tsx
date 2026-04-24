@@ -594,10 +594,15 @@ export default function AdminDisparosPage() {
 
             i++;
 
-            // User interval + random jitter (5-25% extra) to avoid pattern detection
-            const baseDelayMs = Math.max(capturedInterval * 1000, 2000);
-            const jitterMs = Math.floor(baseDelayMs * (0.05 + Math.random() * 0.20));
-            const turboDelayMs = baseDelayMs + jitterMs;
+            // Delay: random 4-12s (anti-pattern) OR user interval + 5-25% jitter
+            let turboDelayMs: number;
+            if (capturedRandomJitter) {
+              turboDelayMs = randomBetween(4000, 12000);
+            } else {
+              const baseDelayMs = Math.max(capturedInterval * 1000, 2000);
+              const jitterMs = Math.floor(baseDelayMs * (0.05 + Math.random() * 0.20));
+              turboDelayMs = baseDelayMs + jitterMs;
+            }
             if (i < remainingIds.length && !ctrl?.isCancelled) {
               const waited = await resilientDelay(turboDelayMs, () => dispatchControlsRef.current[dispatchId]);
               if (!waited) break;
