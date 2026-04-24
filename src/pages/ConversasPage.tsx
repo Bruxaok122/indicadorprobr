@@ -137,6 +137,11 @@ export default function ConversasPage() {
     }
   }, [contacts, playNotification, selectedContactId]);
 
+  // Reset incoming-tracking when switching contacts to avoid playing sound on chat switch
+  useEffect(() => {
+    lastSelectedIncomingMessageRef.current = null;
+  }, [selectedContactId]);
+
   useEffect(() => {
     if (!selectedContactId || !messages || messages.length === 0) return;
 
@@ -146,6 +151,7 @@ export default function ConversasPage() {
 
     if (!lastIncoming) return;
 
+    // First time we see messages for this contact — initialize without playing
     if (lastSelectedIncomingMessageRef.current === null) {
       lastSelectedIncomingMessageRef.current = lastIncoming.id;
       return;
