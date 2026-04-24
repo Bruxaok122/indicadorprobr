@@ -224,6 +224,7 @@ export default function AdminDisparosPage() {
   const [batchMode, setBatchMode] = useState(false);
   const [batchSize, setBatchSize] = useState(50);
   const [intervalSeconds, setIntervalSeconds] = useState(5);
+  const [randomJitter412, setRandomJitter412] = useState(false); // 4-12s random per send (anti-pattern)
   const [turboLimit, setTurboLimit] = useState(100);
   // Step 4: Responsible
   const [selectedUserId, setSelectedUserId] = useState<string>("");
