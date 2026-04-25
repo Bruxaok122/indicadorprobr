@@ -427,10 +427,20 @@ export function ChatContactList({
                       )}
                     </div>
 
-                    {/* Preview da última mensagem - truncado, nunca ultrapassa */}
-                    <p className="mt-0.5 block w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted-foreground">
-                      {contact.last_message_preview || contact.phone}
-                    </p>
+                    {/* Preview da última mensagem + badge contagem (estilo WhatsApp) */}
+                    <div className="mt-0.5 flex w-full min-w-0 items-center gap-2">
+                      <p className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted-foreground">
+                        {contact.last_message_preview || contact.phone}
+                      </p>
+                      {unreadCounts[contact.id] > 0 && !isSelected && (
+                        <span
+                          className="shrink-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-green-500 text-white text-[11px] font-bold leading-none shadow-sm"
+                          aria-label={`${unreadCounts[contact.id]} mensagens não lidas`}
+                        >
+                          {unreadCounts[contact.id] > 99 ? "99+" : unreadCounts[contact.id]}
+                        </span>
+                      )}
+                    </div>
 
                     {/* Action buttons for unclaimed shared contacts */}
                     {canShowSharedActions(contact) && (
