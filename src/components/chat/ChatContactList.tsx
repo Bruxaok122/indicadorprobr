@@ -104,6 +104,7 @@ export function ChatContactList({
   isClearingAll,
   notificationEnabled,
   onToggleNotification,
+  unreadCounts = {},
 }: ChatContactListProps) {
   const { user, isAdmin } = useAuthContext();
   const { claimContact, isClaiming } = useClaimContact();
