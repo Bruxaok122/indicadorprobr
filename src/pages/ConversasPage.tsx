@@ -289,6 +289,7 @@ export default function ConversasPage() {
               isClearingAll={isClearingAll}
               notificationEnabled={notificationEnabled}
               onToggleNotification={toggleNotification}
+              unreadCounts={unreadCounts}
             />
           </div>
 
