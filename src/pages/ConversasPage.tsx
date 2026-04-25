@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNotificationSound } from "@/hooks/useNotificationSound";
+import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { MessageSquare, Send, Upload, FileText, FileImage } from "lucide-react";
 import { DispatchCountdown } from "@/components/chat/DispatchCountdown";
 
