@@ -43,6 +43,7 @@ interface ChatContactListProps {
   isClearingAll?: boolean;
   notificationEnabled?: boolean;
   onToggleNotification?: () => void;
+  unreadCounts?: Record<string, number>;
 }
 
 function formatMessageTime(dateStr: string): string {
