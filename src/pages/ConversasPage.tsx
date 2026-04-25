@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNotificationSound } from "@/hooks/useNotificationSound";
+import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { MessageSquare, Send, Upload, FileText, FileImage } from "lucide-react";
 import { DispatchCountdown } from "@/components/chat/DispatchCountdown";
 
@@ -64,6 +65,15 @@ export default function ConversasPage() {
   } = useMessages(selectedContactId);
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
+
+  // Unread message counts (per contact, per operator)
+  const contactIds = useMemo(() => contacts.map((c) => c.id), [contacts]);
+  const { counts: unreadCounts, markAsRead } = useUnreadCounts(contactIds);
+
+  // Mark selected contact as read whenever it changes or new messages arrive while open
+  useEffect(() => {
+    if (selectedContactId) markAsRead(selectedContactId);
+  }, [selectedContactId, messages?.length, markAsRead]);
 
   // Fetch dispatched phone info directly from DB when not in operator's phones list
   const dispatchedPhoneId = selectedContact?.dispatched_phone_number_id;
@@ -279,6 +289,7 @@ export default function ConversasPage() {
               isClearingAll={isClearingAll}
               notificationEnabled={notificationEnabled}
               onToggleNotification={toggleNotification}
+              unreadCounts={unreadCounts}
             />
           </div>
 
