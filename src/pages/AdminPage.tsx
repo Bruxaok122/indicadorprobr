@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Users, UserPlus, Radio, Mic, HeartPulse, Zap, Activity, FileText, BotMessageSquare } from "lucide-react";
+import { Users, UserPlus, Radio, Mic, HeartPulse, Zap, Activity, FileText, BotMessageSquare, Eye } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -30,6 +30,7 @@ import { DispatchMonitor } from "@/components/admin/DispatchMonitor";
 import { AdminFichasPanel } from "@/components/admin/AdminFichasPanel";
 import { AITestPanel } from "@/components/admin/AITestPanel";
 import { FailureRateCard } from "@/components/admin/FailureRateCard";
+import { RealtimeMonitorPanel } from "@/components/admin/RealtimeMonitorPanel";
 
 function AdminPageInner() {
   const navigate = useNavigate();
@@ -65,7 +66,7 @@ function AdminPageInner() {
   const [phonePermUser, setPhonePermUser] = useState<Profile | null>(null);
   const [monitorUser, setMonitorUser] = useState<Profile | null>(null);
   const [userToDeleteMobile, setUserToDeleteMobile] = useState<Profile | null>(null);
-  const [activeTab, setActiveTab] = useState("apis");
+  const [activeTab, setActiveTab] = useState("tempo-real");
 
   const handleLogout = async () => {
     await signOut();
@@ -77,8 +78,11 @@ function AdminPageInner() {
       <AdminHeader onLogout={handleLogout} onRefresh={refreshAll} />
 
       <main className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
-        <Tabs defaultValue="apis" onValueChange={(v) => setActiveTab(v)}>
+        <Tabs defaultValue="tempo-real" onValueChange={(v) => setActiveTab(v)}>
           <TabsList className="w-full sm:w-auto flex-wrap">
+            <TabsTrigger value="tempo-real" className="gap-1.5">
+              <Eye className="h-4 w-4" /> Tempo Real
+            </TabsTrigger>
             <TabsTrigger value="apis" className="gap-1.5">
               <Zap className="h-4 w-4" /> APIs
             </TabsTrigger>
@@ -111,6 +115,10 @@ function AdminPageInner() {
             </TabsTrigger>
           </TabsList>
 
+
+          <TabsContent value="tempo-real" className="mt-4">
+            <RealtimeMonitorPanel />
+          </TabsContent>
 
           <TabsContent value="apis" className="mt-4">
             <ApiConfigsSection />
