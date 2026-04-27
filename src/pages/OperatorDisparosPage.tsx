@@ -1107,12 +1107,15 @@ export default function OperatorDisparosPage() {
         }
 
         const ctrl = dispatchControlsRef.current[dispatchId];
+        const skipMsg = results.skipped > 0 ? `, ${results.skipped} pulados (já receberam template em 24h)` : "";
         if (ctrl?.isCancelled) {
-          toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas`);
+          toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
         } else if (results.failed > 0) {
-          toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas`);
+          toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
+        } else if (results.sent === 0 && results.skipped > 0) {
+          toast.warning(`Nenhum disparo realizado — todos os ${results.skipped} contatos já receberam template em 24h.`);
         } else {
-          toast.success(`🛡️ Disparo conservador concluído — ${results.sent} enviados!`);
+          toast.success(`🛡️ Disparo conservador concluído — ${results.sent} enviados${skipMsg}!`);
         }
       } catch (err: any) {
         toast.error("Erro no disparo", { description: err.message });
