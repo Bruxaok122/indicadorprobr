@@ -261,10 +261,14 @@ export default function OperatorDisparosPage() {
   function refreshLists() {
     if (!user?.id) return;
     setLoadingLists(true);
+    // Only count contacts still eligible for dispatch (status = "novo").
+    // Contacts already dispatched flip to "aguardando" and should disappear from the list,
+    // matching the previous UX where dispatched contacts were auto-removed.
     supabase
       .from("contacts")
       .select("contact_list")
       .eq("user_id", user.id)
+      .eq("status", "novo")
       .not("contact_list", "is", null)
       .limit(50000)
       .then(({ data }) => {
