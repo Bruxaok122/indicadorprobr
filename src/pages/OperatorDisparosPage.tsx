@@ -1076,7 +1076,7 @@ export default function OperatorDisparosPage() {
           }
 
           updateDispatch(dispatchId, {
-            current: results.sent + results.failed,
+            current: results.sent + results.failed + results.skipped,
             sent: results.sent,
             failed: results.failed,
             errors: [...results.errors],
