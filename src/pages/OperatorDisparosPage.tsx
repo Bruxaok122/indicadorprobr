@@ -421,7 +421,7 @@ export default function OperatorDisparosPage() {
 
     // Run dispatch in background
     (async () => {
-      const results = { sent: 0, failed: 0, errors: [] as string[] };
+      const results = { sent: 0, failed: 0, skipped: 0, errors: [] as string[] };
       let consecutiveErrors = 0;
 
       try {
