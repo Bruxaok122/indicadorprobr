@@ -119,7 +119,56 @@ serve(async (req) => {
       );
     }
 
-    const results = { total: contacts.length, sent: 0, failed: 0, errors: [] as string[] };
+    // 🛡️ Deduplicação 24h: bloqueia contatos que já receberam QUALQUER template nas últimas 24h
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const recentlyDispatched = new Set<string>();
+    {
+      const ids = contacts.map((c: any) => c.id);
+      // Chunk para evitar URL muito longa
+      const chunkSize = 200;
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        const { data: recentMsgs } = await supabase
+          .from("messages")
+          .select("contact_id, template_name, created_at")
+          .in("contact_id", chunk)
+          .eq("direction", "outgoing")
+          .not("template_name", "is", null)
+          .gte("created_at", since24h);
+        if (recentMsgs) {
+          for (const m of recentMsgs as any[]) recentlyDispatched.add(m.contact_id);
+        }
+      }
+    }
+
+    const eligibleContacts = contacts.filter((c: any) => !recentlyDispatched.has(c.id));
+    const skippedDuplicates = contacts.length - eligibleContacts.length;
+
+    if (eligibleContacts.length === 0) {
+      return new Response(
+        JSON.stringify({
+          total: contacts.length,
+          sent: 0,
+          failed: 0,
+          skipped: skippedDuplicates,
+          errors: [`Todos os ${skippedDuplicates} contato(s) já receberam template nas últimas 24h. Disparo cancelado.`],
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Dedupe 24h: ${skippedDuplicates}/${contacts.length} contatos pulados (já receberam template recentemente).`);
+
+    const results = {
+      total: contacts.length,
+      sent: 0,
+      failed: 0,
+      skipped: skippedDuplicates,
+      errors: [] as string[],
+    };
+    if (skippedDuplicates > 0) {
+      results.errors.push(`⏭️ ${skippedDuplicates} contato(s) pulado(s) — já receberam template nas últimas 24h.`);
+    }
 
     let finalPhoneNumberId = config.phone_number_id;
 
@@ -173,7 +222,7 @@ serve(async (req) => {
     // variableMappings is an object like { "1": "name", "2": "process_number" }
     const hasVariables = variableMappings && Object.keys(variableMappings).length > 0;
 
-    for (const contact of contacts) {
+    for (const contact of eligibleContacts) {
       try {
         if (contact.status === "encerrado") {
           results.failed++;
