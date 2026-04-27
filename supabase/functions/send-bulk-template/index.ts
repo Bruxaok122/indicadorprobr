@@ -147,11 +147,15 @@ serve(async (req) => {
     if (eligibleContacts.length === 0) {
       return new Response(
         JSON.stringify({
-          total: contacts.length,
-          sent: 0,
-          failed: 0,
-          skipped: skippedDuplicates,
-          errors: [`Todos os ${skippedDuplicates} contato(s) já receberam template nas últimas 24h. Disparo cancelado.`],
+          success: true,
+          results: {
+            total: contacts.length,
+            sent: 0,
+            failed: 0,
+            skipped: skippedDuplicates,
+            errors: [`⏭️ ${skippedDuplicates} contato(s) já receberam template nas últimas 24h — pulados.`],
+          },
+          message: `Disparo pulado: ${skippedDuplicates} contato(s) já receberam template recente.`,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
