@@ -222,7 +222,7 @@ serve(async (req) => {
     // variableMappings is an object like { "1": "name", "2": "process_number" }
     const hasVariables = variableMappings && Object.keys(variableMappings).length > 0;
 
-    for (const contact of contacts) {
+    for (const contact of eligibleContacts) {
       try {
         if (contact.status === "encerrado") {
           results.failed++;
