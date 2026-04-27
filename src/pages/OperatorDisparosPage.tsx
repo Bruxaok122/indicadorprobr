@@ -698,7 +698,7 @@ export default function OperatorDisparosPage() {
     const capturedPhoneVerifiedName = phoneVerifiedName;
 
     (async () => {
-      const results = { sent: 0, failed: 0, errors: [] as string[] };
+      const results = { sent: 0, failed: 0, skipped: 0, errors: [] as string[] };
       let consecutiveErrors = 0;
       let currentPhase = 0;
       let msgsInCurrentPhase = 0;
