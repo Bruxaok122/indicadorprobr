@@ -421,7 +421,7 @@ export default function OperatorDisparosPage() {
 
     // Run dispatch in background
     (async () => {
-      const results = { sent: 0, failed: 0, errors: [] as string[] };
+      const results = { sent: 0, failed: 0, skipped: 0, errors: [] as string[] };
       let consecutiveErrors = 0;
 
       try {
@@ -455,6 +455,7 @@ export default function OperatorDisparosPage() {
           if (!sendError && result?.results) {
             results.sent += result.results.sent || 0;
             results.failed += result.results.failed || 0;
+            results.skipped += result.results.skipped || 0;
             if (result.results.errors) results.errors.push(...result.results.errors);
 
             if (result.results.errors?.some((e: string) => e.includes("Conta Business bloqueada"))) {
@@ -480,7 +481,7 @@ export default function OperatorDisparosPage() {
           }
 
           updateDispatch(dispatchId, {
-            current: results.sent + results.failed,
+            current: results.sent + results.failed + results.skipped,
             sent: results.sent,
             failed: results.failed,
             errors: [...results.errors],
@@ -496,7 +497,7 @@ export default function OperatorDisparosPage() {
             // Set nextSendAt for countdown display
             const nextAt = new Date(Date.now() + delayMs).toISOString();
             updateDispatch(dispatchId, {
-              current: results.sent + results.failed,
+              current: results.sent + results.failed + results.skipped,
               sent: results.sent,
               failed: results.failed,
               errors: [...results.errors],
@@ -512,12 +513,15 @@ export default function OperatorDisparosPage() {
         }
 
         const ctrl = dispatchControlsRef.current[dispatchId];
+        const skipMsg = results.skipped > 0 ? `, ${results.skipped} pulados (já receberam template em 24h)` : "";
         if (ctrl?.isCancelled) {
-          toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas`);
+          toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
         } else if (results.failed > 0) {
-          toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas`);
+          toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
+        } else if (results.sent === 0 && results.skipped > 0) {
+          toast.warning(`Nenhum disparo realizado — todos os ${results.skipped} contatos já receberam template em 24h.`);
         } else {
-          toast.success(`Concluído — ${results.sent} enviados!`);
+          toast.success(`Concluído — ${results.sent} enviados${skipMsg}!`);
         }
       } catch (err: any) {
         toast.error("Erro no disparo", { description: err.message });
@@ -694,7 +698,7 @@ export default function OperatorDisparosPage() {
     const capturedPhoneVerifiedName = phoneVerifiedName;
 
     (async () => {
-      const results = { sent: 0, failed: 0, errors: [] as string[] };
+      const results = { sent: 0, failed: 0, skipped: 0, errors: [] as string[] };
       let consecutiveErrors = 0;
       let currentPhase = 0;
       let msgsInCurrentPhase = 0;
@@ -776,6 +780,7 @@ export default function OperatorDisparosPage() {
           if (!sendError && result?.results) {
             results.sent += result.results.sent || 0;
             results.failed += result.results.failed || 0;
+            results.skipped += result.results.skipped || 0;
             if (result.results.errors) results.errors.push(...result.results.errors);
 
             // Circuit breaker for block errors
@@ -837,7 +842,7 @@ export default function OperatorDisparosPage() {
           }
 
           updateDispatch(dispatchId, {
-            current: results.sent + results.failed,
+            current: results.sent + results.failed + results.skipped,
             sent: results.sent,
             failed: results.failed,
             errors: [...results.errors],
@@ -876,12 +881,15 @@ export default function OperatorDisparosPage() {
         }
 
         const ctrl = dispatchControlsRef.current[dispatchId];
+        const skipMsg = results.skipped > 0 ? `, ${results.skipped} pulados (já receberam template em 24h)` : "";
         if (ctrl?.isCancelled) {
-          toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas`);
+          toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
         } else if (results.failed > 0) {
-          toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas`);
+          toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
+        } else if (results.sent === 0 && results.skipped > 0) {
+          toast.warning(`Nenhum disparo realizado — todos os ${results.skipped} contatos já receberam template em 24h.`);
         } else {
-          toast.success(`✅ Disparo inteligente concluído — ${results.sent} enviados!`);
+          toast.success(`✅ Disparo inteligente concluído — ${results.sent} enviados${skipMsg}!`);
         }
       } catch (err: any) {
         toast.error("Erro no disparo", { description: err.message });
@@ -960,7 +968,7 @@ export default function OperatorDisparosPage() {
     const capturedPhoneVerifiedName = phoneVerifiedName;
 
     (async () => {
-      const results = { sent: 0, failed: 0, errors: [] as string[] };
+      const results = { sent: 0, failed: 0, skipped: 0, errors: [] as string[] };
       let consecutiveErrors = 0;
       let totalSentInSession = 0;
 
@@ -1021,6 +1029,7 @@ export default function OperatorDisparosPage() {
           if (!sendError && result?.results) {
             results.sent += result.results.sent || 0;
             results.failed += result.results.failed || 0;
+            results.skipped += result.results.skipped || 0;
             if (result.results.errors) results.errors.push(...result.results.errors);
 
             // Strict circuit breaker: any block error stops immediately
@@ -1067,7 +1076,7 @@ export default function OperatorDisparosPage() {
           }
 
           updateDispatch(dispatchId, {
-            current: results.sent + results.failed,
+            current: results.sent + results.failed + results.skipped,
             sent: results.sent,
             failed: results.failed,
             errors: [...results.errors],
@@ -1098,12 +1107,15 @@ export default function OperatorDisparosPage() {
         }
 
         const ctrl = dispatchControlsRef.current[dispatchId];
+        const skipMsg = results.skipped > 0 ? `, ${results.skipped} pulados (já receberam template em 24h)` : "";
         if (ctrl?.isCancelled) {
-          toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas`);
+          toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
         } else if (results.failed > 0) {
-          toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas`);
+          toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
+        } else if (results.sent === 0 && results.skipped > 0) {
+          toast.warning(`Nenhum disparo realizado — todos os ${results.skipped} contatos já receberam template em 24h.`);
         } else {
-          toast.success(`🛡️ Disparo conservador concluído — ${results.sent} enviados!`);
+          toast.success(`🛡️ Disparo conservador concluído — ${results.sent} enviados${skipMsg}!`);
         }
       } catch (err: any) {
         toast.error("Erro no disparo", { description: err.message });
