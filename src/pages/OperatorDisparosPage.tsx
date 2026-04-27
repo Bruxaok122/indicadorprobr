@@ -455,6 +455,7 @@ export default function OperatorDisparosPage() {
           if (!sendError && result?.results) {
             results.sent += result.results.sent || 0;
             results.failed += result.results.failed || 0;
+            results.skipped += result.results.skipped || 0;
             if (result.results.errors) results.errors.push(...result.results.errors);
 
             if (result.results.errors?.some((e: string) => e.includes("Conta Business bloqueada"))) {
@@ -480,7 +481,7 @@ export default function OperatorDisparosPage() {
           }
 
           updateDispatch(dispatchId, {
-            current: results.sent + results.failed,
+            current: results.sent + results.failed + results.skipped,
             sent: results.sent,
             failed: results.failed,
             errors: [...results.errors],
