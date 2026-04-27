@@ -497,7 +497,7 @@ export default function OperatorDisparosPage() {
             // Set nextSendAt for countdown display
             const nextAt = new Date(Date.now() + delayMs).toISOString();
             updateDispatch(dispatchId, {
-              current: results.sent + results.failed,
+              current: results.sent + results.failed + results.skipped,
               sent: results.sent,
               failed: results.failed,
               errors: [...results.errors],
