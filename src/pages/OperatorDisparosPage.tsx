@@ -780,6 +780,7 @@ export default function OperatorDisparosPage() {
           if (!sendError && result?.results) {
             results.sent += result.results.sent || 0;
             results.failed += result.results.failed || 0;
+            results.skipped += result.results.skipped || 0;
             if (result.results.errors) results.errors.push(...result.results.errors);
 
             // Circuit breaker for block errors
