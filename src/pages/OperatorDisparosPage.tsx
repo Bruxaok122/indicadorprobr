@@ -944,7 +944,7 @@ export default function OperatorDisparosPage() {
 
     let query = supabase
       .from("contacts")
-      .select("id")
+      .select("id, phone")
       .eq("contact_list", selectedList)
       .eq("status", "novo");
     query = applyOperatorPoolFilter(query);
@@ -953,7 +953,7 @@ export default function OperatorDisparosPage() {
     if (onlyVerifiedNames) query = query.eq("name_verified", true);
 
     const { data: contactsData } = await query;
-    let contactIds = (contactsData || []).map((c: any) => c.id);
+    let contactIds = getUniqueContactIdsByPhone(contactsData || []);
     if (contactIds.length === 0) {
       toast.error("Nenhum contato disponível nesta lista");
       return;
