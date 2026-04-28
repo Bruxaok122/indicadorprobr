@@ -18,6 +18,10 @@ function formatFirstName(fullName: string): string {
   return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
 }
 
+function normalizePhone(phone: string | null | undefined): string {
+  return String(phone || "").replace(/\D/g, "");
+}
+
 function resolveVariable(contact: any, fieldKey: string, extra?: { phoneVerifiedName?: string }): string {
   switch (fieldKey) {
     case "name": return isEmpty(contact.name) ? "Cliente" : formatFirstName(contact.name);
@@ -119,7 +123,8 @@ serve(async (req) => {
       );
     }
 
-    // Sem deduplicação: o controle de re-envio é feito pelo status do contato (novo → aguardando).
+    // O envio só pode acontecer para contatos ainda disponíveis na fila.
+    // Se um contato já saiu da lista/status "novo", a função não envia novamente.
     const eligibleContacts = contacts;
 
     const results = {
@@ -184,6 +189,12 @@ serve(async (req) => {
 
     for (const contact of eligibleContacts) {
       try {
+        if (contact.status !== "novo") {
+          results.skipped++;
+          results.errors.push(`${contact.name}: já removido da lista de disparo`);
+          continue;
+        }
+
         if (contact.status === "encerrado") {
           results.failed++;
           results.errors.push(`${contact.name}: Cliente bloqueado`);
@@ -337,11 +348,13 @@ serve(async (req) => {
           status: "sent",
         });
 
+        const originalContactList = contact.contact_list;
         const contactUpdate: any = {
           status: "aguardando",
           last_message_at: new Date().toISOString(),
           user_id: effectiveUserId,
           dispatched_phone_number_id: finalPhoneNumberId,
+          contact_list: null,
         };
         if (isSharedDispatch) {
           contactUpdate.dispatch_mode = "shared";
@@ -355,17 +368,29 @@ serve(async (req) => {
           .update(contactUpdate)
           .eq("id", contact.id);
 
-        if (contact.phone) {
-          await supabase
+        if (contact.phone && originalContactList) {
+          const targetPhone = normalizePhone(contact.phone);
+          const { data: duplicates } = await supabase
             .from("contacts")
-            .update({
-              status: "encerrado",
-              last_message_at: new Date().toISOString(),
-            })
-            .eq("phone", contact.phone)
-            .eq("contact_list", contact.contact_list)
-            .eq("status", "novo")
-            .neq("id", contact.id);
+            .select("id, phone")
+            .eq("contact_list", originalContactList)
+            .eq("status", "novo");
+
+          const duplicateIds = (duplicates || [])
+            .filter((row: any) => row.id !== contact.id && normalizePhone(row.phone) === targetPhone)
+            .map((row: any) => row.id);
+
+          for (let i = 0; i < duplicateIds.length; i += 100) {
+            const batch = duplicateIds.slice(i, i + 100);
+            await supabase
+              .from("contacts")
+              .update({
+                status: "encerrado",
+                contact_list: null,
+                last_message_at: new Date().toISOString(),
+              })
+              .in("id", batch);
+          }
         }
 
         if (effectiveUserId) {
