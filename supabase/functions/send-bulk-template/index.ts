@@ -22,6 +22,22 @@ function normalizePhone(phone: string | null | undefined): string {
   return String(phone || "").replace(/\D/g, "");
 }
 
+function normalizeText(value: string | null | undefined): string {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+\/\d+\s*$/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+}
+
+function validIdentity(value: string | null | undefined): string {
+  const cleaned = String(value || "").trim();
+  if (!cleaned || cleaned === "Não informado" || cleaned === "********" || cleaned.includes("XXXX")) return "";
+  return cleaned;
+}
+
 function resolveVariable(contact: any, fieldKey: string, extra?: { phoneVerifiedName?: string }): string {
   switch (fieldKey) {
     case "name": return isEmpty(contact.name) ? "Cliente" : formatFirstName(contact.name);
@@ -368,16 +384,26 @@ serve(async (req) => {
           .update(contactUpdate)
           .eq("id", contact.id);
 
-        if (contact.phone && originalContactList) {
+        if (originalContactList) {
           const targetPhone = normalizePhone(contact.phone);
+          const targetCpf = normalizePhone(validIdentity(contact.cpf));
+          const targetProcess = validIdentity(contact.process_number);
+          const targetName = normalizeText(contact.name);
           const { data: duplicates } = await supabase
             .from("contacts")
-            .select("id, phone")
+            .select("id, name, phone, cpf, process_number")
             .eq("contact_list", originalContactList)
             .eq("status", "novo");
 
           const duplicateIds = (duplicates || [])
-            .filter((row: any) => row.id !== contact.id && normalizePhone(row.phone) === targetPhone)
+            .filter((row: any) => {
+              if (row.id === contact.id) return false;
+              const samePhone = !!targetPhone && normalizePhone(row.phone) === targetPhone;
+              const sameCpf = !!targetCpf && normalizePhone(validIdentity(row.cpf)) === targetCpf;
+              const sameProcess = !!targetProcess && validIdentity(row.process_number) === targetProcess;
+              const sameName = !!targetName && normalizeText(row.name) === targetName;
+              return samePhone || sameCpf || sameProcess || sameName;
+            })
             .map((row: any) => row.id);
 
           for (let i = 0; i < duplicateIds.length; i += 100) {
