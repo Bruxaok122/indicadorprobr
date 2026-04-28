@@ -119,61 +119,16 @@ serve(async (req) => {
       );
     }
 
-    // 🛡️ Deduplicação 24h: bloqueia contatos que já receberam ESTE MESMO template nas últimas 24h
-    // (permite re-engajar com templates diferentes)
-    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const recentlyDispatched = new Set<string>();
-    {
-      const ids = contacts.map((c: any) => c.id);
-      const chunkSize = 200;
-      for (let i = 0; i < ids.length; i += chunkSize) {
-        const chunk = ids.slice(i, i + chunkSize);
-        const { data: recentMsgs } = await supabase
-          .from("messages")
-          .select("contact_id, template_name, created_at, status")
-          .in("contact_id", chunk)
-          .eq("direction", "outgoing")
-          .eq("template_name", templateName)
-          .neq("status", "failed")
-          .gte("created_at", since24h);
-        if (recentMsgs) {
-          for (const m of recentMsgs as any[]) recentlyDispatched.add(m.contact_id);
-        }
-      }
-    }
-
-    const eligibleContacts = contacts.filter((c: any) => !recentlyDispatched.has(c.id));
-    const skippedDuplicates = contacts.length - eligibleContacts.length;
-
-    if (eligibleContacts.length === 0) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          results: {
-            total: contacts.length,
-            sent: 0,
-            failed: 0,
-            skipped: skippedDuplicates,
-            errors: [`⏭️ ${skippedDuplicates} contato(s) já receberam o template "${templateName}" nas últimas 24h — pulados. Use outro template para re-engajar.`],
-          },
-          message: `Disparo pulado: ${skippedDuplicates} contato(s) já receberam este template nas últimas 24h.`,
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`Dedupe 24h (template=${templateName}): ${skippedDuplicates}/${contacts.length} contatos pulados.`);
+    // Sem deduplicação: o controle de re-envio é feito pelo status do contato (novo → aguardando).
+    const eligibleContacts = contacts;
 
     const results = {
       total: contacts.length,
       sent: 0,
       failed: 0,
-      skipped: skippedDuplicates,
+      skipped: 0,
       errors: [] as string[],
     };
-    if (skippedDuplicates > 0) {
-      results.errors.push(`⏭️ ${skippedDuplicates} contato(s) pulado(s) — já receberam o template "${templateName}" nas últimas 24h.`);
-    }
 
     let finalPhoneNumberId = config.phone_number_id;
 
