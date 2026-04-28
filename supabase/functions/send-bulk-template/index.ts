@@ -355,6 +355,19 @@ serve(async (req) => {
           .update(contactUpdate)
           .eq("id", contact.id);
 
+        if (contact.phone) {
+          await supabase
+            .from("contacts")
+            .update({
+              status: "encerrado",
+              last_message_at: new Date().toISOString(),
+            })
+            .eq("phone", contact.phone)
+            .eq("contact_list", contact.contact_list)
+            .eq("status", "novo")
+            .neq("id", contact.id);
+        }
+
         if (effectiveUserId) {
           await supabase.rpc("increment_templates_sent", { _user_id: effectiveUserId });
         }
