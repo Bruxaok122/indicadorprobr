@@ -230,6 +230,11 @@ export default function OperatorDisparosPage() {
   const templateBody = selectedTemplate ? getTemplateBody(selectedTemplate) : "";
   const templateVars = extractVariables(templateBody);
 
+  const applyOperatorPoolFilter = useCallback((query: any) => {
+    if (!user?.id) return query;
+    return query.or(`user_id.eq.${user.id},user_id.is.null`);
+  }, [user?.id]);
+
   // Auto-select phone
   useEffect(() => {
     if (phones.length === 1 && !selectedPhoneNumberId) {
@@ -267,7 +272,7 @@ export default function OperatorDisparosPage() {
     supabase
       .from("contacts")
       .select("contact_list")
-      .eq("user_id", user.id)
+      .or(`user_id.eq.${user.id},user_id.is.null`)
       .eq("status", "novo")
       .not("contact_list", "is", null)
       .limit(50000)
@@ -377,8 +382,8 @@ export default function OperatorDisparosPage() {
       .from("contacts")
       .select("id")
       .eq("contact_list", selectedList)
-      .eq("user_id", user.id)
       .eq("status", "novo");
+    query = applyOperatorPoolFilter(query);
 
     if (minRenda !== "all") {
       query = query.gte("valor_da_causa", parseInt(minRenda));
@@ -551,8 +556,8 @@ export default function OperatorDisparosPage() {
       .from("contacts")
       .select("id, name, phone")
       .eq("contact_list", selectedList)
-      .eq("user_id", user.id)
       .eq("status", "novo");
+    manualQuery = applyOperatorPoolFilter(manualQuery);
 
     if (minRenda !== "all") {
       manualQuery = manualQuery.gte("valor_da_causa", parseInt(minRenda));
