@@ -119,21 +119,22 @@ serve(async (req) => {
       );
     }
 
-    // 🛡️ Deduplicação 24h: bloqueia contatos que já receberam QUALQUER template nas últimas 24h
+    // 🛡️ Deduplicação 24h: bloqueia contatos que já receberam ESTE MESMO template nas últimas 24h
+    // (permite re-engajar com templates diferentes)
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const recentlyDispatched = new Set<string>();
     {
       const ids = contacts.map((c: any) => c.id);
-      // Chunk para evitar URL muito longa
       const chunkSize = 200;
       for (let i = 0; i < ids.length; i += chunkSize) {
         const chunk = ids.slice(i, i + chunkSize);
         const { data: recentMsgs } = await supabase
           .from("messages")
-          .select("contact_id, template_name, created_at")
+          .select("contact_id, template_name, created_at, status")
           .in("contact_id", chunk)
           .eq("direction", "outgoing")
-          .not("template_name", "is", null)
+          .eq("template_name", templateName)
+          .neq("status", "failed")
           .gte("created_at", since24h);
         if (recentMsgs) {
           for (const m of recentMsgs as any[]) recentlyDispatched.add(m.contact_id);
@@ -153,15 +154,15 @@ serve(async (req) => {
             sent: 0,
             failed: 0,
             skipped: skippedDuplicates,
-            errors: [`⏭️ ${skippedDuplicates} contato(s) já receberam template nas últimas 24h — pulados.`],
+            errors: [`⏭️ ${skippedDuplicates} contato(s) já receberam o template "${templateName}" nas últimas 24h — pulados. Use outro template para re-engajar.`],
           },
-          message: `Disparo pulado: ${skippedDuplicates} contato(s) já receberam template recente.`,
+          message: `Disparo pulado: ${skippedDuplicates} contato(s) já receberam este template nas últimas 24h.`,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Dedupe 24h: ${skippedDuplicates}/${contacts.length} contatos pulados (já receberam template recentemente).`);
+    console.log(`Dedupe 24h (template=${templateName}): ${skippedDuplicates}/${contacts.length} contatos pulados.`);
 
     const results = {
       total: contacts.length,
