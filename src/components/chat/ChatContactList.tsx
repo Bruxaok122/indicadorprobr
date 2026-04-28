@@ -124,6 +124,7 @@ export function ChatContactList({
   const { dismissContact, isDismissing } = useDismissContact();
   const dismissedSet = useDismissedContacts();
   const [activeTab, setActiveTab] = useState<TabFilter>("aguardando");
+  const lastStatusMap = useLastOutgoingStatus(contacts.map((c) => c.id));
 
   const isUnclaimedShared = (c: Contact) =>
     (c as any).dispatch_mode === "shared" && !(c as any).claimed_by;
