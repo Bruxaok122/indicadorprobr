@@ -345,18 +345,23 @@ export default function OperatorDisparosPage() {
         let successful = 0;
         let failed = 0;
         for (const contact of contactsToImport) {
-          // Check if contact with same phone already exists for this operator
+          // Check if contact with same phone already exists in the operator/pool queue.
+          // Never revive a contact that has already left the dispatch list.
           const { data: existing } = await supabase
             .from("contacts")
-            .select("id")
+            .select("id, status")
             .eq("phone", contact.phone)
-            .eq("user_id", user!.id)
+            .or(`user_id.eq.${user!.id},user_id.is.null`)
             .neq("status", "encerrado")
             .order("last_message_at", { ascending: false, nullsFirst: false })
             .limit(1)
             .maybeSingle();
 
           if (existing) {
+            if (existing.status !== "novo") {
+              successful++;
+              continue;
+            }
             // Reuse existing contact: update status back to "novo" and refresh list name
             const { error } = await supabase
               .from("contacts")
