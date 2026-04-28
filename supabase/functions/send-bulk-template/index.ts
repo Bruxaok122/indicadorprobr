@@ -172,7 +172,7 @@ serve(async (req) => {
       errors: [] as string[],
     };
     if (skippedDuplicates > 0) {
-      results.errors.push(`⏭️ ${skippedDuplicates} contato(s) pulado(s) — já receberam template nas últimas 24h.`);
+      results.errors.push(`⏭️ ${skippedDuplicates} contato(s) pulado(s) — já receberam o template "${templateName}" nas últimas 24h.`);
     }
 
     let finalPhoneNumberId = config.phone_number_id;
