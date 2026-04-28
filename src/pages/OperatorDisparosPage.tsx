@@ -237,7 +237,8 @@ export default function OperatorDisparosPage() {
 
   const getContactQueueKey = (row: any) => {
     const cpfKey = String(row.cpf || "").replace(/\D/g, "");
-    const processKey = String(row.process_number || "").trim();
+    const rawProcess = String(row.process_number || "").trim();
+    const processKey = rawProcess && !rawProcess.includes("XXXX") && rawProcess !== "Não informado" ? rawProcess : "";
     const nameKey = String(row.name || "")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
