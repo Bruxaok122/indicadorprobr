@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/select";
 
 export default function ConversasPage() {
-  const { isAdmin, profile, signOut } = useAuthContext();
+  const { isAdmin, profile, user, signOut } = useAuthContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { contacts, isLoading: contactsLoading, toggleContactBlock, isTogglingBlock, togglePriority, isTogglingPriority, clearAllContacts, isClearingAll } = useContacts();
@@ -332,11 +332,23 @@ export default function ConversasPage() {
                   messageText={messageText} setMessageText={setMessageText} canSendFreeText={canSendFreeText}
                   hasMessages={hasMessages} isSending={isSending || isSendingAudio} isMobile={isMobile}
                   templatesAvailable={templates.length > 0} isContactBlocked={selectedContact.status === "encerrado"}
-                  isReadOnly={
-                    !isAdmin &&
-                    (selectedContact as any).dispatch_mode === "shared" &&
-                    !(selectedContact as any).claimed_by
-                  }
+                  isReadOnly={(() => {
+                    if (isAdmin) return false;
+                    const c: any = selectedContact;
+                    const uid = user?.id;
+                    if (!uid) return true;
+                    // Private: only owner can write
+                    if (c.dispatch_mode !== "shared") {
+                      return c.user_id != null && c.user_id !== uid;
+                    }
+                    // Shared: only the operator who claimed it can write.
+                    // If claimed by someone else → read-only.
+                    // If unclaimed → read-only (must claim first).
+                    // Owner of the contact (user_id) can also write.
+                    if (c.user_id === uid) return false;
+                    if (c.claimed_by && c.claimed_by === uid) return false;
+                    return true;
+                  })()}
                   onSendMessage={handleSendMessage} onOpenTemplateDialog={() => setShowTemplateDialog(true)}
                   onFileSelected={handleFileSelected}
                   onSendAudio={(blob) => {
