@@ -235,12 +235,26 @@ export default function OperatorDisparosPage() {
     return query.or(`user_id.eq.${user.id},user_id.is.null`);
   }, [user?.id]);
 
+  const getContactQueueKey = (row: any) => {
+    const cpfKey = String(row.cpf || "").replace(/\D/g, "");
+    const processKey = String(row.process_number || "").trim();
+    const nameKey = String(row.name || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+\/\d+\s*$/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toUpperCase();
+    const phoneKey = String(row.phone || "").replace(/\D/g, "");
+    return cpfKey || processKey || nameKey || phoneKey;
+  };
+
   const getUniqueContactIdsByPhone = (rows: any[]) => {
     const seen = new Set<string>();
     return rows.filter((row) => {
-      const phoneKey = String(row.phone || "").replace(/\D/g, "");
-      if (!phoneKey || seen.has(phoneKey)) return false;
-      seen.add(phoneKey);
+      const queueKey = getContactQueueKey(row);
+      if (!queueKey || seen.has(queueKey)) return false;
+      seen.add(queueKey);
       return true;
     }).map((row) => row.id);
   };
@@ -281,7 +295,7 @@ export default function OperatorDisparosPage() {
     // matching the previous UX where dispatched contacts were auto-removed.
     supabase
       .from("contacts")
-      .select("contact_list, phone")
+      .select("contact_list, name, phone, cpf, process_number")
       .or(`user_id.eq.${user.id},user_id.is.null`)
       .eq("status", "novo")
       .not("contact_list", "is", null)
@@ -292,7 +306,7 @@ export default function OperatorDisparosPage() {
         (data as any[]).forEach(c => {
           if (!c.contact_list) return;
           if (!map[c.contact_list]) map[c.contact_list] = new Set<string>();
-          map[c.contact_list].add(String(c.phone || "").replace(/\D/g, ""));
+          map[c.contact_list].add(getContactQueueKey(c));
         });
         setAvailableLists(
           Object.entries(map)
