@@ -235,6 +235,16 @@ export default function OperatorDisparosPage() {
     return query.or(`user_id.eq.${user.id},user_id.is.null`);
   }, [user?.id]);
 
+  const getUniqueContactIdsByPhone = (rows: any[]) => {
+    const seen = new Set<string>();
+    return rows.filter((row) => {
+      const phoneKey = String(row.phone || "").replace(/\D/g, "");
+      if (!phoneKey || seen.has(phoneKey)) return false;
+      seen.add(phoneKey);
+      return true;
+    }).map((row) => row.id);
+  };
+
   // Auto-select phone
   useEffect(() => {
     if (phones.length === 1 && !selectedPhoneNumberId) {
@@ -271,20 +281,22 @@ export default function OperatorDisparosPage() {
     // matching the previous UX where dispatched contacts were auto-removed.
     supabase
       .from("contacts")
-      .select("contact_list")
+      .select("contact_list, phone")
       .or(`user_id.eq.${user.id},user_id.is.null`)
       .eq("status", "novo")
       .not("contact_list", "is", null)
       .limit(50000)
       .then(({ data }) => {
         if (!data) { setLoadingLists(false); return; }
-        const map: Record<string, number> = {};
+        const map: Record<string, Set<string>> = {};
         (data as any[]).forEach(c => {
-          if (c.contact_list) map[c.contact_list] = (map[c.contact_list] || 0) + 1;
+          if (!c.contact_list) return;
+          if (!map[c.contact_list]) map[c.contact_list] = new Set<string>();
+          map[c.contact_list].add(String(c.phone || "").replace(/\D/g, ""));
         });
         setAvailableLists(
           Object.entries(map)
-            .map(([name, count]) => ({ name, count }))
+            .map(([name, phones]) => ({ name, count: phones.size }))
             .sort((a, b) => a.name.localeCompare(b.name))
         );
         setLoadingLists(false);
