@@ -235,12 +235,27 @@ export default function OperatorDisparosPage() {
     return query.or(`user_id.eq.${user.id},user_id.is.null`);
   }, [user?.id]);
 
+  const getContactQueueKey = (row: any) => {
+    const cpfKey = String(row.cpf || "").replace(/\D/g, "");
+    const rawProcess = String(row.process_number || "").trim();
+    const processKey = rawProcess && !rawProcess.includes("XXXX") && rawProcess !== "Não informado" ? rawProcess : "";
+    const nameKey = String(row.name || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+\/\d+\s*$/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toUpperCase();
+    const phoneKey = String(row.phone || "").replace(/\D/g, "");
+    return cpfKey || processKey || nameKey || phoneKey;
+  };
+
   const getUniqueContactIdsByPhone = (rows: any[]) => {
     const seen = new Set<string>();
     return rows.filter((row) => {
-      const phoneKey = String(row.phone || "").replace(/\D/g, "");
-      if (!phoneKey || seen.has(phoneKey)) return false;
-      seen.add(phoneKey);
+      const queueKey = getContactQueueKey(row);
+      if (!queueKey || seen.has(queueKey)) return false;
+      seen.add(queueKey);
       return true;
     }).map((row) => row.id);
   };
@@ -281,7 +296,7 @@ export default function OperatorDisparosPage() {
     // matching the previous UX where dispatched contacts were auto-removed.
     supabase
       .from("contacts")
-      .select("contact_list, phone")
+      .select("contact_list, name, phone, cpf, process_number")
       .or(`user_id.eq.${user.id},user_id.is.null`)
       .eq("status", "novo")
       .not("contact_list", "is", null)
@@ -292,7 +307,7 @@ export default function OperatorDisparosPage() {
         (data as any[]).forEach(c => {
           if (!c.contact_list) return;
           if (!map[c.contact_list]) map[c.contact_list] = new Set<string>();
-          map[c.contact_list].add(String(c.phone || "").replace(/\D/g, ""));
+          map[c.contact_list].add(getContactQueueKey(c));
         });
         setAvailableLists(
           Object.entries(map)
@@ -330,18 +345,23 @@ export default function OperatorDisparosPage() {
         let successful = 0;
         let failed = 0;
         for (const contact of contactsToImport) {
-          // Check if contact with same phone already exists for this operator
+          // Check if contact with same phone already exists in the operator/pool queue.
+          // Never revive a contact that has already left the dispatch list.
           const { data: existing } = await supabase
             .from("contacts")
-            .select("id")
+            .select("id, status")
             .eq("phone", contact.phone)
-            .eq("user_id", user!.id)
+            .or(`user_id.eq.${user!.id},user_id.is.null`)
             .neq("status", "encerrado")
             .order("last_message_at", { ascending: false, nullsFirst: false })
             .limit(1)
             .maybeSingle();
 
           if (existing) {
+            if (existing.status !== "novo") {
+              successful++;
+              continue;
+            }
             // Reuse existing contact: update status back to "novo" and refresh list name
             const { error } = await supabase
               .from("contacts")
@@ -392,7 +412,7 @@ export default function OperatorDisparosPage() {
     // Fetch contacts from operator's own list with renda filter
     let query = supabase
       .from("contacts")
-      .select("id, phone")
+      .select("id, name, phone, cpf, process_number")
       .eq("contact_list", selectedList)
       .eq("status", "novo");
     query = applyOperatorPoolFilter(query);
@@ -566,7 +586,7 @@ export default function OperatorDisparosPage() {
 
     let manualQuery = supabase
       .from("contacts")
-      .select("id, name, phone")
+      .select("id, name, phone, cpf, process_number")
       .eq("contact_list", selectedList)
       .eq("status", "novo");
     manualQuery = applyOperatorPoolFilter(manualQuery);
@@ -580,9 +600,13 @@ export default function OperatorDisparosPage() {
 
     const { data: contactsData } = await manualQuery;
 
-    const contacts = (contactsData || []).filter((c: any, index: number, arr: any[]) =>
-      arr.findIndex((item: any) => String(item.phone || "").replace(/\D/g, "") === String(c.phone || "").replace(/\D/g, "")) === index
-    ).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone }));
+    const seenManual = new Set<string>();
+    const contacts = (contactsData || []).filter((c: any) => {
+      const queueKey = getContactQueueKey(c);
+      if (!queueKey || seenManual.has(queueKey)) return false;
+      seenManual.add(queueKey);
+      return true;
+    }).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone }));
     if (contacts.length === 0) {
       toast.error("Nenhum contato disponível nesta lista");
       return;
@@ -674,7 +698,7 @@ export default function OperatorDisparosPage() {
 
     let query = supabase
       .from("contacts")
-      .select("id, phone")
+      .select("id, name, phone, cpf, process_number")
       .eq("contact_list", selectedList)
       .eq("status", "novo");
     query = applyOperatorPoolFilter(query);
@@ -944,7 +968,7 @@ export default function OperatorDisparosPage() {
 
     let query = supabase
       .from("contacts")
-      .select("id, phone")
+      .select("id, name, phone, cpf, process_number")
       .eq("contact_list", selectedList)
       .eq("status", "novo");
     query = applyOperatorPoolFilter(query);
