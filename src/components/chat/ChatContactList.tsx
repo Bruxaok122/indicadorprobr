@@ -408,11 +408,12 @@ export function ChatContactList({
                       </p>
                       {contact.last_message_at && (
                         <span className={cn(
-                          "shrink-0 text-[11px] whitespace-nowrap",
+                          "shrink-0 inline-flex items-center gap-1 text-[11px] whitespace-nowrap",
                           contact.status === "aguardando"
                             ? "text-green-600 dark:text-green-400 font-semibold"
                             : "text-gray-400"
                         )}>
+                          {renderTick(lastStatusMap[contact.id])}
                           {formatMessageTime(contact.last_message_at)}
                         </span>
                       )}
