@@ -1167,8 +1167,8 @@ export default function OperatorDisparosPage() {
       const { data: contactIds } = await supabase
         .from("contacts")
         .select("id")
-        .eq("user_id", user.id)
-        .eq("contact_list", listNameToDelete);
+        .eq("contact_list", listNameToDelete)
+        .or(`user_id.eq.${user.id},user_id.is.null`);
       
       const ids = (contactIds || []).map((c: any) => c.id);
       
