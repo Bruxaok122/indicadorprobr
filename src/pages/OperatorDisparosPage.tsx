@@ -662,8 +662,8 @@ export default function OperatorDisparosPage() {
       .from("contacts")
       .select("id")
       .eq("contact_list", selectedList)
-      .eq("user_id", user.id)
       .eq("status", "novo");
+    query = applyOperatorPoolFilter(query);
 
     if (minRenda !== "all") query = query.gte("valor_da_causa", parseInt(minRenda));
     if (onlyVerifiedNames) query = query.eq("name_verified", true);
@@ -932,8 +932,8 @@ export default function OperatorDisparosPage() {
       .from("contacts")
       .select("id")
       .eq("contact_list", selectedList)
-      .eq("user_id", user.id)
       .eq("status", "novo");
+    query = applyOperatorPoolFilter(query);
 
     if (minRenda !== "all") query = query.gte("valor_da_causa", parseInt(minRenda));
     if (onlyVerifiedNames) query = query.eq("name_verified", true);
@@ -1149,8 +1149,8 @@ export default function OperatorDisparosPage() {
     const { data } = await supabase
       .from("contacts")
       .select("name, phone, status, cpf, lawyer_name")
-      .eq("user_id", user.id)
       .eq("contact_list", listName)
+      .or(`user_id.eq.${user.id},user_id.is.null`)
       .order("name")
       .limit(500);
     setViewingListContacts((data || []) as any[]);
