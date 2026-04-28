@@ -77,6 +77,18 @@ function getStatusDot(status: string) {
   }
 }
 
+function renderTick(status?: LastOutgoingStatus) {
+  if (!status) return null;
+  switch (status) {
+    case "pending": return <Clock className="h-3 w-3 text-gray-400 shrink-0" />;
+    case "sent": return <Check className="h-3.5 w-3.5 text-gray-400 shrink-0" />;
+    case "delivered": return <CheckCheck className="h-3.5 w-3.5 text-gray-400 shrink-0" />;
+    case "read": return <CheckCheck className="h-3.5 w-3.5 text-blue-500 shrink-0" />;
+    case "failed": return <X className="h-3 w-3 text-red-500 shrink-0" />;
+    default: return null;
+  }
+}
+
 function getStatusLabel(status: string) {
   switch (status) {
     case "aguardando": return "Aguardando";
