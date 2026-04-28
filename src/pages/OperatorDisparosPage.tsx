@@ -230,6 +230,11 @@ export default function OperatorDisparosPage() {
   const templateBody = selectedTemplate ? getTemplateBody(selectedTemplate) : "";
   const templateVars = extractVariables(templateBody);
 
+  const applyOperatorPoolFilter = useCallback((query: any) => {
+    if (!user?.id) return query;
+    return query.or(`user_id.eq.${user.id},user_id.is.null`);
+  }, [user?.id]);
+
   // Auto-select phone
   useEffect(() => {
     if (phones.length === 1 && !selectedPhoneNumberId) {
@@ -267,7 +272,7 @@ export default function OperatorDisparosPage() {
     supabase
       .from("contacts")
       .select("contact_list")
-      .eq("user_id", user.id)
+      .or(`user_id.eq.${user.id},user_id.is.null`)
       .eq("status", "novo")
       .not("contact_list", "is", null)
       .limit(50000)
@@ -377,8 +382,8 @@ export default function OperatorDisparosPage() {
       .from("contacts")
       .select("id")
       .eq("contact_list", selectedList)
-      .eq("user_id", user.id)
       .eq("status", "novo");
+    query = applyOperatorPoolFilter(query);
 
     if (minRenda !== "all") {
       query = query.gte("valor_da_causa", parseInt(minRenda));
@@ -517,13 +522,13 @@ export default function OperatorDisparosPage() {
         }
 
         const ctrl = dispatchControlsRef.current[dispatchId];
-        const skipMsg = results.skipped > 0 ? `, ${results.skipped} pulados (já receberam template em 24h)` : "";
+        const skipMsg = "";
         if (ctrl?.isCancelled) {
           toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
         } else if (results.failed > 0) {
           toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
         } else if (results.sent === 0 && results.skipped > 0) {
-          toast.warning(`Nenhum disparo realizado — todos os ${results.skipped} contatos já receberam template em 24h.`);
+          toast.warning("Nenhum disparo realizado.");
         } else {
           toast.success(`Concluído — ${results.sent} enviados${skipMsg}!`);
         }
@@ -551,8 +556,8 @@ export default function OperatorDisparosPage() {
       .from("contacts")
       .select("id, name, phone")
       .eq("contact_list", selectedList)
-      .eq("user_id", user.id)
       .eq("status", "novo");
+    manualQuery = applyOperatorPoolFilter(manualQuery);
 
     if (minRenda !== "all") {
       manualQuery = manualQuery.gte("valor_da_causa", parseInt(minRenda));
@@ -657,8 +662,8 @@ export default function OperatorDisparosPage() {
       .from("contacts")
       .select("id")
       .eq("contact_list", selectedList)
-      .eq("user_id", user.id)
       .eq("status", "novo");
+    query = applyOperatorPoolFilter(query);
 
     if (minRenda !== "all") query = query.gte("valor_da_causa", parseInt(minRenda));
     if (onlyVerifiedNames) query = query.eq("name_verified", true);
@@ -885,13 +890,13 @@ export default function OperatorDisparosPage() {
         }
 
         const ctrl = dispatchControlsRef.current[dispatchId];
-        const skipMsg = results.skipped > 0 ? `, ${results.skipped} pulados (já receberam template em 24h)` : "";
+        const skipMsg = "";
         if (ctrl?.isCancelled) {
           toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
         } else if (results.failed > 0) {
           toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
         } else if (results.sent === 0 && results.skipped > 0) {
-          toast.warning(`Nenhum disparo realizado — todos os ${results.skipped} contatos já receberam template em 24h.`);
+          toast.warning("Nenhum disparo realizado.");
         } else {
           toast.success(`✅ Disparo inteligente concluído — ${results.sent} enviados${skipMsg}!`);
         }
@@ -927,8 +932,8 @@ export default function OperatorDisparosPage() {
       .from("contacts")
       .select("id")
       .eq("contact_list", selectedList)
-      .eq("user_id", user.id)
       .eq("status", "novo");
+    query = applyOperatorPoolFilter(query);
 
     if (minRenda !== "all") query = query.gte("valor_da_causa", parseInt(minRenda));
     if (onlyVerifiedNames) query = query.eq("name_verified", true);
@@ -1111,13 +1116,13 @@ export default function OperatorDisparosPage() {
         }
 
         const ctrl = dispatchControlsRef.current[dispatchId];
-        const skipMsg = results.skipped > 0 ? `, ${results.skipped} pulados (já receberam template em 24h)` : "";
+        const skipMsg = "";
         if (ctrl?.isCancelled) {
           toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
         } else if (results.failed > 0) {
           toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
         } else if (results.sent === 0 && results.skipped > 0) {
-          toast.warning(`Nenhum disparo realizado — todos os ${results.skipped} contatos já receberam template em 24h.`);
+          toast.warning("Nenhum disparo realizado.");
         } else {
           toast.success(`🛡️ Disparo conservador concluído — ${results.sent} enviados${skipMsg}!`);
         }
@@ -1144,8 +1149,8 @@ export default function OperatorDisparosPage() {
     const { data } = await supabase
       .from("contacts")
       .select("name, phone, status, cpf, lawyer_name")
-      .eq("user_id", user.id)
       .eq("contact_list", listName)
+      .or(`user_id.eq.${user.id},user_id.is.null`)
       .order("name")
       .limit(500);
     setViewingListContacts((data || []) as any[]);
@@ -1162,8 +1167,8 @@ export default function OperatorDisparosPage() {
       const { data: contactIds } = await supabase
         .from("contacts")
         .select("id")
-        .eq("user_id", user.id)
-        .eq("contact_list", listNameToDelete);
+        .eq("contact_list", listNameToDelete)
+        .or(`user_id.eq.${user.id},user_id.is.null`);
       
       const ids = (contactIds || []).map((c: any) => c.id);
       
