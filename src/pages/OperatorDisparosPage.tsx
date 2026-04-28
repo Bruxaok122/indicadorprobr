@@ -522,13 +522,13 @@ export default function OperatorDisparosPage() {
         }
 
         const ctrl = dispatchControlsRef.current[dispatchId];
-        const skipMsg = results.skipped > 0 ? `, ${results.skipped} pulados (já receberam template em 24h)` : "";
+        const skipMsg = "";
         if (ctrl?.isCancelled) {
           toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
         } else if (results.failed > 0) {
           toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
         } else if (results.sent === 0 && results.skipped > 0) {
-          toast.warning(`Nenhum disparo realizado — todos os ${results.skipped} contatos já receberam template em 24h.`);
+          toast.warning("Nenhum disparo realizado.");
         } else {
           toast.success(`Concluído — ${results.sent} enviados${skipMsg}!`);
         }
@@ -890,13 +890,13 @@ export default function OperatorDisparosPage() {
         }
 
         const ctrl = dispatchControlsRef.current[dispatchId];
-        const skipMsg = results.skipped > 0 ? `, ${results.skipped} pulados (já receberam template em 24h)` : "";
+        const skipMsg = "";
         if (ctrl?.isCancelled) {
           toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
         } else if (results.failed > 0) {
           toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas${skipMsg}`);
         } else if (results.sent === 0 && results.skipped > 0) {
-          toast.warning(`Nenhum disparo realizado — todos os ${results.skipped} contatos já receberam template em 24h.`);
+          toast.warning("Nenhum disparo realizado.");
         } else {
           toast.success(`✅ Disparo inteligente concluído — ${results.sent} enviados${skipMsg}!`);
         }
