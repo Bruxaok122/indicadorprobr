@@ -392,7 +392,7 @@ export default function OperatorDisparosPage() {
     // Fetch contacts from operator's own list with renda filter
     let query = supabase
       .from("contacts")
-      .select("id")
+      .select("id, phone")
       .eq("contact_list", selectedList)
       .eq("status", "novo");
     query = applyOperatorPoolFilter(query);
@@ -405,7 +405,7 @@ export default function OperatorDisparosPage() {
     }
 
     const { data: contactsData } = await query;
-    const contactIds = (contactsData || []).map((c: any) => c.id);
+    const contactIds = getUniqueContactIdsByPhone(contactsData || []);
     if (contactIds.length === 0) {
       toast.error("Nenhum contato disponível nesta lista");
       return;
@@ -580,7 +580,9 @@ export default function OperatorDisparosPage() {
 
     const { data: contactsData } = await manualQuery;
 
-    const contacts = (contactsData || []).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone }));
+    const contacts = (contactsData || []).filter((c: any, index: number, arr: any[]) =>
+      arr.findIndex((item: any) => String(item.phone || "").replace(/\D/g, "") === String(c.phone || "").replace(/\D/g, "")) === index
+    ).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone }));
     if (contacts.length === 0) {
       toast.error("Nenhum contato disponível nesta lista");
       return;
@@ -672,7 +674,7 @@ export default function OperatorDisparosPage() {
 
     let query = supabase
       .from("contacts")
-      .select("id")
+      .select("id, phone")
       .eq("contact_list", selectedList)
       .eq("status", "novo");
     query = applyOperatorPoolFilter(query);
@@ -681,7 +683,7 @@ export default function OperatorDisparosPage() {
     if (onlyVerifiedNames) query = query.eq("name_verified", true);
 
     const { data: contactsData } = await query;
-    let contactIds = (contactsData || []).map((c: any) => c.id);
+    let contactIds = getUniqueContactIdsByPhone(contactsData || []);
     if (contactIds.length === 0) {
       toast.error("Nenhum contato disponível nesta lista");
       return;
