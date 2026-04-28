@@ -406,7 +406,7 @@ export default function OperatorDisparosPage() {
     // Fetch contacts from operator's own list with renda filter
     let query = supabase
       .from("contacts")
-      .select("id, phone")
+      .select("id, name, phone, cpf, process_number")
       .eq("contact_list", selectedList)
       .eq("status", "novo");
     query = applyOperatorPoolFilter(query);
@@ -580,7 +580,7 @@ export default function OperatorDisparosPage() {
 
     let manualQuery = supabase
       .from("contacts")
-      .select("id, name, phone")
+      .select("id, name, phone, cpf, process_number")
       .eq("contact_list", selectedList)
       .eq("status", "novo");
     manualQuery = applyOperatorPoolFilter(manualQuery);
@@ -594,9 +594,13 @@ export default function OperatorDisparosPage() {
 
     const { data: contactsData } = await manualQuery;
 
-    const contacts = (contactsData || []).filter((c: any, index: number, arr: any[]) =>
-      arr.findIndex((item: any) => String(item.phone || "").replace(/\D/g, "") === String(c.phone || "").replace(/\D/g, "")) === index
-    ).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone }));
+    const seenManual = new Set<string>();
+    const contacts = (contactsData || []).filter((c: any) => {
+      const queueKey = getContactQueueKey(c);
+      if (!queueKey || seenManual.has(queueKey)) return false;
+      seenManual.add(queueKey);
+      return true;
+    }).map((c: any) => ({ id: c.id, name: c.name, phone: c.phone }));
     if (contacts.length === 0) {
       toast.error("Nenhum contato disponível nesta lista");
       return;
@@ -688,7 +692,7 @@ export default function OperatorDisparosPage() {
 
     let query = supabase
       .from("contacts")
-      .select("id, phone")
+      .select("id, name, phone, cpf, process_number")
       .eq("contact_list", selectedList)
       .eq("status", "novo");
     query = applyOperatorPoolFilter(query);
@@ -958,7 +962,7 @@ export default function OperatorDisparosPage() {
 
     let query = supabase
       .from("contacts")
-      .select("id, phone")
+      .select("id, name, phone, cpf, process_number")
       .eq("contact_list", selectedList)
       .eq("status", "novo");
     query = applyOperatorPoolFilter(query);
