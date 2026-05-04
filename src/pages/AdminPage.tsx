@@ -31,6 +31,7 @@ import { AdminFichasPanel } from "@/components/admin/AdminFichasPanel";
 import { AITestPanel } from "@/components/admin/AITestPanel";
 import { FailureRateCard } from "@/components/admin/FailureRateCard";
 import { RealtimeMonitorPanel } from "@/components/admin/RealtimeMonitorPanel";
+import { ClearAllChatsButton } from "@/components/admin/ClearAllChatsButton";
 
 function AdminPageInner() {
   const navigate = useNavigate();
