@@ -472,11 +472,16 @@ export function parseJuridicalList(rawText: string): {
   const contacts: ParsedContact[] = [];
   const usedPhones = new Set<string>();
 
+  // Detect "RELATORIO DETALHADO" report format
+  const isReportFormat = /RELATORIO DETALHADO/i.test(rawText) || /^PROCESSO:\s*\S+[\s\S]*^POLO ATIVO:/m.test(rawText);
+
   // Divide o texto pelos separadores (equals ou dashes)
   const hasDashSeparator = /^-{10,}$/m.test(rawText);
-  const rawBlocks = hasDashSeparator
-    ? rawText.split(/\n?-{10,}\n?/).filter((block) => block.trim().length > 0)
-    : rawText.split(SEPARATOR_EQUALS).filter((block) => block.trim().length > 0);
+  const rawBlocks = isReportFormat
+    ? []
+    : hasDashSeparator
+      ? rawText.split(/\n?-{10,}\n?/).filter((block) => block.trim().length > 0)
+      : rawText.split(SEPARATOR_EQUALS).filter((block) => block.trim().length > 0);
 
   const addContactsFromBlock = (parsed: ParsedBlock) => {
     // Deduplicate: skip phones already used by a previous block
