@@ -339,6 +339,108 @@ function parseBlockDashFormat(block: string): ParsedBlock | null {
 }
 
 /**
+ * Parse do formato "RELATORIO DETALHADO - CONSULTA OAB"
+ * Cada bloco PROCESSO contém POLO ATIVO/POLO PASSIVO com várias pessoas.
+ * Para cada pessoa com telefones, gera um ParsedBlock individual.
+ */
+function parseBlocksReportFormat(rawText: string): ParsedBlock[] {
+  const results: ParsedBlock[] = [];
+  // Split by 40+ dashes (block separator) - includes the leading newline
+  const rawBlocks = rawText.split(/\n-{20,}\n/).map(b => b.trim()).filter(Boolean);
+
+  for (const block of rawBlocks) {
+    if (!/^PROCESSO:/m.test(block)) continue;
+
+    const processMatch = block.match(/^PROCESSO:\s*(.+)$/m);
+    let processNumber = processMatch ? processMatch[1].trim() : "0031486-26.2025.8.26.0002";
+    const extractedProc = extractProcess(processNumber);
+    if (extractedProc) processNumber = extractedProc;
+
+    // Find POLO ATIVO / POLO PASSIVO sections
+    const poloActiveIdx = block.search(/^POLO ATIVO:/m);
+    const poloPassiveIdx = block.search(/^POLO PASSIVO:/m);
+
+    type Section = { name: string; text: string };
+    const sections: Section[] = [];
+    if (poloActiveIdx !== -1) {
+      const end = poloPassiveIdx !== -1 && poloPassiveIdx > poloActiveIdx ? poloPassiveIdx : block.length;
+      sections.push({ name: "ativo", text: block.substring(poloActiveIdx, end) });
+    }
+    if (poloPassiveIdx !== -1) {
+      sections.push({ name: "passivo", text: block.substring(poloPassiveIdx) });
+    }
+
+    // For each section, parse persons. Persons start with "- NOME:" lines.
+    // Lawyer for the contact = "ADVOGADO:" line that appears AFTER the person (in same polo).
+    for (const section of sections) {
+      const lines = section.text.split("\n");
+      // Indices of person starts
+      const personStarts: number[] = [];
+      for (let i = 0; i < lines.length; i++) {
+        if (/^-\s*NOME:/i.test(lines[i])) personStarts.push(i);
+      }
+
+      for (let pi = 0; pi < personStarts.length; pi++) {
+        const start = personStarts[pi];
+        const end = pi + 1 < personStarts.length ? personStarts[pi + 1] : lines.length;
+        const personLines = lines.slice(start, end);
+
+        let name = "Cliente";
+        let cpf: string | undefined;
+        let renda: string | undefined;
+        const phones: string[] = [];
+        let lawyer = "********";
+
+        for (let li = 0; li < personLines.length; li++) {
+          const line = personLines[li].trim();
+          const nameM = line.match(/^-\s*NOME:\s*(.+)$/i);
+          if (nameM) {
+            // Take first name only (split by ;)
+            name = nameM[1].split(";")[0].trim() || "Cliente";
+            continue;
+          }
+          const docM = line.match(/^-\s*DOC:\s*(.+)$/i);
+          if (docM) { cpf = docM[1].trim(); continue; }
+          const rendaM = line.match(/^-\s*RENDA:\s*R?\$?\s*([\d.,]+)/i);
+          if (rendaM) { renda = rendaM[1]; continue; }
+          if (/^-\s*TELEFONES:/i.test(line)) {
+            // following lines starting with " N. ..." until non-phone
+            for (let pj = li + 1; pj < personLines.length; pj++) {
+              const pl = personLines[pj];
+              if (/^-\s/.test(pl.trim())) break;
+              const extracted = extractPhones(pl);
+              if (extracted.length > 0) phones.push(...extracted);
+              else if (pl.trim() === "") continue;
+            }
+            continue;
+          }
+          const advM = line.match(/^-\s*ADVOGADO:\s*(.+)$/i);
+          if (advM) {
+            // Lawyer string can contain "; Advogado: X" - take the first name only
+            const raw = advM[1].split(";")[0].replace(/\s*\(CPF[^)]*\)/i, "").trim();
+            if (raw) lawyer = raw;
+          }
+        }
+
+        const uniquePhones = [...new Set(phones)];
+        if (uniquePhones.length === 0) continue;
+
+        results.push({
+          lawyer,
+          process: processNumber,
+          clientName: name,
+          phones: uniquePhones,
+          cpf,
+          renda,
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+/**
  * Detecta qual formato usar e faz parse do bloco
  */
 function parseBlock(block: string): ParsedBlock | null {
