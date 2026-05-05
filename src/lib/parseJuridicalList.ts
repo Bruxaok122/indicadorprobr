@@ -506,6 +506,15 @@ export function parseJuridicalList(rawText: string): {
     });
   };
 
+  if (isReportFormat) {
+    const reportBlocks = parseBlocksReportFormat(rawText);
+    if (reportBlocks.length === 0) {
+      errors.push("Nenhum contato válido encontrado no relatório (sem telefones celulares).");
+    }
+    reportBlocks.forEach(addContactsFromBlock);
+    return { contacts, errors, blocks };
+  }
+
   if (rawBlocks.length === 0) {
     const parsed = parseBlock(rawText);
     if (parsed && parsed.phones.length > 0) {
