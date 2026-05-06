@@ -146,7 +146,7 @@ export async function runPersistentDispatch(jobInput: PersistedDispatchJob, opti
   runningDispatches.add(jobInput.id);
 
   let job = getDispatchJob(jobInput.id) || jobInput;
-  let results = job.results || { sent: 0, failed: 0, skipped: 0, errors: [] };
+  const results = job.results || { sent: 0, failed: 0, skipped: 0, errors: [] };
   let consecutiveErrors = 0;
   let currentPhase = 0;
   let msgsInCurrentPhase = 0;
@@ -273,8 +273,9 @@ export async function runPersistentDispatch(jobInput: PersistedDispatchJob, opti
     if (ctrl?.isCancelled) toast.warning(`Cancelado — ${results.sent} enviados, ${results.failed} falhas`);
     else if (results.failed > 0) toast.error(`Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas`);
     else toast.success(`Disparo concluído — ${results.sent} enviados!`);
-  } catch (err: any) {
-    toast.error("Erro no disparo", { description: err.message });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Erro desconhecido";
+    toast.error("Erro no disparo", { description: message });
     saveDispatchJob({ ...job, results });
   } finally {
     runningDispatches.delete(job.id);
