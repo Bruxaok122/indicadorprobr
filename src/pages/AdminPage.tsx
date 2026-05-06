@@ -31,7 +31,6 @@ import { AdminFichasPanel } from "@/components/admin/AdminFichasPanel";
 import { AITestPanel } from "@/components/admin/AITestPanel";
 import { FailureRateCard } from "@/components/admin/FailureRateCard";
 import { RealtimeMonitorPanel } from "@/components/admin/RealtimeMonitorPanel";
-import { ClearAllChatsButton } from "@/components/admin/ClearAllChatsButton";
 
 function AdminPageInner() {
   const navigate = useNavigate();
@@ -79,9 +78,6 @@ function AdminPageInner() {
       <AdminHeader onLogout={handleLogout} onRefresh={refreshAll} />
 
       <main className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
-        <div className="flex justify-end">
-          <ClearAllChatsButton />
-        </div>
         <Tabs defaultValue="tempo-real" onValueChange={(v) => setActiveTab(v)}>
           <TabsList className="w-full sm:w-auto flex-wrap">
             <TabsTrigger value="tempo-real" className="gap-1.5">

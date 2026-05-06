@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useRef, useEffect, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getDispatchJob, removeDispatchJob, runPersistentDispatch } from "@/lib/dispatchRunner";
 
 export type DispatchMode = "batch" | "individual" | "turbo" | "smart";
 
@@ -101,15 +100,6 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
   const [loadingFromDb, setLoadingFromDb] = useState(true);
   const dispatchControlsRef = useRef<Record<string, DispatchControls>>({});
 
-  const updateDispatchState = useCallback((dispatchId: string, updates: Partial<ActiveDispatch>) => {
-    setActiveDispatches((prev) => {
-      const updated = prev.map((d) => (d.id === dispatchId ? { ...d, ...updates } : d));
-      const dispatch = updated.find((d) => d.id === dispatchId);
-      if (dispatch) upsertDispatchToDb(dispatch);
-      return updated;
-    });
-  }, []);
-
   // Load persisted dispatches from DB on mount
   useEffect(() => {
     async function loadDispatches() {
@@ -122,15 +112,6 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
         if (data && data.length > 0) {
           const mapped = (data as any[]).map(mapDbRowToDispatch);
           setActiveDispatches(mapped);
-          for (const dispatch of mapped) {
-            const job = getDispatchJob(dispatch.id);
-            if (!job || dispatch.isFinished) continue;
-            dispatchControlsRef.current[dispatch.id] ||= { isPaused: dispatch.isPaused, isCancelled: dispatch.isCancelled };
-            runPersistentDispatch(job, {
-              updateDispatch: updateDispatchState,
-              getControls: () => dispatchControlsRef.current[dispatch.id],
-            });
-          }
         }
       } catch (e) {
         console.error("Failed to load dispatches from DB:", e);
@@ -179,9 +160,17 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [updateDispatchState]);
+  }, []);
 
-  const updateDispatch = updateDispatchState;
+  const updateDispatch = useCallback((dispatchId: string, updates: Partial<ActiveDispatch>) => {
+    setActiveDispatches((prev) => {
+      const updated = prev.map((d) => (d.id === dispatchId ? { ...d, ...updates } : d));
+      // Persist the updated dispatch to DB
+      const dispatch = updated.find((d) => d.id === dispatchId);
+      if (dispatch) upsertDispatchToDb(dispatch);
+      return updated;
+    });
+  }, []);
 
   const addDispatch = useCallback((dispatch: ActiveDispatch) => {
     setActiveDispatches((prev) => [dispatch, ...prev]);
@@ -190,7 +179,6 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
 
   const dismissDispatch = useCallback((dispatchId: string) => {
     setActiveDispatches((prev) => prev.filter((d) => d.id !== dispatchId));
-    removeDispatchJob(dispatchId);
     deleteDispatchFromDb(dispatchId);
   }, []);
 
