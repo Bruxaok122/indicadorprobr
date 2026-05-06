@@ -35,6 +35,7 @@ import { ParsedContact } from "@/types/juriszap";
 import { CreateTemplateDialog } from "@/components/templates/CreateTemplateDialog";
 import { cn } from "@/lib/utils";
 import { getTierConfig } from "@/lib/tierLimits";
+import { saveDispatchJob, runPersistentDispatch, type PersistedDispatchJob } from "@/lib/dispatchRunner";
 
 // --- Parser for the operator's raw format ---
 // No number validation, accepts all phones as-is
@@ -453,6 +454,32 @@ export default function OperatorDisparosPage() {
 
     addDispatch(newDispatch);
 
+    const job: PersistedDispatchJob = {
+      id: dispatchId,
+      kind: "auto",
+      contactIds,
+      templateName: selectedTemplate.name,
+      templateLanguage: selectedTemplate.language,
+      userId: user.id,
+      assignedUserId: sharedDispatch ? null : user.id,
+      selectedPhoneNumberId: selectedPhoneNumberId || undefined,
+      variableMappings: { ...variableMappings },
+      phoneVerifiedName,
+      dispatchMode: sharedDispatch ? "shared" : "private",
+      intervalSeconds,
+      nextIndex: 0,
+      results: { sent: 0, failed: 0, skipped: 0, errors: [] },
+    };
+    saveDispatchJob(job);
+    runPersistentDispatch(job, {
+      updateDispatch,
+      getControls: () => dispatchControlsRef.current[dispatchId],
+      onComplete: refreshLists,
+    });
+
+    toast.info("Disparo iniciado e protegido contra queda de tela!");
+    return;
+
     const capturedTemplate = selectedTemplate;
     const capturedPhoneId = selectedPhoneNumberId;
     const capturedMappings = { ...variableMappings };
@@ -739,6 +766,31 @@ export default function OperatorDisparosPage() {
 
     addDispatch(newDispatch);
 
+    const job: PersistedDispatchJob = {
+      id: dispatchId,
+      kind: "smart",
+      contactIds,
+      templateName: selectedTemplate.name,
+      templateLanguage: selectedTemplate.language,
+      userId: user.id,
+      assignedUserId: sharedDispatch ? null : user.id,
+      selectedPhoneNumberId: selectedPhoneNumberId || undefined,
+      variableMappings: { ...variableMappings },
+      phoneVerifiedName,
+      dispatchMode: sharedDispatch ? "shared" : "private",
+      nextIndex: 0,
+      results: { sent: 0, failed: 0, skipped: 0, errors: [] },
+    };
+    saveDispatchJob(job);
+    runPersistentDispatch(job, {
+      updateDispatch,
+      getControls: () => dispatchControlsRef.current[dispatchId],
+      onComplete: refreshLists,
+    });
+
+    toast.info("🧠 Disparo inteligente iniciado e protegido contra queda de tela!");
+    return;
+
     const capturedTemplate = selectedTemplate;
     const capturedPhoneId = selectedPhoneNumberId;
     const capturedMappings = { ...variableMappings };
@@ -1008,6 +1060,32 @@ export default function OperatorDisparosPage() {
     };
 
     addDispatch(newDispatch);
+
+    const job: PersistedDispatchJob = {
+      id: dispatchId,
+      kind: "conservative",
+      contactIds,
+      templateName: selectedTemplate.name,
+      templateLanguage: selectedTemplate.language,
+      userId: user.id,
+      assignedUserId: sharedDispatch ? null : user.id,
+      selectedPhoneNumberId: selectedPhoneNumberId || undefined,
+      variableMappings: { ...variableMappings },
+      phoneVerifiedName,
+      dispatchMode: sharedDispatch ? "shared" : "private",
+      baseIntervalSec,
+      nextIndex: 0,
+      results: { sent: 0, failed: 0, skipped: 0, errors: [] },
+    };
+    saveDispatchJob(job);
+    runPersistentDispatch(job, {
+      updateDispatch,
+      getControls: () => dispatchControlsRef.current[dispatchId],
+      onComplete: refreshLists,
+    });
+
+    toast.info("🛡️ Disparo conservador iniciado e protegido contra queda de tela!");
+    return;
 
     const capturedTemplate = selectedTemplate;
     const capturedPhoneId = selectedPhoneNumberId;
