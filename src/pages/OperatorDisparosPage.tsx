@@ -2129,6 +2129,37 @@ export default function OperatorDisparosPage() {
             </DialogDescription>
           </DialogHeader>
 
+          {/* Banner Validação WhatsApp */}
+          <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
+              <ShieldCheck className="h-5 w-5 text-emerald-500 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">Validar números no WhatsApp</p>
+                <p className="text-xs text-muted-foreground">
+                  Remove automaticamente quem não tem WhatsApp antes de importar.
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleValidateWhatsApp}
+              disabled={parsedContacts.length === 0 || isValidatingWa}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {isValidatingWa ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  <span className="ml-2">{waValidationProgress.done}/{waValidationProgress.total}</span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Validar agora
+                </>
+              )}
+            </Button>
+          </div>
+
           {parseErrors.length > 0 && (
             <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm">
               <p className="font-medium">Avisos:</p>
