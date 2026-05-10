@@ -328,6 +328,48 @@ export default function OperatorDisparosPage() {
     else toast.error("Nenhum contato encontrado. Verifique o formato.");
   };
 
+  const handleValidateWhatsApp = async () => {
+    if (parsedContacts.length === 0) return;
+    setIsValidatingWa(true);
+    const total = parsedContacts.length;
+    setWaValidationProgress({ done: 0, total, removed: 0 });
+
+    const BATCH_SIZE = 200;
+    const validContacts: OperatorParsedContact[] = [];
+    let processed = 0;
+
+    try {
+      for (let i = 0; i < parsedContacts.length; i += BATCH_SIZE) {
+        const batch = parsedContacts.slice(i, i + BATCH_SIZE);
+        const phones = batch.map(c => String(c.phone || "").replace(/\D/g, ""));
+        const { data, error } = await supabase.functions.invoke("check-whatsapp-existence", {
+          body: { phones },
+        });
+        if (error) throw error;
+        const results: Record<string, boolean> = data?.results || {};
+        for (const c of batch) {
+          const key = String(c.phone || "").replace(/\D/g, "");
+          if (results[key]) validContacts.push(c);
+        }
+        processed += batch.length;
+        setWaValidationProgress({
+          done: processed,
+          total,
+          removed: processed - validContacts.length,
+        });
+      }
+      setParsedContacts(validContacts);
+      const removed = total - validContacts.length;
+      toast.success(
+        `Validação concluída: ${validContacts.length} com WhatsApp, ${removed} removidos`
+      );
+    } catch (err: any) {
+      toast.error("Erro na validação", { description: err.message });
+    } finally {
+      setIsValidatingWa(false);
+    }
+  };
+
   const handleImport = () => {
     if (!listName.trim()) {
       toast.error("Informe um nome para a lista");
