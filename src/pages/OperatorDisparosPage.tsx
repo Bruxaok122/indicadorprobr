@@ -2173,8 +2173,29 @@ export default function OperatorDisparosPage() {
           </ScrollArea>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setShowPreview(false)}>Cancelar</Button>
-            <Button onClick={handleImport} disabled={parsedContacts.length === 0}>
+            <Button variant="outline" onClick={() => setShowPreview(false)} disabled={isValidatingWa}>
+              Cancelar
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleValidateWhatsApp}
+              disabled={parsedContacts.length === 0 || isValidatingWa}
+            >
+              {isValidatingWa ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  <span className="ml-2">
+                    Validando {waValidationProgress.done}/{waValidationProgress.total}...
+                  </span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Validar WhatsApp
+                </>
+              )}
+            </Button>
+            <Button onClick={handleImport} disabled={parsedContacts.length === 0 || isValidatingWa}>
               <Upload className="mr-2 h-4 w-4" />
               Importar {parsedContacts.length} Contatos
             </Button>
