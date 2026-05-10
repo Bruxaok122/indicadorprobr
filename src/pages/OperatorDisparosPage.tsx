@@ -193,6 +193,8 @@ export default function OperatorDisparosPage() {
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [listName, setListName] = useState("");
+  const [isValidatingWa, setIsValidatingWa] = useState(false);
+  const [waValidationProgress, setWaValidationProgress] = useState({ done: 0, total: 0, removed: 0 });
 
   // Dispatch state
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
