@@ -70,6 +70,38 @@ export default function AdminContatosPage() {
   // WhatsApp validation (inside preview, before import)
   const [whatsappEntries, setWhatsappEntries] = useState<WhatsAppValidationEntry[]>([]);
   const [filterRendaMinValue, setFilterRendaMinValue] = useState(0);
+  const [isValidatingWaApi, setIsValidatingWaApi] = useState(false);
+  const [waApiProgress, setWaApiProgress] = useState({ done: 0, total: 0 });
+
+  const handleValidateWhatsAppApi = async () => {
+    if (parsedContacts.length === 0) return;
+    setIsValidatingWaApi(true);
+    setWaApiProgress({ done: 0, total: parsedContacts.length });
+    const entries: WhatsAppValidationEntry[] = [];
+    const BATCH = 200;
+    try {
+      for (let i = 0; i < parsedContacts.length; i += BATCH) {
+        const batch = parsedContacts.slice(i, i + BATCH);
+        const phones = batch.map((c) => normalizePhoneForMatch(String(c.phone || "")));
+        const { data, error } = await supabase.functions.invoke("check-whatsapp-existence", {
+          body: { phones },
+        });
+        if (error) throw error;
+        const results: Record<string, boolean> = data?.results || {};
+        for (const p of phones) {
+          entries.push({ phone: p, exists: !!results[p] });
+        }
+        setWaApiProgress({ done: Math.min(i + BATCH, parsedContacts.length), total: parsedContacts.length });
+      }
+      setWhatsappEntries(entries);
+      const valid = entries.filter((e) => e.exists).length;
+      toast.success(`Validação concluída: ${valid}/${entries.length} com WhatsApp`);
+    } catch (err: any) {
+      toast.error("Erro na validação", { description: err.message });
+    } finally {
+      setIsValidatingWaApi(false);
+    }
+  };
 
   // WhatsApp validation for existing list
   const [showExistingValidation, setShowExistingValidation] = useState(false);
