@@ -803,6 +803,37 @@ export default function AdminContatosPage() {
               Formato esperado: colunas "WhatsApp Number" e "Does it exist?" (Yes/No)
             </p>
 
+            {/* Validação via API rápida */}
+            <div className="rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 min-w-0">
+                <ShieldCheck className="h-5 w-5 text-emerald-500 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">Validar via API (rápido)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Verifica online quais números têm WhatsApp — sem precisar de Excel.
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={handleValidateWhatsAppApi}
+                disabled={parsedContacts.length === 0 || isValidatingWaApi}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {isValidatingWaApi ? (
+                  <>
+                    <LoadingSpinner size="sm" />
+                    <span className="ml-2">{waApiProgress.done}/{waApiProgress.total}</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                    Validar agora
+                  </>
+                )}
+              </Button>
+            </div>
+
             {/* Validation results */}
             {whatsappEntries.length > 0 && (
               <div className="space-y-3">
