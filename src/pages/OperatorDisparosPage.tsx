@@ -193,6 +193,8 @@ export default function OperatorDisparosPage() {
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [listName, setListName] = useState("");
+  const [isValidatingWa, setIsValidatingWa] = useState(false);
+  const [waValidationProgress, setWaValidationProgress] = useState({ done: 0, total: 0, removed: 0 });
 
   // Dispatch state
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
@@ -324,6 +326,48 @@ export default function OperatorDisparosPage() {
     setParseErrors(errors);
     if (contacts.length > 0) setShowPreview(true);
     else toast.error("Nenhum contato encontrado. Verifique o formato.");
+  };
+
+  const handleValidateWhatsApp = async () => {
+    if (parsedContacts.length === 0) return;
+    setIsValidatingWa(true);
+    const total = parsedContacts.length;
+    setWaValidationProgress({ done: 0, total, removed: 0 });
+
+    const BATCH_SIZE = 200;
+    const validContacts: OperatorParsedContact[] = [];
+    let processed = 0;
+
+    try {
+      for (let i = 0; i < parsedContacts.length; i += BATCH_SIZE) {
+        const batch = parsedContacts.slice(i, i + BATCH_SIZE);
+        const phones = batch.map(c => String(c.phone || "").replace(/\D/g, ""));
+        const { data, error } = await supabase.functions.invoke("check-whatsapp-existence", {
+          body: { phones },
+        });
+        if (error) throw error;
+        const results: Record<string, boolean> = data?.results || {};
+        for (const c of batch) {
+          const key = String(c.phone || "").replace(/\D/g, "");
+          if (results[key]) validContacts.push(c);
+        }
+        processed += batch.length;
+        setWaValidationProgress({
+          done: processed,
+          total,
+          removed: processed - validContacts.length,
+        });
+      }
+      setParsedContacts(validContacts);
+      const removed = total - validContacts.length;
+      toast.success(
+        `Validação concluída: ${validContacts.length} com WhatsApp, ${removed} removidos`
+      );
+    } catch (err: any) {
+      toast.error("Erro na validação", { description: err.message });
+    } finally {
+      setIsValidatingWa(false);
+    }
   };
 
   const handleImport = () => {
@@ -2129,8 +2173,29 @@ export default function OperatorDisparosPage() {
           </ScrollArea>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setShowPreview(false)}>Cancelar</Button>
-            <Button onClick={handleImport} disabled={parsedContacts.length === 0}>
+            <Button variant="outline" onClick={() => setShowPreview(false)} disabled={isValidatingWa}>
+              Cancelar
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleValidateWhatsApp}
+              disabled={parsedContacts.length === 0 || isValidatingWa}
+            >
+              {isValidatingWa ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  <span className="ml-2">
+                    Validando {waValidationProgress.done}/{waValidationProgress.total}...
+                  </span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="mr-2 h-4 w-4" />
+                  Validar WhatsApp
+                </>
+              )}
+            </Button>
+            <Button onClick={handleImport} disabled={parsedContacts.length === 0 || isValidatingWa}>
               <Upload className="mr-2 h-4 w-4" />
               Importar {parsedContacts.length} Contatos
             </Button>
