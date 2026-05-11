@@ -852,7 +852,7 @@ export default function AdminContatosPage() {
             {/* Validation results */}
             {whatsappEntries.length > 0 && (
               <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   <Card className="p-3 text-center">
                     <p className="text-xl font-bold">{whatsappEntries.length}</p>
                     <p className="text-[10px] text-muted-foreground">Verificados</p>
@@ -862,14 +862,21 @@ export default function AdminContatosPage() {
                       <CheckCircle className="h-3.5 w-3.5 text-green-500" />
                       <p className="text-xl font-bold text-green-500">{validPhoneCount}</p>
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Válidos</p>
+                      <p className="text-[10px] text-muted-foreground">Confirmados</p>
                   </Card>
+                    <Card className="p-3 text-center border-warning/30">
+                      <div className="flex items-center justify-center gap-1">
+                        <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+                        <p className="text-xl font-bold text-warning">{unknownPhoneCount}</p>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Inconclusivos</p>
+                    </Card>
                   <Card className="p-3 text-center border-destructive/30">
                     <div className="flex items-center justify-center gap-1">
                       <XCircle className="h-3.5 w-3.5 text-destructive" />
-                      <p className="text-xl font-bold text-destructive">{invalidPhoneCount}</p>
+                        <p className="text-xl font-bold text-destructive">{noWhatsappPhoneCount}</p>
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Inválidos</p>
+                      <p className="text-[10px] text-muted-foreground">Sem WhatsApp</p>
                   </Card>
                 </div>
 
@@ -899,7 +906,7 @@ export default function AdminContatosPage() {
                 <AlertBanner type={removedCount > 0 ? "warning" : "info"} title="Resultado do filtro">
                   <p className="text-xs">
                     <strong>{validatedContacts.length}</strong> cliente(s) serão importados.
-                    {removedCount > 0 && <> <strong className="text-destructive">{removedCount}</strong> cliente(s) serão removidos (WhatsApp inválido{filterRendaMinValue > 0 ? ` ou renda < R$${filterRendaMinValue.toLocaleString("pt-BR")}` : ""}).</>}
+                    {removedCount > 0 && <> <strong className="text-destructive">{removedCount}</strong> cliente(s) serão removidos (sem WhatsApp confirmado, inconclusivo{filterRendaMinValue > 0 ? ` ou renda < R$${filterRendaMinValue.toLocaleString("pt-BR")}` : ""}).</>}
                   </p>
                 </AlertBanner>
               </div>
