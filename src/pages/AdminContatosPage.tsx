@@ -1035,8 +1035,16 @@ export default function AdminContatosPage() {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 flex-wrap">
             <Button variant="outline" onClick={() => { setShowPreview(false); setWhatsappEntries([]); setFilterRendaMinValue(0); }} disabled={importContactsMutation.isPending}>Cancelar</Button>
+            <Button
+              variant="secondary"
+              onClick={handleImportWithoutValidation}
+              disabled={importContactsMutation.isPending || !selectedList || parsedContacts.length === 0}
+              title="Importa todos os números do arquivo sem checar WhatsApp"
+            >
+              Importar sem validar ({parsedContacts.length})
+            </Button>
             <Button
               onClick={handleConfirmImport}
               disabled={importContactsMutation.isPending || !selectedList || validatedContacts.length === 0}
@@ -1044,7 +1052,7 @@ export default function AdminContatosPage() {
               {importContactsMutation.isPending ? <LoadingSpinner size="sm" /> : (
                 <>
                   <CheckCircle className="h-4 w-4 mr-1.5" />
-                  Importar {validatedContacts.length} cliente(s)
+                  Importar {validatedContacts.length} validado(s)
                 </>
               )}
             </Button>
