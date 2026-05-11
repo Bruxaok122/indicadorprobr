@@ -58,6 +58,36 @@ export function ChatBubble({ message, onDeleteMessage }: ChatBubbleProps) {
       );
     }
 
+    if (message.message_type === "sticker") {
+      if (message.image_url) {
+        return (
+          <img
+            src={message.image_url}
+            alt="Figurinha"
+            className="max-w-[160px] max-h-[160px] object-contain bg-transparent"
+          />
+        );
+      }
+      return <p className="text-sm italic opacity-70">[Figurinha]</p>;
+    }
+
+    if (message.message_type === "reaction") {
+      const raw = message.content || "";
+      const match = raw.match(/^(.+?)\s*→\s*"(.*)"$/);
+      const emoji = match ? match[1] : raw;
+      const ref = match ? match[2] : "";
+      return (
+        <div className="flex items-center gap-2 py-0.5">
+          <span className="text-2xl leading-none">{emoji}</span>
+          {ref && (
+            <span className="text-xs opacity-60 italic max-w-[200px] truncate">
+              "{ref}"
+            </span>
+          )}
+        </div>
+      );
+    }
+
     if (message.message_type === "image" && message.image_url) {
       return (
         <div className="space-y-1">
