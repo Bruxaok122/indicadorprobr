@@ -106,6 +106,29 @@ export default function AdminContatosPage() {
       const valid = entries.filter((e) => e.exists).length;
       const unknown = entries.filter((e) => e.status === "unknown").length;
       toast.success(`Validação concluída: ${valid}/${entries.length} confirmados${unknown ? `, ${unknown} inconclusivos` : ""}`);
+
+      // Auto-import valid contacts immediately after validation
+      if (valid === 0) {
+        toast.error("Nenhum número válido encontrado. Nada foi importado.");
+        return;
+      }
+      if (!selectedList) {
+        toast.error("Selecione uma lista antes de validar para importar automaticamente.");
+        return;
+      }
+      const validPhones = new Set(entries.filter(e => e.exists).map(e => e.phone));
+      let toImport = parsedContacts.filter(c => validPhones.has(normalizePhoneForMatch(c.phone)));
+      if (filterRendaMinValue > 0) {
+        toImport = toImport.filter(c => {
+          const renda = c.renda ?? 0;
+          return renda === 0 || renda >= filterRendaMinValue;
+        });
+      }
+      if (toImport.length === 0) {
+        toast.error("Nenhum contato restante após filtros.");
+        return;
+      }
+      importContactsMutation.mutate({ contacts: toImport, listName: selectedList, splitByState });
     } catch (err: any) {
       toast.error("Erro na validação", { description: err.message });
     } finally {
