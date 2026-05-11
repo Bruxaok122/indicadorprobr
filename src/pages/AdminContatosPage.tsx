@@ -439,12 +439,23 @@ export default function AdminContatosPage() {
   // Handle import - uses validatedContacts (already filtered)
   const handleConfirmImport = () => {
     if (!selectedList) return;
-    const hasApiValidation = whatsappEntries.some((entry) => entry.status === "has_whatsapp" || entry.status === "no_whatsapp" || entry.status === "unknown" || entry.status === "invalid_format");
-    if (!hasApiValidation) {
-      toast.error("Valide os números via API antes de importar");
+    importContactsMutation.mutate({ contacts: validatedContacts, listName: selectedList, splitByState });
+  };
+
+  const handleImportWithoutValidation = () => {
+    if (!selectedList) return;
+    let toImport = parsedContacts;
+    if (filterRendaMinValue > 0) {
+      toImport = toImport.filter((c) => {
+        const renda = c.renda ?? 0;
+        return renda === 0 || renda >= filterRendaMinValue;
+      });
+    }
+    if (toImport.length === 0) {
+      toast.error("Nenhum contato após filtros.");
       return;
     }
-    importContactsMutation.mutate({ contacts: validatedContacts, listName: selectedList, splitByState });
+    importContactsMutation.mutate({ contacts: toImport, listName: selectedList, splitByState });
   };
 
   // --- Existing list validation ---
