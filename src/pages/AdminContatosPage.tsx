@@ -416,7 +416,8 @@ export default function AdminContatosPage() {
   // Handle import - uses validatedContacts (already filtered)
   const handleConfirmImport = () => {
     if (!selectedList) return;
-    if (whatsappEntries.length === 0) {
+    const hasApiValidation = whatsappEntries.some((entry) => entry.status === "has_whatsapp" || entry.status === "no_whatsapp" || entry.status === "unknown" || entry.status === "invalid_format");
+    if (!hasApiValidation) {
       toast.error("Valide os números via API antes de importar");
       return;
     }
