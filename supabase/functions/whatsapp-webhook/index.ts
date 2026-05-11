@@ -355,6 +355,73 @@ serve(async (req) => {
                   } catch (audioError) {
                     console.error("Error downloading audio:", audioError);
                   }
+                } else if (message.type === "sticker") {
+                  messageType = "sticker";
+                  content = "[Figurinha]";
+                  try {
+                    if (accessToken && message.sticker?.id) {
+                      const mediaId = message.sticker.id;
+                      const mimeType = message.sticker.mime_type || "image/webp";
+                      const ext = mimeType.includes("webp") ? "webp" : (mimeType.split("/")[1] || "webp");
+                      const fileName = `${Date.now()}-${mediaId}.${ext}`;
+
+                      const mediaResponse = await fetch(
+                        `https://graph.facebook.com/v21.0/${mediaId}`,
+                        { headers: { Authorization: `Bearer ${accessToken}` } }
+                      );
+                      let downloadUrl: string | null = null;
+                      if (mediaResponse.ok) {
+                        const mediaData = await mediaResponse.json();
+                        downloadUrl = mediaData.url;
+                      } else {
+                        console.error("Sticker media API error:", await mediaResponse.text());
+                      }
+                      if (downloadUrl) {
+                        const stickerResponse = await fetch(downloadUrl, {
+                          headers: { Authorization: `Bearer ${accessToken}` },
+                        });
+                        if (stickerResponse.ok) {
+                          const arrayBuffer = await stickerResponse.arrayBuffer();
+                          const uint8Array = new Uint8Array(arrayBuffer);
+                          const { error: uploadError } = await supabase.storage
+                            .from("documents")
+                            .upload(`stickers/${fileName}`, uint8Array, { contentType: mimeType, upsert: false });
+                          if (uploadError) {
+                            console.error("Sticker storage upload error:", uploadError);
+                          } else {
+                            const { data: urlData } = supabase.storage.from("documents").getPublicUrl(`stickers/${fileName}`);
+                            imageUrl = urlData.publicUrl;
+                            console.log("Sticker uploaded successfully, URL:", imageUrl);
+                          }
+                        } else {
+                          console.error("Sticker download failed:", await stickerResponse.text());
+                        }
+                      }
+                    }
+                  } catch (stickerError) {
+                    console.error("Error downloading sticker:", stickerError);
+                  }
+                } else if (message.type === "reaction") {
+                  messageType = "reaction";
+                  const emoji = message.reaction?.emoji || "";
+                  const refId = message.reaction?.message_id;
+                  let preview = "";
+                  if (refId) {
+                    const { data: origMsg } = await supabase
+                      .from("messages")
+                      .select("content, message_type")
+                      .eq("whatsapp_message_id", refId)
+                      .maybeSingle();
+                    if (origMsg) {
+                      const raw = (origMsg.content || `[${origMsg.message_type}]`).replace(/##\S+?:\S*?##\s*/g, "").trim();
+                      preview = raw.slice(0, 80);
+                    }
+                  }
+                  if (!emoji) {
+                    content = preview ? `Removeu reação · "${preview}"` : "Removeu reação";
+                  } else {
+                    content = preview ? `${emoji} → "${preview}"` : emoji;
+                  }
                 } else if (message.type === "video") {
                   content = "[Vídeo recebido]";
                 } else if (message.type === "unsupported") {
