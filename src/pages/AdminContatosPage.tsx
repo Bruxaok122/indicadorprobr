@@ -34,6 +34,8 @@ interface ContactList {
 interface WhatsAppValidationEntry {
   phone: string;
   exists: boolean;
+  status?: "has_whatsapp" | "no_whatsapp" | "unknown" | "invalid_format";
+  reason?: string;
 }
 
 // Normalize phone to digits only, ensure 55 prefix
@@ -78,7 +80,7 @@ export default function AdminContatosPage() {
     setIsValidatingWaApi(true);
     setWaApiProgress({ done: 0, total: parsedContacts.length });
     const entries: WhatsAppValidationEntry[] = [];
-    const BATCH = 200;
+    const BATCH = 25;
     try {
       for (let i = 0; i < parsedContacts.length; i += BATCH) {
         const batch = parsedContacts.slice(i, i + BATCH);
@@ -87,15 +89,23 @@ export default function AdminContatosPage() {
           body: { phones },
         });
         if (error) throw error;
+        const statuses: Record<string, { exists: boolean | null; status: WhatsAppValidationEntry["status"]; reason?: string }> = data?.statuses || {};
         const results: Record<string, boolean> = data?.results || {};
         for (const p of phones) {
-          entries.push({ phone: p, exists: !!results[p] });
+          const details = statuses[p];
+          entries.push({
+            phone: p,
+            exists: details ? details.status === "has_whatsapp" : results[p] === true,
+            status: details?.status || (results[p] === true ? "has_whatsapp" : "unknown"),
+            reason: details?.reason,
+          });
         }
         setWaApiProgress({ done: Math.min(i + BATCH, parsedContacts.length), total: parsedContacts.length });
       }
       setWhatsappEntries(entries);
       const valid = entries.filter((e) => e.exists).length;
-      toast.success(`Validação concluída: ${valid}/${entries.length} com WhatsApp`);
+      const unknown = entries.filter((e) => e.status === "unknown").length;
+      toast.success(`Validação concluída: ${valid}/${entries.length} confirmados${unknown ? `, ${unknown} inconclusivos` : ""}`);
     } catch (err: any) {
       toast.error("Erro na validação", { description: err.message });
     } finally {
