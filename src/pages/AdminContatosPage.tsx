@@ -34,6 +34,8 @@ interface ContactList {
 interface WhatsAppValidationEntry {
   phone: string;
   exists: boolean;
+  status?: "has_whatsapp" | "no_whatsapp" | "unknown" | "invalid_format";
+  reason?: string;
 }
 
 // Normalize phone to digits only, ensure 55 prefix
@@ -78,7 +80,7 @@ export default function AdminContatosPage() {
     setIsValidatingWaApi(true);
     setWaApiProgress({ done: 0, total: parsedContacts.length });
     const entries: WhatsAppValidationEntry[] = [];
-    const BATCH = 200;
+    const BATCH = 25;
     try {
       for (let i = 0; i < parsedContacts.length; i += BATCH) {
         const batch = parsedContacts.slice(i, i + BATCH);
@@ -87,15 +89,23 @@ export default function AdminContatosPage() {
           body: { phones },
         });
         if (error) throw error;
+        const statuses: Record<string, { exists: boolean | null; status: WhatsAppValidationEntry["status"]; reason?: string }> = data?.statuses || {};
         const results: Record<string, boolean> = data?.results || {};
         for (const p of phones) {
-          entries.push({ phone: p, exists: !!results[p] });
+          const details = statuses[p];
+          entries.push({
+            phone: p,
+            exists: details ? details.status === "has_whatsapp" : results[p] === true,
+            status: details?.status || (results[p] === true ? "has_whatsapp" : "unknown"),
+            reason: details?.reason,
+          });
         }
         setWaApiProgress({ done: Math.min(i + BATCH, parsedContacts.length), total: parsedContacts.length });
       }
       setWhatsappEntries(entries);
       const valid = entries.filter((e) => e.exists).length;
-      toast.success(`Validação concluída: ${valid}/${entries.length} com WhatsApp`);
+      const unknown = entries.filter((e) => e.status === "unknown").length;
+      toast.success(`Validação concluída: ${valid}/${entries.length} confirmados${unknown ? `, ${unknown} inconclusivos` : ""}`);
     } catch (err: any) {
       toast.error("Erro na validação", { description: err.message });
     } finally {
@@ -179,7 +189,8 @@ export default function AdminContatosPage() {
   })();
 
   const removedCount = parsedContacts.length - validatedContacts.length;
-  const invalidPhoneCount = whatsappEntries.filter(e => !e.exists).length;
+  const noWhatsappPhoneCount = whatsappEntries.filter(e => e.status === "no_whatsapp" || e.status === "invalid_format").length;
+  const unknownPhoneCount = whatsappEntries.filter(e => e.status === "unknown").length;
   const validPhoneCount = whatsappEntries.filter(e => e.exists).length;
 
   // --- Mutations ---
@@ -405,6 +416,11 @@ export default function AdminContatosPage() {
   // Handle import - uses validatedContacts (already filtered)
   const handleConfirmImport = () => {
     if (!selectedList) return;
+    const hasApiValidation = whatsappEntries.some((entry) => entry.status === "has_whatsapp" || entry.status === "no_whatsapp" || entry.status === "unknown" || entry.status === "invalid_format");
+    if (!hasApiValidation) {
+      toast.error("Valide os números via API antes de importar");
+      return;
+    }
     importContactsMutation.mutate({ contacts: validatedContacts, listName: selectedList, splitByState });
   };
 
@@ -837,7 +853,7 @@ export default function AdminContatosPage() {
             {/* Validation results */}
             {whatsappEntries.length > 0 && (
               <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   <Card className="p-3 text-center">
                     <p className="text-xl font-bold">{whatsappEntries.length}</p>
                     <p className="text-[10px] text-muted-foreground">Verificados</p>
@@ -847,14 +863,21 @@ export default function AdminContatosPage() {
                       <CheckCircle className="h-3.5 w-3.5 text-green-500" />
                       <p className="text-xl font-bold text-green-500">{validPhoneCount}</p>
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Válidos</p>
+                      <p className="text-[10px] text-muted-foreground">Confirmados</p>
                   </Card>
+                    <Card className="p-3 text-center border-warning/30">
+                      <div className="flex items-center justify-center gap-1">
+                        <AlertTriangle className="h-3.5 w-3.5 text-warning" />
+                        <p className="text-xl font-bold text-warning">{unknownPhoneCount}</p>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Inconclusivos</p>
+                    </Card>
                   <Card className="p-3 text-center border-destructive/30">
                     <div className="flex items-center justify-center gap-1">
                       <XCircle className="h-3.5 w-3.5 text-destructive" />
-                      <p className="text-xl font-bold text-destructive">{invalidPhoneCount}</p>
+                        <p className="text-xl font-bold text-destructive">{noWhatsappPhoneCount}</p>
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Inválidos</p>
+                      <p className="text-[10px] text-muted-foreground">Sem WhatsApp</p>
                   </Card>
                 </div>
 
@@ -884,7 +907,7 @@ export default function AdminContatosPage() {
                 <AlertBanner type={removedCount > 0 ? "warning" : "info"} title="Resultado do filtro">
                   <p className="text-xs">
                     <strong>{validatedContacts.length}</strong> cliente(s) serão importados.
-                    {removedCount > 0 && <> <strong className="text-destructive">{removedCount}</strong> cliente(s) serão removidos (WhatsApp inválido{filterRendaMinValue > 0 ? ` ou renda < R$${filterRendaMinValue.toLocaleString("pt-BR")}` : ""}).</>}
+                    {removedCount > 0 && <> <strong className="text-destructive">{removedCount}</strong> cliente(s) serão removidos (sem WhatsApp confirmado, inconclusivo{filterRendaMinValue > 0 ? ` ou renda < R$${filterRendaMinValue.toLocaleString("pt-BR")}` : ""}).</>}
                   </p>
                 </AlertBanner>
               </div>
