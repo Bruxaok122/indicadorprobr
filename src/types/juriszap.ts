@@ -42,7 +42,7 @@ export interface Message {
   conversation_id: string;
   contact_id: string;
   direction: 'incoming' | 'outgoing';
-  message_type: 'text' | 'template' | 'document' | 'image' | 'audio';
+  message_type: 'text' | 'template' | 'document' | 'image' | 'audio' | 'sticker' | 'reaction';
   content?: string;
   template_name?: string;
   document_url?: string;
