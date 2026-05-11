@@ -189,7 +189,8 @@ export default function AdminContatosPage() {
   })();
 
   const removedCount = parsedContacts.length - validatedContacts.length;
-  const invalidPhoneCount = whatsappEntries.filter(e => !e.exists).length;
+  const noWhatsappPhoneCount = whatsappEntries.filter(e => e.status === "no_whatsapp" || e.status === "invalid_format").length;
+  const unknownPhoneCount = whatsappEntries.filter(e => e.status === "unknown").length;
   const validPhoneCount = whatsappEntries.filter(e => e.exists).length;
 
   // --- Mutations ---
@@ -415,6 +416,10 @@ export default function AdminContatosPage() {
   // Handle import - uses validatedContacts (already filtered)
   const handleConfirmImport = () => {
     if (!selectedList) return;
+    if (whatsappEntries.length === 0) {
+      toast.error("Valide os números via API antes de importar");
+      return;
+    }
     importContactsMutation.mutate({ contacts: validatedContacts, listName: selectedList, splitByState });
   };
 
