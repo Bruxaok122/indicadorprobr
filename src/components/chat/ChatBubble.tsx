@@ -208,7 +208,7 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: Cha
                   isOutgoing
                     ? "bubble-outgoing bg-[#d9fdd3] dark:bg-[#005c4b] text-gray-900 dark:text-gray-100"
                     : "bubble-incoming bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100",
-                  reactionEmojis.length > 0 && "mb-3.5"
+                  reactionEmojis.length > 0 && "mb-5"
                 )}>
                   {renderContent()}
                   <div className="flex items-center justify-end gap-1 mt-0.5 -mb-0.5 text-[11px] text-gray-500 dark:text-gray-400">
