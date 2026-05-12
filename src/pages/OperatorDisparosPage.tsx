@@ -290,34 +290,43 @@ export default function OperatorDisparosPage() {
     return () => clearInterval(interval);
   }, [user?.id]);
 
-  function refreshLists() {
+  async function refreshLists() {
     if (!user?.id) return;
     setLoadingLists(true);
-    // Only count contacts still eligible for dispatch (status = "novo").
-    // Contacts already dispatched flip to "aguardando" and should disappear from the list,
-    // matching the previous UX where dispatched contacts were auto-removed.
-    supabase
-      .from("contacts")
-      .select("contact_list, name, phone, cpf, process_number")
-      .or(`user_id.eq.${user.id},user_id.is.null`)
-      .eq("status", "novo")
-      .not("contact_list", "is", null)
-      .limit(50000)
-      .then(({ data }) => {
-        if (!data) { setLoadingLists(false); return; }
-        const map: Record<string, Set<string>> = {};
-        (data as any[]).forEach(c => {
-          if (!c.contact_list) return;
-          if (!map[c.contact_list]) map[c.contact_list] = new Set<string>();
-          map[c.contact_list].add(getContactQueueKey(c));
-        });
-        setAvailableLists(
-          Object.entries(map)
-            .map(([name, phones]) => ({ name, count: phones.size }))
-            .sort((a, b) => a.name.localeCompare(b.name))
-        );
-        setLoadingLists(false);
+    try {
+      // Paginate to bypass Supabase's default 1000-row cap, ensuring all lists are visible
+      // even when a single list has more than 1000 eligible contacts.
+      const pageSize = 1000;
+      let from = 0;
+      const all: any[] = [];
+      // Hard safety cap to avoid infinite loops
+      while (from < 200000) {
+        const { data, error } = await supabase
+          .from("contacts")
+          .select("contact_list, name, phone, cpf, process_number")
+          .or(`user_id.eq.${user.id},user_id.is.null`)
+          .eq("status", "novo")
+          .not("contact_list", "is", null)
+          .range(from, from + pageSize - 1);
+        if (error || !data) break;
+        all.push(...data);
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      const map: Record<string, Set<string>> = {};
+      all.forEach(c => {
+        if (!c.contact_list) return;
+        if (!map[c.contact_list]) map[c.contact_list] = new Set<string>();
+        map[c.contact_list].add(getContactQueueKey(c));
       });
+      setAvailableLists(
+        Object.entries(map)
+          .map(([name, phones]) => ({ name, count: phones.size }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      );
+    } finally {
+      setLoadingLists(false);
+    }
   }
 
   const handleParse = () => {
