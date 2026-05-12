@@ -53,6 +53,7 @@ export interface Message {
   error_code?: string | null;
   error_details?: string | null;
   is_deleted?: boolean;
+  reacts_to_message_id?: string | null;
   created_at: string;
 }
 
