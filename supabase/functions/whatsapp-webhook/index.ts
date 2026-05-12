@@ -227,6 +227,7 @@ serve(async (req) => {
                 let content = "";
                 let messageType = "text";
                 let imageUrl: string | undefined;
+                const messageInsertExtra: Record<string, any> = {};
 
                 // Fetch access token once — used for downloading any media
                 let accessToken: string | null = null;
