@@ -65,15 +65,36 @@ export function ChatMessages({ messages, isLoading, isSending, templatesAvailabl
   }
 
   const renderMessages = () => {
+    // Separate reactions from regular messages and group them by parent
+    const reactionsByParent = new Map<string, Message[]>();
+    const visibleMessages: Message[] = [];
+    for (const m of messages) {
+      if (m.message_type === "reaction" && m.reacts_to_message_id) {
+        const arr = reactionsByParent.get(m.reacts_to_message_id) || [];
+        arr.push(m);
+        reactionsByParent.set(m.reacts_to_message_id, arr);
+      } else {
+        visibleMessages.push(m);
+      }
+    }
+
     const elements: React.ReactNode[] = [];
     let lastDate: Date | null = null;
-    messages.forEach((message) => {
+    visibleMessages.forEach((message) => {
       const msgDate = new Date(message.created_at);
       if (!lastDate || !isSameDay(lastDate, msgDate)) {
         elements.push(<ChatDateSeparator key={`date-${message.id}`} date={msgDate} />);
         lastDate = msgDate;
       }
-      elements.push(<ChatBubble key={message.id} message={message} onDeleteMessage={onDeleteMessage} />);
+      elements.push(
+        <ChatBubble
+          key={message.id}
+          message={message}
+          reactions={reactionsByParent.get(message.id)}
+          onDeleteMessage={onDeleteMessage}
+          onReact={onReact}
+        />
+      );
     });
     return elements;
   };
