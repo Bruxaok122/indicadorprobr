@@ -48,7 +48,7 @@ function getErrorLabel(errorCode?: string | null): string | null {
   }
 }
 
-export function ChatBubble({ message, onDeleteMessage }: ChatBubbleProps) {
+export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: ChatBubbleProps) {
   const isOutgoing = message.direction === "outgoing";
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const canDelete = isOutgoing && !message.is_deleted;
