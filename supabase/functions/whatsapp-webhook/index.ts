@@ -227,6 +227,7 @@ serve(async (req) => {
                 let content = "";
                 let messageType = "text";
                 let imageUrl: string | undefined;
+                const messageInsertExtra: Record<string, any> = {};
 
                 // Fetch access token once — used for downloading any media
                 let accessToken: string | null = null;
@@ -405,23 +406,18 @@ serve(async (req) => {
                   messageType = "reaction";
                   const emoji = message.reaction?.emoji || "";
                   const refId = message.reaction?.message_id;
-                  let preview = "";
+                  let reactsToId: string | null = null;
                   if (refId) {
                     const { data: origMsg } = await supabase
                       .from("messages")
-                      .select("content, message_type")
+                      .select("id")
                       .eq("whatsapp_message_id", refId)
                       .maybeSingle();
-                    if (origMsg) {
-                      const raw = (origMsg.content || `[${origMsg.message_type}]`).replace(/##\S+?:\S*?##\s*/g, "").trim();
-                      preview = raw.slice(0, 80);
-                    }
+                    if (origMsg) reactsToId = origMsg.id;
                   }
-                  if (!emoji) {
-                    content = preview ? `Removeu reação · "${preview}"` : "Removeu reação";
-                  } else {
-                    content = preview ? `${emoji} → "${preview}"` : emoji;
-                  }
+                  content = emoji || "";
+                  // Stash for insert below
+                  (messageInsertExtra as any).reacts_to_message_id = reactsToId;
                 } else if (message.type === "video") {
                   content = "[Vídeo recebido]";
                 } else if (message.type === "unsupported") {
@@ -466,6 +462,7 @@ serve(async (req) => {
                 if (imageUrl) {
                   messageInsert.image_url = imageUrl;
                 }
+                Object.assign(messageInsert, messageInsertExtra);
 
                 const { error: messageError } = await supabase.from("messages").insert(messageInsert);
 
