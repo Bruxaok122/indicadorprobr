@@ -277,15 +277,31 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: Cha
 
 function QuickReactRow({ messageId, onReact }: { messageId: string; onReact: (id: string, e: string) => void }) {
   const [expanded, setExpanded] = useState(false);
+  // Merge recent + defaults, recent first, deduped, capped at MAX_RECENT
+  const emojis = (() => {
+    const recent = getRecentEmojis();
+    const merged: string[] = [];
+    for (const e of [...recent, ...DEFAULT_QUICK_EMOJIS]) {
+      if (!merged.includes(e)) merged.push(e);
+      if (merged.length >= MAX_RECENT) break;
+    }
+    return merged;
+  })();
+
+  const handleSelect = (e: string) => {
+    pushRecentEmoji(e);
+    onReact(messageId, e);
+  };
+
   if (expanded) {
-    return <EmojiPicker onSelect={(e) => onReact(messageId, e)} />;
+    return <EmojiPicker onSelect={handleSelect} />;
   }
   return (
     <div className="flex items-center gap-1">
-      {QUICK_EMOJIS.map((e) => (
+      {emojis.map((e) => (
         <button
           key={e}
-          onClick={() => onReact(messageId, e)}
+          onClick={() => handleSelect(e)}
           className="text-xl hover:scale-125 transition-transform px-1"
         >
           {e}
