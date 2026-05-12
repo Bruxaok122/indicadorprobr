@@ -327,6 +327,7 @@ export default function ConversasPage() {
                   messages={messages} isLoading={messagesLoading} isSending={isSending}
                   templatesAvailable={templates.length > 0} onOpenTemplateDialog={() => setShowTemplateDialog(true)}
                   onDeleteMessage={deleteMessage}
+                  onReact={(messageId, emoji) => sendReaction({ messageId, emoji })}
                 />
                 <ChatInput
                   messageText={messageText} setMessageText={setMessageText} canSendFreeText={canSendFreeText}
