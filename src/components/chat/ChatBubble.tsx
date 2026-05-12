@@ -18,7 +18,7 @@ interface ChatBubbleProps {
   onReact?: (messageId: string, emoji: string) => void;
 }
 
-const DEFAULT_QUICK_EMOJIS = ["👍", "👌", "❤️", "😂", "😮", "😢", "🙏", "🔥"];
+const DEFAULT_QUICK_EMOJIS = ["👍", "🆗", "❤️", "😂", "😮", "😢", "🙏", "🔥"];
 const RECENT_KEY = "juriszap_recent_reactions";
 const MAX_RECENT = 8;
 
