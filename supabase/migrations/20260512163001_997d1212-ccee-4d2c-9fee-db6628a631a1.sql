@@ -1,0 +1,2 @@
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS reacts_to_message_id uuid;
+CREATE INDEX IF NOT EXISTS idx_messages_reacts_to ON public.messages(reacts_to_message_id) WHERE reacts_to_message_id IS NOT NULL;
