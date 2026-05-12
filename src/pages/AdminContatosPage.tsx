@@ -141,6 +141,72 @@ export default function AdminContatosPage() {
   const [existingWhatsappEntries, setExistingWhatsappEntries] = useState<WhatsAppValidationEntry[]>([]);
   const [existingFilterRenda, setExistingFilterRenda] = useState(false);
   const [isProcessingExistingValidation, setIsProcessingExistingValidation] = useState(false);
+  const [isValidatingExistingApi, setIsValidatingExistingApi] = useState(false);
+  const [existingApiProgress, setExistingApiProgress] = useState({ done: 0, total: 0 });
+
+  const handleValidateExistingViaApi = async () => {
+    if (!selectedList) return;
+    setIsValidatingExistingApi(true);
+    setExistingApiProgress({ done: 0, total: 0 });
+    try {
+      // Fetch all contacts of the list (pagination, bypass 1000 row cap)
+      const pageSize = 1000;
+      let from = 0;
+      const all: any[] = [];
+      while (from < 200000) {
+        const { data, error } = await supabase
+          .from("contacts")
+          .select("id, phone")
+          .is("user_id", null)
+          .eq("contact_list", selectedList)
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      if (all.length === 0) {
+        toast.error("Nenhum contato encontrado nessa lista.");
+        return;
+      }
+      const phones = Array.from(new Set(all.map((c) => normalizePhoneForMatch(String(c.phone || ""))).filter(Boolean)));
+      setExistingApiProgress({ done: 0, total: phones.length });
+
+      const entries: WhatsAppValidationEntry[] = [];
+      const BATCH = 25;
+      for (let i = 0; i < phones.length; i += BATCH) {
+        const batch = phones.slice(i, i + BATCH);
+        const { data, error } = await supabase.functions.invoke("check-whatsapp-existence", {
+          body: { phones: batch },
+        });
+        if (error) throw error;
+        const statuses: Record<string, { exists: boolean | null; status: WhatsAppValidationEntry["status"]; reason?: string }> = data?.statuses || {};
+        const results: Record<string, boolean> = data?.results || {};
+        for (const p of batch) {
+          const details = statuses[p];
+          const status = details?.status || (results[p] === true ? "has_whatsapp" : "unknown");
+          // Only mark exists when API explicitly confirmed; unknown stays as not-exists to avoid false positives — but DO NOT delete unknowns
+          entries.push({
+            phone: p,
+            exists: status === "has_whatsapp",
+            status,
+            reason: details?.reason,
+          });
+        }
+        setExistingApiProgress({ done: Math.min(i + BATCH, phones.length), total: phones.length });
+      }
+      setExistingWhatsappEntries(entries);
+      const valid = entries.filter((e) => e.exists).length;
+      const noWa = entries.filter((e) => e.status === "no_whatsapp").length;
+      const unknown = entries.filter((e) => e.status === "unknown" || e.status === "invalid_format").length;
+      toast.success(`API: ${valid} com WhatsApp, ${noWa} sem WhatsApp${unknown ? `, ${unknown} inconclusivos (mantidos)` : ""}`);
+    } catch (err: any) {
+      toast.error("Erro na validação via API", { description: err.message });
+    } finally {
+      setIsValidatingExistingApi(false);
+    }
+  };
 
   // Single contact state
   const [singleName, setSingleName] = useState("");
@@ -501,7 +567,11 @@ export default function AdminContatosPage() {
       if (fetchErr) throw fetchErr;
       const contacts = freshContacts || [];
 
-      const invalidPhones = new Set(existingWhatsappEntries.filter(e => !e.exists).map(e => e.phone));
+      const invalidPhones = new Set(
+        existingWhatsappEntries
+          .filter((e) => e.status ? e.status === "no_whatsapp" : !e.exists)
+          .map((e) => e.phone)
+      );
       const validPhones = new Set(existingWhatsappEntries.filter(e => e.exists).map(e => e.phone));
 
       const toRemoveIds: string[] = [];
@@ -1107,6 +1177,34 @@ export default function AdminContatosPage() {
             </Button>
             <p className="text-[11px] text-muted-foreground text-center">
               Formato esperado: colunas "WhatsApp Number" e "Does it exist?" (Yes/No)
+            </p>
+
+            <div className="relative flex items-center">
+              <div className="flex-1 border-t border-border" />
+              <span className="px-2 text-[10px] uppercase text-muted-foreground">ou</span>
+              <div className="flex-1 border-t border-border" />
+            </div>
+
+            <Button
+              variant="secondary"
+              className="w-full gap-2"
+              onClick={handleValidateExistingViaApi}
+              disabled={isValidatingExistingApi || isProcessingExistingValidation}
+            >
+              {isValidatingExistingApi ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  Validando via API… {existingApiProgress.total > 0 ? `${existingApiProgress.done}/${existingApiProgress.total}` : ""}
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="h-4 w-4" />
+                  Validar via API (sem Excel)
+                </>
+              )}
+            </Button>
+            <p className="text-[11px] text-muted-foreground text-center">
+              Verifica online cada número da lista. Inconclusivos são mantidos.
             </p>
 
             {existingWhatsappEntries.length > 0 && (
