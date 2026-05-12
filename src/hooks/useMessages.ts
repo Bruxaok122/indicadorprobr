@@ -212,6 +212,23 @@ export function useMessages(contactId: string | null) {
     },
   });
 
+  const sendReactionMutation = useMutation({
+    mutationFn: async (params: { messageId: string; emoji: string }) => {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp-reaction", {
+        body: { messageId: params.messageId, emoji: params.emoji, userId: user?.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["messages", contactId, user?.id], exact: true });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao reagir", { description: error.message });
+    },
+  });
+
   return {
     messages,
     isLoading,
@@ -224,5 +241,6 @@ export function useMessages(contactId: string | null) {
     sendAudio: sendAudioMutation.mutate,
     isSendingAudio: sendAudioMutation.isPending,
     deleteMessage: deleteMessageMutation.mutate,
+    sendReaction: sendReactionMutation.mutate,
   };
 }
