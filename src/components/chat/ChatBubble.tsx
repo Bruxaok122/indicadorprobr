@@ -3,8 +3,9 @@ import { Message } from "@/types/juriszap";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, Check, CheckCheck, X, FileText, ZoomIn, Mic, Ban, Trash2, SmilePlus } from "lucide-react";
+import { Clock, Check, CheckCheck, X, FileText, ZoomIn, Mic, Ban, Trash2, SmilePlus, Plus } from "lucide-react";
 import { ImageLightbox } from "./ImageLightbox";
+import { EmojiPicker } from "./EmojiPicker";
 import { motion } from "framer-motion";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -229,17 +230,7 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: Cha
                 </Button>
               </PopoverTrigger>
               <PopoverContent side="top" align="start" className="w-auto p-1.5">
-                <div className="flex gap-1">
-                  {QUICK_EMOJIS.map((e) => (
-                    <button
-                      key={e}
-                      onClick={() => onReact(message.id, e)}
-                      className="text-xl hover:scale-125 transition-transform px-1"
-                    >
-                      {e}
-                    </button>
-                  ))}
-                </div>
+                <QuickReactRow messageId={message.id} onReact={onReact} />
               </PopoverContent>
             </Popover>
           )}
@@ -262,5 +253,32 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: Cha
         <ImageLightbox src={message.image_url} alt="Imagem" open={lightboxOpen} onClose={() => setLightboxOpen(false)} />
       )}
     </>
+  );
+}
+
+function QuickReactRow({ messageId, onReact }: { messageId: string; onReact: (id: string, e: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  if (expanded) {
+    return <EmojiPicker onSelect={(e) => onReact(messageId, e)} />;
+  }
+  return (
+    <div className="flex items-center gap-1">
+      {QUICK_EMOJIS.map((e) => (
+        <button
+          key={e}
+          onClick={() => onReact(messageId, e)}
+          className="text-xl hover:scale-125 transition-transform px-1"
+        >
+          {e}
+        </button>
+      ))}
+      <button
+        onClick={() => setExpanded(true)}
+        className="ml-1 h-7 w-7 flex items-center justify-center rounded-full bg-muted hover:bg-accent transition-colors"
+        title="Mais emojis"
+      >
+        <Plus className="h-4 w-4" />
+      </button>
+    </div>
   );
 }
