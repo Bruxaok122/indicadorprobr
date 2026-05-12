@@ -302,7 +302,7 @@ export default function AdminDisparosPage() {
   const handleNext = () => { if (currentStep < 4 && canProceed(currentStep)) goToStep(currentStep + 1); };
   const handleBack = () => { if (currentStep > 1) goToStep(currentStep - 1); };
 
-  function refreshLists() {
+  async function refreshLists() {
     if (!user?.id) {
       setAvailableLists([]);
       setLoadingLists(false);
@@ -310,32 +310,39 @@ export default function AdminDisparosPage() {
     }
 
     setLoadingLists(true);
-    supabase
-      .from("contacts")
-      .select("contact_list", { count: "exact", head: false })
-      .is("user_id", null)
-      .not("contact_list", "is", null)
-      .limit(50000)
-      .then(({ data }) => {
-        if (!data) {
-          setLoadingLists(false);
-          return;
-        }
+    try {
+      // Paginate to bypass Supabase's 1000-row default cap
+      const pageSize = 1000;
+      let from = 0;
+      const all: any[] = [];
+      while (from < 200000) {
+        const { data, error } = await supabase
+          .from("contacts")
+          .select("contact_list")
+          .is("user_id", null)
+          .not("contact_list", "is", null)
+          .range(from, from + pageSize - 1);
+        if (error || !data) break;
+        all.push(...data);
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
 
-        const map: Record<string, number> = {};
-        (data as any[]).forEach((c) => {
-          const listName = c.contact_list;
-          if (!listName) return;
-          map[listName] = (map[listName] || 0) + 1;
-        });
-
-        const lists = Object.entries(map)
-          .map(([name, count]) => ({ name, count }))
-          .sort((a, b) => a.name.localeCompare(b.name));
-
-        setAvailableLists(lists);
-        setLoadingLists(false);
+      const map: Record<string, number> = {};
+      all.forEach((c) => {
+        const listName = c.contact_list;
+        if (!listName) return;
+        map[listName] = (map[listName] || 0) + 1;
       });
+
+      const lists = Object.entries(map)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      setAvailableLists(lists);
+    } finally {
+      setLoadingLists(false);
+    }
   }
 
   // --- Dispatch logic ---
