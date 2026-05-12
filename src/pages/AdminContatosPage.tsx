@@ -1179,6 +1179,34 @@ export default function AdminContatosPage() {
               Formato esperado: colunas "WhatsApp Number" e "Does it exist?" (Yes/No)
             </p>
 
+            <div className="relative flex items-center">
+              <div className="flex-1 border-t border-border" />
+              <span className="px-2 text-[10px] uppercase text-muted-foreground">ou</span>
+              <div className="flex-1 border-t border-border" />
+            </div>
+
+            <Button
+              variant="secondary"
+              className="w-full gap-2"
+              onClick={handleValidateExistingViaApi}
+              disabled={isValidatingExistingApi || isProcessingExistingValidation}
+            >
+              {isValidatingExistingApi ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  Validando via API… {existingApiProgress.total > 0 ? `${existingApiProgress.done}/${existingApiProgress.total}` : ""}
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="h-4 w-4" />
+                  Validar via API (sem Excel)
+                </>
+              )}
+            </Button>
+            <p className="text-[11px] text-muted-foreground text-center">
+              Verifica online cada número da lista. Inconclusivos são mantidos.
+            </p>
+
             {existingWhatsappEntries.length > 0 && (
               <>
                 <div className="grid grid-cols-3 gap-2">
