@@ -462,6 +462,7 @@ serve(async (req) => {
                 if (imageUrl) {
                   messageInsert.image_url = imageUrl;
                 }
+                Object.assign(messageInsert, messageInsertExtra);
 
                 const { error: messageError } = await supabase.from("messages").insert(messageInsert);
 
