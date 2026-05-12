@@ -3,15 +3,21 @@ import { Message } from "@/types/juriszap";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, Check, CheckCheck, X, FileText, ZoomIn, Mic, Ban, Trash2 } from "lucide-react";
+import { Clock, Check, CheckCheck, X, FileText, ZoomIn, Mic, Ban, Trash2, SmilePlus } from "lucide-react";
 import { ImageLightbox } from "./ImageLightbox";
 import { motion } from "framer-motion";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 
 interface ChatBubbleProps {
   message: Message;
+  reactions?: Message[];
   onDeleteMessage?: (messageId: string) => void;
+  onReact?: (messageId: string, emoji: string) => void;
 }
+
+const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "👏"];
 
 function getStatusIcon(status: Message["status"]) {
   switch (status) {
