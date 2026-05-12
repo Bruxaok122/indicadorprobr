@@ -257,7 +257,7 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: Cha
           {/* Reaction chips — pinned bottom-right of bubble (WhatsApp style) */}
           {reactionEmojis.length > 0 && (
             <div className={cn(
-              "absolute -bottom-3 flex gap-0.5 rounded-full bg-white dark:bg-[#2a3942] px-1.5 py-0.5 shadow border border-gray-200 dark:border-gray-700 text-sm leading-none z-10",
+              "absolute -bottom-2 flex gap-0.5 rounded-full bg-white dark:bg-[#2a3942] px-1.5 py-0.5 shadow border border-gray-200 dark:border-gray-700 text-xs leading-none z-10",
               isOutgoing ? "right-2" : "left-2"
             )}>
               {reactionEmojis.map((r, i) => (
