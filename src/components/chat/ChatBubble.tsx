@@ -158,46 +158,105 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: Cha
     return <p className="whitespace-pre-wrap text-sm leading-relaxed">{cleanContent}</p>;
   };
 
+  // Aggregate reactions: deduplicate per user_id (latest wins) and skip empty (removed)
+  const reactionEmojis = (() => {
+    if (!reactions || reactions.length === 0) return [] as { emoji: string; outgoing: boolean }[];
+    const byKey = new Map<string, { emoji: string; outgoing: boolean; created_at: string }>();
+    for (const r of reactions) {
+      const key = (r.direction === "outgoing" ? "out" : "in") + ":" + ((r as any).user_id || r.contact_id);
+      const prev = byKey.get(key);
+      if (!prev || new Date(r.created_at) > new Date(prev.created_at)) {
+        byKey.set(key, { emoji: (r.content || "").trim(), outgoing: r.direction === "outgoing", created_at: r.created_at });
+      }
+    }
+    return Array.from(byKey.values()).filter((r) => r.emoji);
+  })();
+
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild disabled={!canDelete}>
-          <motion.div
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className={cn("flex mb-0.5 px-3 md:px-4 group", isOutgoing ? "justify-end" : "justify-start", canDelete && "cursor-context-menu")}
-          >
-            <div className={cn(
-              "relative max-w-[85%] md:max-w-[65%] px-2.5 py-1.5 shadow-sm chat-selectable overflow-hidden break-words",
-              isOutgoing
-                ? "bubble-outgoing bg-[#d9fdd3] dark:bg-[#005c4b] text-gray-900 dark:text-gray-100"
-                : "bubble-incoming bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100"
-            )}>
-              {renderContent()}
-              <div className="flex items-center justify-end gap-1 mt-0.5 -mb-0.5 text-[11px] text-gray-500 dark:text-gray-400">
-                <span>{format(new Date(message.created_at), "HH:mm", { locale: ptBR })}</span>
-                {isOutgoing && getStatusIcon(message.status)}
-              </div>
-              {message.status === "failed" && isOutgoing && (
-                <div className="mt-1 rounded bg-red-50 dark:bg-red-900/20 px-2 py-1 text-[11px] text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40">
-                  {getErrorLabel(message.error_code) || message.error_details || "Falha no envio"}
+      <div className={cn("flex mb-0.5 px-3 md:px-4 group", isOutgoing ? "justify-end" : "justify-start")}>
+        <div className="relative inline-block">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild disabled={!canDelete}>
+              <motion.div
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+                className={cn(canDelete && "cursor-context-menu")}
+              >
+                <div className={cn(
+                  "relative max-w-[85vw] md:max-w-[480px] px-2.5 py-1.5 shadow-sm chat-selectable overflow-hidden break-words",
+                  isOutgoing
+                    ? "bubble-outgoing bg-[#d9fdd3] dark:bg-[#005c4b] text-gray-900 dark:text-gray-100"
+                    : "bubble-incoming bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100",
+                  reactionEmojis.length > 0 && "mb-3.5"
+                )}>
+                  {renderContent()}
+                  <div className="flex items-center justify-end gap-1 mt-0.5 -mb-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                    <span>{format(new Date(message.created_at), "HH:mm", { locale: ptBR })}</span>
+                    {isOutgoing && getStatusIcon(message.status)}
+                  </div>
+                  {message.status === "failed" && isOutgoing && (
+                    <div className="mt-1 rounded bg-red-50 dark:bg-red-900/20 px-2 py-1 text-[11px] text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40">
+                      {getErrorLabel(message.error_code) || message.error_details || "Falha no envio"}
+                    </div>
+                  )}
                 </div>
-              )}
+              </motion.div>
+            </DropdownMenuTrigger>
+            {canDelete && (
+              <DropdownMenuContent side="left" align="start" className="min-w-[160px]">
+                <DropdownMenuItem
+                  onClick={() => onDeleteMessage?.(message.id)}
+                  className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Apagar para todos
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            )}
+          </DropdownMenu>
+
+          {/* Emoji react button — only on incoming bubbles */}
+          {!isOutgoing && onReact && !message.is_deleted && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="absolute -right-7 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                >
+                  <SmilePlus className="h-3.5 w-3.5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent side="top" align="start" className="w-auto p-1.5">
+                <div className="flex gap-1">
+                  {QUICK_EMOJIS.map((e) => (
+                    <button
+                      key={e}
+                      onClick={() => onReact(message.id, e)}
+                      className="text-xl hover:scale-125 transition-transform px-1"
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+
+          {/* Reaction chips — pinned bottom-right of bubble (WhatsApp style) */}
+          {reactionEmojis.length > 0 && (
+            <div className={cn(
+              "absolute -bottom-2 flex gap-0.5 rounded-full bg-white dark:bg-[#2a3942] px-1.5 py-0.5 shadow border border-gray-200 dark:border-gray-700 text-sm",
+              isOutgoing ? "right-2" : "left-2"
+            )}>
+              {reactionEmojis.map((r, i) => (
+                <span key={i}>{r.emoji}</span>
+              ))}
             </div>
-          </motion.div>
-        </DropdownMenuTrigger>
-        {canDelete && (
-          <DropdownMenuContent side="left" align="start" className="min-w-[160px]">
-            <DropdownMenuItem
-              onClick={() => onDeleteMessage?.(message.id)}
-              className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Apagar para todos
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        )}
-      </DropdownMenu>
+          )}
+        </div>
+      </div>
 
       {message.message_type === "image" && message.image_url && (
         <ImageLightbox src={message.image_url} alt="Imagem" open={lightboxOpen} onClose={() => setLightboxOpen(false)} />
