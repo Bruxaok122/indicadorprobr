@@ -230,17 +230,7 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: Cha
                 </Button>
               </PopoverTrigger>
               <PopoverContent side="top" align="start" className="w-auto p-1.5">
-                <div className="flex gap-1">
-                  {QUICK_EMOJIS.map((e) => (
-                    <button
-                      key={e}
-                      onClick={() => onReact(message.id, e)}
-                      className="text-xl hover:scale-125 transition-transform px-1"
-                    >
-                      {e}
-                    </button>
-                  ))}
-                </div>
+                <QuickReactRow messageId={message.id} onReact={onReact} />
               </PopoverContent>
             </Popover>
           )}
