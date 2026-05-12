@@ -221,37 +221,11 @@ export function useMessages(contactId: string | null) {
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    onMutate: async (params) => {
-      const queryKey = ["messages", contactId, user?.id];
-      await queryClient.cancelQueries({ queryKey, exact: true });
-      const previous = queryClient.getQueryData<Message[]>(queryKey);
-      const parent = previous?.find((m) => m.id === params.messageId);
-      if (previous && parent) {
-        const optimistic: Message = {
-          ...parent,
-          id: `optimistic-reaction-${params.messageId}-${Date.now()}`,
-          message_type: "reaction",
-          content: params.emoji,
-          direction: "outgoing",
-          reacts_to_message_id: params.messageId,
-          created_at: new Date().toISOString(),
-          status: "sent",
-          user_id: user?.id ?? null,
-        } as Message;
-        // Replace any prior optimistic outgoing reaction from this user on this message
-        const filtered = previous.filter(
-          (m) => !(m.message_type === "reaction" && m.reacts_to_message_id === params.messageId && m.direction === "outgoing" && (m as any).user_id === user?.id && String(m.id).startsWith("optimistic-reaction-"))
-        );
-        queryClient.setQueryData<Message[]>(queryKey, [...filtered, optimistic]);
-      }
-      return { previous };
-    },
-    onError: (error: any, _params, ctx: any) => {
-      if (ctx?.previous) queryClient.setQueryData(["messages", contactId, user?.id], ctx.previous);
-      toast.error("Erro ao reagir", { description: error.message });
-    },
-    onSettled: () => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["messages", contactId, user?.id], exact: true });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao reagir", { description: error.message });
     },
   });
 
