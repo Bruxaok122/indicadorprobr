@@ -18,7 +18,26 @@ interface ChatBubbleProps {
   onReact?: (messageId: string, emoji: string) => void;
 }
 
-const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏", "🔥", "👏"];
+const DEFAULT_QUICK_EMOJIS = ["👍", "👌", "❤️", "😂", "😮", "😢", "🙏", "🔥"];
+const RECENT_KEY = "juriszap_recent_reactions";
+const MAX_RECENT = 8;
+
+function getRecentEmojis(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === "string") : [];
+  } catch { return []; }
+}
+
+function pushRecentEmoji(emoji: string) {
+  try {
+    const current = getRecentEmojis().filter((e) => e !== emoji);
+    const next = [emoji, ...current].slice(0, MAX_RECENT);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch { /* ignore */ }
+}
 
 function getStatusIcon(status: Message["status"]) {
   switch (status) {
