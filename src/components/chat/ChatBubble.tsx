@@ -255,3 +255,30 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: Cha
     </>
   );
 }
+
+function QuickReactRow({ messageId, onReact }: { messageId: string; onReact: (id: string, e: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  if (expanded) {
+    return <EmojiPicker onSelect={(e) => onReact(messageId, e)} />;
+  }
+  return (
+    <div className="flex items-center gap-1">
+      {QUICK_EMOJIS.map((e) => (
+        <button
+          key={e}
+          onClick={() => onReact(messageId, e)}
+          className="text-xl hover:scale-125 transition-transform px-1"
+        >
+          {e}
+        </button>
+      ))}
+      <button
+        onClick={() => setExpanded(true)}
+        className="ml-1 h-7 w-7 flex items-center justify-center rounded-full bg-muted hover:bg-accent transition-colors"
+        title="Mais emojis"
+      >
+        <Plus className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
