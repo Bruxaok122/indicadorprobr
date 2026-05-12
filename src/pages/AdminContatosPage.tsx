@@ -567,7 +567,11 @@ export default function AdminContatosPage() {
       if (fetchErr) throw fetchErr;
       const contacts = freshContacts || [];
 
-      const invalidPhones = new Set(existingWhatsappEntries.filter(e => !e.exists).map(e => e.phone));
+      const invalidPhones = new Set(
+        existingWhatsappEntries
+          .filter((e) => e.status ? e.status === "no_whatsapp" : !e.exists)
+          .map((e) => e.phone)
+      );
       const validPhones = new Set(existingWhatsappEntries.filter(e => e.exists).map(e => e.phone));
 
       const toRemoveIds: string[] = [];
