@@ -420,6 +420,22 @@ serve(async (req) => {
                   (messageInsertExtra as any).reacts_to_message_id = reactsToId;
                 } else if (message.type === "video") {
                   content = "[Vídeo recebido]";
+                } else if (message.type === "contacts") {
+                  // vCard sharing — extract name + phone numbers
+                  const cards = message.contacts || [];
+                  const lines: string[] = [];
+                  for (const card of cards) {
+                    const name = card?.name?.formatted_name || card?.name?.first_name || "Contato";
+                    const phones: string[] = (card?.phones || [])
+                      .map((p: any) => p?.phone || p?.wa_id)
+                      .filter(Boolean);
+                    if (phones.length === 0) {
+                      lines.push(`👤 ${name}`);
+                    } else {
+                      lines.push(`👤 ${name}\n📞 ${phones.join(", ")}`);
+                    }
+                  }
+                  content = `[Contato compartilhado]\n${lines.join("\n\n")}`;
                 } else if (message.type === "unsupported") {
                   // WhatsApp sends "unsupported" type when a message is deleted
                   // Check if there's a reference to an existing message (context.id)
