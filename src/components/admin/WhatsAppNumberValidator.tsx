@@ -178,7 +178,7 @@ export function WhatsAppNumberValidator() {
       case "has_whatsapp":
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case "no_whatsapp":
-        return <XCircle className="h-4 w-4 text-destructive" />;
+        return <span className="text-[10px] font-bold text-destructive leading-none">s/w</span>;
       case "invalid_format":
       case "landline":
       case "invalid_ddd":
