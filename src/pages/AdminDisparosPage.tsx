@@ -456,9 +456,11 @@ export default function AdminDisparosPage() {
 
     // Fetch remaining contacts from the list (real-time, only pool contacts)
     const isTurbo = dispatchMode === "turbo";
+    const minIncomeFilter = highIncomeOnly ? 10000 : undefined;
     const contactIds = await fetchRemainingContactIds(
       selectedList,
-      isTurbo ? turboLimit : batchMode ? batchSize : undefined
+      isTurbo ? turboLimit : batchMode ? batchSize : undefined,
+      minIncomeFilter
     );
 
     if (contactIds.length === 0) {
