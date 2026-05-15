@@ -68,13 +68,14 @@ const slideVariants = {
 };
 
 /** Helper to re-fetch remaining contact IDs from a list (only pool contacts with user_id=null) */
-async function fetchRemainingContactIds(listName: string, limit?: number): Promise<string[]> {
+async function fetchRemainingContactIds(listName: string, limit?: number, minIncome?: number): Promise<string[]> {
   const query = supabase
     .from("contacts")
     .select("id")
     .eq("contact_list", listName)
     .is("user_id", null);
 
+  if (typeof minIncome === "number") query.gte("valor_da_causa", minIncome);
   if (limit) query.limit(limit);
 
   const { data } = await query;
