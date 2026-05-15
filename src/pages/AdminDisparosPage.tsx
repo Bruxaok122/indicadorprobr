@@ -775,7 +775,7 @@ export default function AdminDisparosPage() {
               }
               if (ctrl?.isCancelled) break;
 
-              const freshIds = await fetchRemainingContactIds(capturedListName);
+              const freshIds = await fetchRemainingContactIds(capturedListName, undefined, capturedMinIncome);
               remainingIds = freshIds;
               i = 0;
               updateDispatch(dispatchId, { total: results.sent + results.failed + results.skipped + remainingIds.length });
