@@ -68,13 +68,14 @@ const slideVariants = {
 };
 
 /** Helper to re-fetch remaining contact IDs from a list (only pool contacts with user_id=null) */
-async function fetchRemainingContactIds(listName: string, limit?: number): Promise<string[]> {
+async function fetchRemainingContactIds(listName: string, limit?: number, minIncome?: number): Promise<string[]> {
   const query = supabase
     .from("contacts")
     .select("id")
     .eq("contact_list", listName)
     .is("user_id", null);
 
+  if (typeof minIncome === "number") query.gte("valor_da_causa", minIncome);
   if (limit) query.limit(limit);
 
   const { data } = await query;
@@ -234,6 +235,8 @@ export default function AdminDisparosPage() {
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
   const [scheduledHour, setScheduledHour] = useState("10");
   const [scheduledMinute, setScheduledMinute] = useState("00");
+  // Filter: only dispatch to contacts with valor_da_causa >= 10000
+  const [highIncomeOnly, setHighIncomeOnly] = useState(false);
 
   // Phone data for advogado variable (editable override)
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
@@ -453,9 +456,11 @@ export default function AdminDisparosPage() {
 
     // Fetch remaining contacts from the list (real-time, only pool contacts)
     const isTurbo = dispatchMode === "turbo";
+    const minIncomeFilter = highIncomeOnly ? 10000 : undefined;
     const contactIds = await fetchRemainingContactIds(
       selectedList,
-      isTurbo ? turboLimit : batchMode ? batchSize : undefined
+      isTurbo ? turboLimit : batchMode ? batchSize : undefined,
+      minIncomeFilter
     );
 
     if (contactIds.length === 0) {
@@ -508,7 +513,7 @@ export default function AdminDisparosPage() {
     const capturedBatchSize = batchSize;
     const capturedTurboLimit = turboLimit;
     const capturedIsTurbo = isTurbo;
-
+    const capturedMinIncome = minIncomeFilter;
     // Run dispatch in background with anti-ban protections
     (async () => {
       const results = { sent: 0, failed: 0, skipped: 0, errors: [] as string[] };
@@ -630,7 +635,8 @@ export default function AdminDisparosPage() {
 
               const freshIds = await fetchRemainingContactIds(
                 capturedListName,
-                capturedBatchMode ? Math.max(capturedBatchSize - results.sent, 1) : undefined
+                capturedBatchMode ? Math.max(capturedBatchSize - results.sent, 1) : undefined,
+                capturedMinIncome
               );
               remainingIds = freshIds;
               i = 0;
@@ -769,7 +775,7 @@ export default function AdminDisparosPage() {
               }
               if (ctrl?.isCancelled) break;
 
-              const freshIds = await fetchRemainingContactIds(capturedListName);
+              const freshIds = await fetchRemainingContactIds(capturedListName, undefined, capturedMinIncome);
               remainingIds = freshIds;
               i = 0;
               updateDispatch(dispatchId, { total: results.sent + results.failed + results.skipped + remainingIds.length });
@@ -1381,6 +1387,22 @@ export default function AdminDisparosPage() {
                       <p>• Circuit breaker em caso de bloqueio da Meta</p>
                     </div>
                   </motion.div>
+
+                  {/* 💰 High income filter toggle */}
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <Label htmlFor="high-income-toggle" className="text-xs font-semibold cursor-pointer flex items-center gap-1.5">
+                        💰 Apenas Renda Alta (≥ R$ 10.000)
+                        {highIncomeOnly && (
+                          <span className="inline-flex items-center rounded-full bg-amber-500/20 px-1.5 py-0 text-[10px] font-bold text-amber-600 dark:text-amber-400">ATIVO</span>
+                        )}
+                      </Label>
+                      <p className="text-[10px] text-muted-foreground">
+                        Quando ativo, dispara apenas para contatos com valor da causa ≥ R$ 10.000. Desativado: dispara para todos.
+                      </p>
+                    </div>
+                    <Switch id="high-income-toggle" checked={highIncomeOnly} onCheckedChange={setHighIncomeOnly} />
+                  </div>
 
                   <Button className="w-full gap-2" size="lg" onClick={handleSend}
                     disabled={!selectedTemplate || !selectedList || (!sharedDispatch && !selectedUserId) || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId) || (isScheduled && !scheduledDate)}>
