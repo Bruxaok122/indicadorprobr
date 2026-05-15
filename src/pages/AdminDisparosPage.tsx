@@ -635,7 +635,8 @@ export default function AdminDisparosPage() {
 
               const freshIds = await fetchRemainingContactIds(
                 capturedListName,
-                capturedBatchMode ? Math.max(capturedBatchSize - results.sent, 1) : undefined
+                capturedBatchMode ? Math.max(capturedBatchSize - results.sent, 1) : undefined,
+                capturedMinIncome
               );
               remainingIds = freshIds;
               i = 0;
