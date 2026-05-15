@@ -235,6 +235,8 @@ export default function AdminDisparosPage() {
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
   const [scheduledHour, setScheduledHour] = useState("10");
   const [scheduledMinute, setScheduledMinute] = useState("00");
+  // Filter: only dispatch to contacts with valor_da_causa >= 10000
+  const [highIncomeOnly, setHighIncomeOnly] = useState(false);
 
   // Phone data for advogado variable (editable override)
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
