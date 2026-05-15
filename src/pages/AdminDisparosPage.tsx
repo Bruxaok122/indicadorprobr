@@ -513,7 +513,7 @@ export default function AdminDisparosPage() {
     const capturedBatchSize = batchSize;
     const capturedTurboLimit = turboLimit;
     const capturedIsTurbo = isTurbo;
-
+    const capturedMinIncome = minIncomeFilter;
     // Run dispatch in background with anti-ban protections
     (async () => {
       const results = { sent: 0, failed: 0, skipped: 0, errors: [] as string[] };
