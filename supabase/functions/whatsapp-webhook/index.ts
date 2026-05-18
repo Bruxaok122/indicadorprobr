@@ -123,13 +123,27 @@ serve(async (req) => {
                   continue;
                 }
 
+                // Check if ANY contact with this phone is blocked (encerrado).
+                // If so, ignore the inbound message entirely — never create a new
+                // contact and never resurrect into the shared/disponíveis pool.
+                const { data: blockedContacts } = await supabase
+                  .from("contacts")
+                  .select("id")
+                  .in("phone", phoneCandidates)
+                  .eq("status", "encerrado")
+                  .limit(1);
+
+                if (blockedContacts && blockedContacts.length > 0) {
+                  console.log(`Phone ${phone} has a blocked contact. Ignoring inbound message.`);
+                  continue;
+                }
+
                 // Find existing contact by phone - prioritize the one with the most recent activity
                 // This ensures incoming replies go to the operator who most recently dispatched
                 const { data: contactsWithPhone } = await supabase
                   .from("contacts")
                   .select("*")
                   .in("phone", phoneCandidates)
-                  .not("status", "eq", "encerrado") // skip blocked contacts
                   .order("last_message_at", { ascending: false, nullsFirst: false }) // most recent activity first, nulls LAST
                   .order("created_at", { ascending: false });
 
