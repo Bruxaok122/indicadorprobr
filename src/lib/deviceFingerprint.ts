@@ -26,39 +26,9 @@ export async function generateDeviceFingerprint(): Promise<string> {
   // Touch support
   components.push(String(navigator.maxTouchPoints || 0));
 
-  // Canvas fingerprint
-  try {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.textBaseline = 'top';
-      ctx.font = '14px Arial';
-      ctx.fillStyle = '#f60';
-      ctx.fillRect(125, 1, 62, 20);
-      ctx.fillStyle = '#069';
-      ctx.fillText('JurisZap', 2, 15);
-      ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-      ctx.fillText('LB013', 4, 17);
-      components.push(canvas.toDataURL());
-    }
-  } catch (e) {
-    components.push('canvas-error');
-  }
-
-  // WebGL info
-  try {
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (gl && 'getParameter' in gl) {
-      const debugInfo = (gl as WebGLRenderingContext).getExtension('WEBGL_debug_renderer_info');
-      if (debugInfo) {
-        components.push((gl as WebGLRenderingContext).getParameter(debugInfo.UNMASKED_VENDOR_WEBGL));
-        components.push((gl as WebGLRenderingContext).getParameter(debugInfo.UNMASKED_RENDERER_WEBGL));
-      }
-    }
-  } catch (e) {
-    components.push('webgl-error');
-  }
+  // NOTE: canvas/WebGL fingerprints intentionally removed — they are not deterministic
+  // between calls (vary by font-load state, GPU state, browser privacy noise),
+  // which caused the periodic guard to log the user out repeatedly.
 
   // Hash the components
   const fingerprintString = components.join('|');
