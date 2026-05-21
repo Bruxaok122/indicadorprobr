@@ -100,6 +100,11 @@ export default function WhatsAppApiPage() {
   const [setPinPhoneId, setSetPinPhoneId] = useState("");
   const [setPinValue, setSetPinValue] = useState("");
   const [settingPin, setSettingPin] = useState(false);
+  // Set PIN by raw phone_number_id (any WABA/account)
+  const [pinByIdValue, setPinByIdValue] = useState("");
+  const [pinByIdPin, setPinByIdPin] = useState("123456");
+  const [pinByIdToken, setPinByIdToken] = useState("");
+  const [settingPinById, setSettingPinById] = useState(false);
 
   // Business Profile State
   const [selectedPhoneId, setSelectedPhoneId] = useState("");
