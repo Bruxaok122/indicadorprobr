@@ -320,7 +320,43 @@ export default function WhatsAppApiPage() {
       setSettingPin(false);
     }
   };
+
+  const handleSetPinById = async () => {
+    const pnid = pinByIdValue.trim();
+    if (!pnid) {
+      toast.error("Informe o Phone Number ID");
+      return;
+    }
+    if (pinByIdPin.length !== 6) {
+      toast.error("O PIN deve ter exatamente 6 dígitos");
+      return;
+    }
+    setSettingPinById(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
+        body: {
+          action: "set_pin_by_id",
+          phone_number_id: pnid,
+          pin: pinByIdPin,
+          access_token: pinByIdToken.trim() || undefined,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("PIN definido com sucesso!", {
+        description: data?.used_token ? `Token utilizado: ${data.used_token}` : undefined,
+      });
+      setPinByIdValue("");
+    } catch (err: any) {
+      const msg = await getInvokeErrorMessage(err, "Erro ao definir PIN");
+      toast.error("Erro ao definir PIN", { description: msg });
+    } finally {
+      setSettingPinById(false);
+    }
+  };
+
   const handleDeletePhone = async (phone: typeof availablePhones[0]) => {
+
     setDeletingPhoneId(phone.id);
     try {
       const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
