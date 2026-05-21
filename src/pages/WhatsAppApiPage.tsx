@@ -100,6 +100,11 @@ export default function WhatsAppApiPage() {
   const [setPinPhoneId, setSetPinPhoneId] = useState("");
   const [setPinValue, setSetPinValue] = useState("");
   const [settingPin, setSettingPin] = useState(false);
+  // Set PIN by raw phone_number_id (any WABA/account)
+  const [pinByIdValue, setPinByIdValue] = useState("");
+  const [pinByIdPin, setPinByIdPin] = useState("123456");
+  const [pinByIdToken, setPinByIdToken] = useState("");
+  const [settingPinById, setSettingPinById] = useState(false);
 
   // Business Profile State
   const [selectedPhoneId, setSelectedPhoneId] = useState("");
@@ -315,7 +320,43 @@ export default function WhatsAppApiPage() {
       setSettingPin(false);
     }
   };
+
+  const handleSetPinById = async () => {
+    const pnid = pinByIdValue.trim();
+    if (!pnid) {
+      toast.error("Informe o Phone Number ID");
+      return;
+    }
+    if (pinByIdPin.length !== 6) {
+      toast.error("O PIN deve ter exatamente 6 dígitos");
+      return;
+    }
+    setSettingPinById(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
+        body: {
+          action: "set_pin_by_id",
+          phone_number_id: pnid,
+          pin: pinByIdPin,
+          access_token: pinByIdToken.trim() || undefined,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("PIN definido com sucesso!", {
+        description: data?.used_token ? `Token utilizado: ${data.used_token}` : undefined,
+      });
+      setPinByIdValue("");
+    } catch (err: any) {
+      const msg = await getInvokeErrorMessage(err, "Erro ao definir PIN");
+      toast.error("Erro ao definir PIN", { description: msg });
+    } finally {
+      setSettingPinById(false);
+    }
+  };
+
   const handleDeletePhone = async (phone: typeof availablePhones[0]) => {
+
     setDeletingPhoneId(phone.id);
     try {
       const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
@@ -689,6 +730,53 @@ export default function WhatsAppApiPage() {
                   </Button>
                 </CardContent>
               </Card>
+
+            {/* Set PIN by raw Phone Number ID (any WABA/account) */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lock className="h-5 w-5" />
+                    Definir PIN por Phone Number ID
+                  </CardTitle>
+                  <CardDescription>
+                    Defina o PIN diretamente informando o ID do número (ex: 1010147042192402). Funciona para qualquer WABA/conta, desde que algum access token configurado tenha permissão — ou informe um token específico abaixo.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Phone Number ID</Label>
+                    <Input
+                      value={pinByIdValue}
+                      onChange={(e) => setPinByIdValue(e.target.value.replace(/\s/g, ""))}
+                      placeholder="1010147042192402"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>PIN de 2 Fatores (6 dígitos)</Label>
+                    <Input
+                      value={pinByIdPin}
+                      onChange={(e) => setPinByIdPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="123456"
+                      maxLength={6}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Access Token (opcional)</Label>
+                    <Input
+                      type="password"
+                      value={pinByIdToken}
+                      onChange={(e) => setPinByIdToken(e.target.value)}
+                      placeholder="Deixe vazio para tentar com todos os tokens configurados"
+                    />
+                  </div>
+                  <Button onClick={handleSetPinById} disabled={settingPinById} className="w-full">
+                    {settingPinById ? <LoadingSpinner size="sm" /> : <Lock className="mr-2 h-4 w-4" />}
+                    {settingPinById ? "Definindo PIN..." : "Definir PIN"}
+                  </Button>
+                </CardContent>
+              </Card>
+
+
 
             {/* Business Profile - available to all users */}
               <Card>

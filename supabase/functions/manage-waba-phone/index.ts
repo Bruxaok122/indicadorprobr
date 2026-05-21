@@ -257,6 +257,93 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
 
+    } else if (action === "set_pin_by_id") {
+      const { phone_number_id, pin, access_token: customToken } = body;
+
+      if (!phone_number_id || !pin || String(pin).length !== 6) {
+        return new Response(JSON.stringify({ error: "Phone Number ID e PIN de 6 dígitos são obrigatórios" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Collect candidate access tokens to try
+      const tokens: { token: string; label: string }[] = [];
+      if (customToken && String(customToken).trim()) {
+        tokens.push({ token: String(customToken).trim(), label: "token informado" });
+      }
+      // User's own configs
+      const { data: userConfigs } = await serviceClient
+        .from("user_whatsapp_config")
+        .select("access_token, waba_id")
+        .eq("user_id", userId);
+      for (const c of userConfigs || []) {
+        if (c.access_token) tokens.push({ token: c.access_token, label: `user waba ${c.waba_id || ""}` });
+      }
+      // Admin api_configs (anyone may have set up the phone there)
+      const { data: apiConfigs } = await serviceClient
+        .from("api_configs")
+        .select("access_token, waba_id, name");
+      for (const c of apiConfigs || []) {
+        if (c.access_token) tokens.push({ token: c.access_token, label: `api_config ${c.name || c.waba_id || ""}` });
+      }
+      // Legacy shared config
+      const { data: sharedAll } = await serviceClient
+        .from("whatsapp_config")
+        .select("access_token, waba_id");
+      for (const c of sharedAll || []) {
+        if (c.access_token) tokens.push({ token: c.access_token, label: `shared ${c.waba_id || ""}` });
+      }
+
+      // Deduplicate
+      const seen = new Set<string>();
+      const uniqTokens = tokens.filter((t) => {
+        if (seen.has(t.token)) return false;
+        seen.add(t.token);
+        return true;
+      });
+
+      if (uniqTokens.length === 0) {
+        return new Response(JSON.stringify({ error: "Nenhum access token disponível" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      let lastError = "Nenhum token conseguiu definir o PIN para este Phone Number ID";
+      for (const t of uniqTokens) {
+        try {
+          const r = await fetch(
+            `https://graph.facebook.com/v21.0/${phone_number_id}/register`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${t.token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ messaging_product: "whatsapp", pin }),
+            }
+          );
+          const d = await r.json();
+          if (r.ok) {
+            return new Response(
+              JSON.stringify({ success: true, data: d, used_token: t.label }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          lastError = d?.error?.error_user_msg || d?.error?.message || lastError;
+          console.log(`set_pin_by_id failed with ${t.label}:`, JSON.stringify(d?.error));
+        } catch (e) {
+          console.log(`set_pin_by_id error with ${t.label}:`, e);
+        }
+      }
+
+      return new Response(JSON.stringify({ error: lastError }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
+
     } else if (action === "delete_phone") {
       const { phone_number_id, db_id } = body;
 
