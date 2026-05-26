@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+export type LastOutgoingStatus = "pending" | "sent" | "delivered" | "read" | "failed" | "failed_no_whatsapp";
+
 // Meta error codes that indicate the recipient does not have WhatsApp
 const NO_WHATSAPP_ERROR_CODES = new Set(["131026"]);
 
