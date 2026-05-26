@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type LastOutgoingStatus = "pending" | "sent" | "delivered" | "read" | "failed";
+export type LastOutgoingStatus = "pending" | "sent" | "delivered" | "read" | "failed" | "failed_no_whatsapp";
+
+// Meta error codes that indicate the recipient does not have WhatsApp
+const NO_WHATSAPP_ERROR_CODES = new Set(["131026"]);
 
 /**
  * Returns a map of contact_id -> status of the latest outgoing message for that contact.
@@ -25,7 +28,7 @@ export function useLastOutgoingStatus(contactIds: string[]) {
       // Fetch recent outgoing messages for these contacts (limit broad, then reduce)
       const { data, error } = await supabase
         .from("messages")
-        .select("contact_id, status, created_at")
+        .select("contact_id, status, error_code, created_at")
         .in("contact_id", contactIds)
         .eq("direction", "outgoing")
         .order("created_at", { ascending: false })
@@ -36,7 +39,11 @@ export function useLastOutgoingStatus(contactIds: string[]) {
       const map: Record<string, LastOutgoingStatus> = {};
       for (const m of data as any[]) {
         if (!map[m.contact_id]) {
-          map[m.contact_id] = m.status as LastOutgoingStatus;
+          let st = m.status as LastOutgoingStatus;
+          if (st === "failed" && m.error_code && NO_WHATSAPP_ERROR_CODES.has(String(m.error_code))) {
+            st = "failed_no_whatsapp";
+          }
+          map[m.contact_id] = st;
         }
       }
       setStatusMap(map);
