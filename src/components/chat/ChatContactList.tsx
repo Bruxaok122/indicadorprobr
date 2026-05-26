@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff, Bot, Users, Hand, X, Check, CheckCheck } from "lucide-react";
+import { Search, MessageSquare, Inbox, Clock, CheckCircle2, XCircle, Phone, Scale, Moon, Sun, LogOut, User, Star, Trash2, Volume2, VolumeOff, Bot, Users, Hand, X, Check, CheckCheck, AlertTriangle } from "lucide-react";
 import { useClaimContact } from "@/hooks/useClaimContact";
 import { useLastOutgoingStatus, LastOutgoingStatus } from "@/hooks/useLastOutgoingStatus";
 import { useDismissContact, useDismissedContacts } from "@/hooks/useDismissContact";
@@ -84,7 +84,7 @@ function renderTick(status?: LastOutgoingStatus) {
     case "sent": return <Check className="h-3.5 w-3.5 text-gray-400 shrink-0" />;
     case "delivered": return <CheckCheck className="h-3.5 w-3.5 text-gray-400 shrink-0" />;
     case "read": return <CheckCheck className="h-3.5 w-3.5 text-blue-500 shrink-0" />;
-    case "failed": return <X className="h-3 w-3 text-red-500 shrink-0" />;
+    case "failed": return <AlertTriangle className="h-3.5 w-3.5 text-yellow-500 shrink-0" />;
     default: return null;
   }
 }
