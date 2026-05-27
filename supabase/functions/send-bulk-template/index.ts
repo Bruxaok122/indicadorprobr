@@ -331,13 +331,13 @@ serve(async (req) => {
           continue;
         }
 
-        // Build personalized content for the saved message
-        let savedContent = `[Template: ${templateName}]`;
-        if (hasVariables) {
-          const varDetails = Object.entries(variableMappings)
-            .map(([k, v]) => `{{${k}}}=${resolveVariable(contact, v as string)}`)
-            .join(", ");
-          savedContent = `[Template: ${templateName}] (${varDetails})`;
+        // Build personalized content for the saved message — render the actual template text the client sees
+        let savedContent = templateBody || `[Template: ${templateName}]`;
+        if (hasVariables && templateBody) {
+          for (const [k, v] of Object.entries(variableMappings)) {
+            const val = resolveVariable(contact, v as string, { phoneVerifiedName });
+            savedContent = savedContent.split(`{{${k}}}`).join(val);
+          }
         }
 
         let { data: conversation } = await supabase
