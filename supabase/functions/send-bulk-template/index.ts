@@ -203,6 +203,27 @@ serve(async (req) => {
     // variableMappings is an object like { "1": "name", "2": "process_number" }
     const hasVariables = variableMappings && Object.keys(variableMappings).length > 0;
 
+    // Fetch the template body once so we can render the actual message text for the saved bubble
+    let templateBody = "";
+    try {
+      if ((config as any).waba_id) {
+        const tplRes = await fetch(
+          `https://graph.facebook.com/v18.0/${(config as any).waba_id}/message_templates?name=${encodeURIComponent(templateName)}&limit=10`,
+          { headers: { Authorization: `Bearer ${config.access_token}` } }
+        );
+        const tplJson = await tplRes.json();
+        const lang = templateLanguage || "pt_BR";
+        const match =
+          (tplJson.data || []).find((t: any) => t.name === templateName && t.language === lang) ||
+          (tplJson.data || []).find((t: any) => t.name === templateName) ||
+          (tplJson.data || [])[0];
+        const bodyComp = match?.components?.find((c: any) => c.type === "BODY");
+        templateBody = bodyComp?.text || "";
+      }
+    } catch (e) {
+      console.error("Failed to fetch template body for rendering:", e);
+    }
+
     for (const contact of eligibleContacts) {
       try {
         if (contact.status !== "novo") {
