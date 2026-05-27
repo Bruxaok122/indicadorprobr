@@ -95,7 +95,7 @@ export default function ConversasPage() {
   // Get operator's active phone and lawyer — prioritize dispatched phone info
   const activePhone = phones.find((p) => p.phone_number_id === selectedPhoneNumberId) || phones[0];
   const operatorPhone = dispatchedPhoneInfo?.display_phone_number || activePhone?.display_phone_number;
-  const operatorLawyer = dispatchedPhoneInfo?.verified_name || dispatchedPhoneInfo?.lawyer_name || activePhone?.verified_name || activePhone?.lawyer_name;
+  const operatorLawyer = dispatchedPhoneInfo?.lawyer_name || activePhone?.lawyer_name || dispatchedPhoneInfo?.verified_name || activePhone?.verified_name;
 
   // Auto-select the dispatched phone number for this contact, or fallback to first available
   useEffect(() => {

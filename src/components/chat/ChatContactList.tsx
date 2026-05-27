@@ -204,9 +204,11 @@ export function ChatContactList({
               <a href="/" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full hover:bg-primary/10 transition-colors" title="Voltar ao painel">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><path d="m15 18-6-6 6-6"/></svg>
               </a>
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 dark:bg-primary/30">
-                <User className="h-4 w-4 text-primary dark:text-primary-foreground" />
-              </div>
+              <img
+                src={`https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(operatorName || operatorPhone || "juriszap")}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`}
+                alt="Avatar"
+                className="h-8 w-8 shrink-0 rounded-full bg-primary/20 dark:bg-primary/30 object-cover"
+              />
               <div className="min-w-0 flex-1">
                 {operatorName && (
                   <p className="text-sm font-semibold text-foreground truncate">{operatorName}</p>
