@@ -213,20 +213,28 @@ export function ChatContactList({
                 {operatorName && (
                   <p className="text-sm font-semibold text-foreground truncate">{operatorName}</p>
                 )}
-                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                  {operatorPhone && (
-                    <span className="flex items-center gap-0.5 truncate">
-                      <Phone className="h-3 w-3" />
-                      {operatorPhone}
-                    </span>
-                  )}
-                  {operatorLawyer && (
-                    <span className="flex items-center gap-0.5 truncate">
-                      <Scale className="h-3 w-3" />
-                      {operatorLawyer}
-                    </span>
-                  )}
-                </div>
+                {(operatorPhone || operatorLawyer) && (
+                  <div className="marquee-mask text-[11px] text-muted-foreground">
+                    <div className="marquee-track">
+                      {[0, 1].map((k) => (
+                        <span key={k} className="flex items-center gap-2 pr-8" aria-hidden={k === 1}>
+                          {operatorPhone && (
+                            <span className="flex items-center gap-0.5">
+                              <Phone className="h-3 w-3" />
+                              {operatorPhone}
+                            </span>
+                          )}
+                          {operatorLawyer && (
+                            <span className="flex items-center gap-0.5">
+                              <Scale className="h-3 w-3" />
+                              {operatorLawyer}
+                            </span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
