@@ -331,3 +331,21 @@ div[style*="Edit with Lovable"],
 [data-radix-toast-announce-exclude] {
   display: none !important;
 }
+
+/* Marquee scroll for operator info */
+@keyframes marquee-x {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.marquee-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee-x 18s linear infinite;
+  will-change: transform;
+}
+.marquee-mask {
+  overflow: hidden;
+  width: 100%;
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
