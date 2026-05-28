@@ -203,6 +203,27 @@ serve(async (req) => {
     // variableMappings is an object like { "1": "name", "2": "process_number" }
     const hasVariables = variableMappings && Object.keys(variableMappings).length > 0;
 
+    // Fetch the template body once so we can render the actual message text for the saved bubble
+    let templateBody = "";
+    try {
+      if ((config as any).waba_id) {
+        const tplRes = await fetch(
+          `https://graph.facebook.com/v18.0/${(config as any).waba_id}/message_templates?name=${encodeURIComponent(templateName)}&limit=10`,
+          { headers: { Authorization: `Bearer ${config.access_token}` } }
+        );
+        const tplJson = await tplRes.json();
+        const lang = templateLanguage || "pt_BR";
+        const match =
+          (tplJson.data || []).find((t: any) => t.name === templateName && t.language === lang) ||
+          (tplJson.data || []).find((t: any) => t.name === templateName) ||
+          (tplJson.data || [])[0];
+        const bodyComp = match?.components?.find((c: any) => c.type === "BODY");
+        templateBody = bodyComp?.text || "";
+      }
+    } catch (e) {
+      console.error("Failed to fetch template body for rendering:", e);
+    }
+
     for (const contact of eligibleContacts) {
       try {
         if (contact.status !== "novo") {
@@ -310,13 +331,13 @@ serve(async (req) => {
           continue;
         }
 
-        // Build personalized content for the saved message
-        let savedContent = `[Template: ${templateName}]`;
-        if (hasVariables) {
-          const varDetails = Object.entries(variableMappings)
-            .map(([k, v]) => `{{${k}}}=${resolveVariable(contact, v as string)}`)
-            .join(", ");
-          savedContent = `[Template: ${templateName}] (${varDetails})`;
+        // Build personalized content for the saved message — render the actual template text the client sees
+        let savedContent = templateBody || `[Template: ${templateName}]`;
+        if (hasVariables && templateBody) {
+          for (const [k, v] of Object.entries(variableMappings)) {
+            const val = resolveVariable(contact, v as string, { phoneVerifiedName });
+            savedContent = savedContent.split(`{{${k}}}`).join(val);
+          }
         }
 
         let { data: conversation } = await supabase

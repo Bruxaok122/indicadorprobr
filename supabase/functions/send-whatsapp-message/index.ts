@@ -216,6 +216,7 @@ serve(async (req) => {
     const whatsappUrl = `https://graph.facebook.com/v18.0/${finalPhoneNumberId}/messages`;
 
     let requestBody: any;
+    let renderedTemplateBody = "";
 
     if (isTemplate && templateName) {
       requestBody = {
@@ -227,6 +228,25 @@ serve(async (req) => {
           language: { code: "pt_BR" },
         },
       };
+
+      // Fetch template body so we save the actual message text (not a [Template: ...] placeholder)
+      try {
+        if ((config as any).waba_id) {
+          const tplRes = await fetch(
+            `https://graph.facebook.com/v18.0/${(config as any).waba_id}/message_templates?name=${encodeURIComponent(templateName)}&limit=10`,
+            { headers: { Authorization: `Bearer ${config.access_token}` } }
+          );
+          const tplJson = await tplRes.json();
+          const match =
+            (tplJson.data || []).find((t: any) => t.name === templateName && t.language === "pt_BR") ||
+            (tplJson.data || []).find((t: any) => t.name === templateName) ||
+            (tplJson.data || [])[0];
+          const bodyComp = match?.components?.find((c: any) => c.type === "BODY");
+          renderedTemplateBody = bodyComp?.text || "";
+        }
+      } catch (e) {
+        console.error("Failed to fetch template body for rendering:", e);
+      }
     } else {
       requestBody = {
         messaging_product: "whatsapp",
@@ -237,6 +257,7 @@ serve(async (req) => {
     }
 
     console.log("Sending message to WhatsApp:", JSON.stringify(requestBody, null, 2));
+
 
     const response = await fetch(whatsappUrl, {
       method: "POST",
@@ -285,7 +306,7 @@ serve(async (req) => {
           user_id: effectiveUserId,
           direction: "outgoing",
           message_type: isTemplate ? "template" : "text",
-          content: message || `[Template: ${templateName}]`,
+          content: message || renderedTemplateBody || `[Template: ${templateName}]`,
           template_name: templateName || null,
           status: "failed",
           error_code: errorCode,
@@ -338,7 +359,7 @@ serve(async (req) => {
       user_id: effectiveUserId,
       direction: "outgoing",
       message_type: isTemplate ? "template" : "text",
-      content: message || `[Template: ${templateName}]`,
+      content: message || renderedTemplateBody || `[Template: ${templateName}]`,
       template_name: templateName || null,
       whatsapp_message_id: result.messages?.[0]?.id,
       status: "sent",
