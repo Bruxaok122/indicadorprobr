@@ -306,7 +306,7 @@ serve(async (req) => {
           user_id: effectiveUserId,
           direction: "outgoing",
           message_type: isTemplate ? "template" : "text",
-          content: message || `[Template: ${templateName}]`,
+          content: message || renderedTemplateBody || `[Template: ${templateName}]`,
           template_name: templateName || null,
           status: "failed",
           error_code: errorCode,
