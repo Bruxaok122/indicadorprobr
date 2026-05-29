@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useDispatchContext } from "@/contexts/DispatchContext";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Send, Timer, CheckCircle, Pause } from "lucide-react";
@@ -13,25 +13,14 @@ function formatCountdown(seconds: number): string {
 
 export function DispatchCountdown() {
   const { user } = useAuthContext();
-  const { activeDispatches, dismissDispatch } = useDispatchContext();
+  const { activeDispatches } = useDispatchContext();
   const [now, setNow] = useState(Date.now());
-  const dismissedRef = useRef<Set<string>>(new Set());
 
   // Tick every second
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
-
-  // Auto-dismiss finished dispatches owned by this user after a short grace period
-  useEffect(() => {
-    const mine = activeDispatches.filter((d) => d.operatorId === user?.id && d.isFinished);
-    for (const d of mine) {
-      if (dismissedRef.current.has(d.id)) continue;
-      dismissedRef.current.add(d.id);
-      setTimeout(() => dismissDispatch(d.id), 4000);
-    }
-  }, [activeDispatches, user?.id, dismissDispatch]);
 
   // Get operator's active (non-finished) dispatches
   const myDispatches = activeDispatches.filter(
@@ -43,12 +32,11 @@ export function DispatchCountdown() {
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+        initial={{ opacity: 0, y: -10, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-        className="fixed bottom-3 left-3 z-50 flex flex-col gap-1.5 pointer-events-none"
+        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+        className="absolute top-2 right-2 z-30 flex flex-col gap-1.5"
       >
-
         {myDispatches.map((dispatch) => {
           const nextSendAt = dispatch.nextSendAt
             ? new Date(dispatch.nextSendAt).getTime()
