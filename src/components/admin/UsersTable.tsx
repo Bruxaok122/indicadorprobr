@@ -211,17 +211,28 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
                      }
                    />
                  </TableCell>
-                 <TableCell>
-                   <Switch
-                     checked={(user as any).can_dispatch || false}
-                     onCheckedChange={(checked) =>
-                       onToggleDispatch({
-                         userId: user.user_id,
-                         canDispatch: checked,
-                       })
-                     }
-                   />
-                 </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={(user as any).can_dispatch || false}
+                      onCheckedChange={(checked) =>
+                        onToggleDispatch({
+                          userId: user.user_id,
+                          canDispatch: checked,
+                        })
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={(user as any).can_replay_admin_dispatch || false}
+                      onCheckedChange={(checked) =>
+                        onToggleReplayPermission?.({
+                          userId: user.user_id,
+                          canReplay: checked,
+                        })
+                      }
+                    />
+                  </TableCell>
             <TableCell>
               <div className="flex flex-col gap-1.5">
                 {user.authorized_fingerprint ? (
