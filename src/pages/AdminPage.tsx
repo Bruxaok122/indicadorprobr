@@ -167,6 +167,7 @@ function AdminPageInner() {
                         onToggleApiPermission={toggleApiPermission}
                         onToggleManageNumbers={toggleManageNumbers}
                         onToggleDispatch={toggleDispatch}
+                        onToggleReplayPermission={toggleReplayPermission}
                         onDelete={setUserToDeleteMobile}
                         onClearTempBan={clearTempBan}
                         onManagePhones={setPhonePermUser}
