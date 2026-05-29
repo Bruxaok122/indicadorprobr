@@ -44,6 +44,7 @@ interface UsersTableProps {
   onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
   onToggleManageNumbers: (params: { userId: string; canManageNumbers: boolean }) => void;
   onToggleDispatch: (params: { userId: string; canDispatch: boolean }) => void;
+  onToggleReplayPermission?: (params: { userId: string; canReplay: boolean }) => void;
   onDelete: (userId: string) => void;
   onClearTempBan: (userId: string) => void;
   onManagePhones: (user: Profile) => void;
@@ -53,7 +54,7 @@ interface UsersTableProps {
   onMonitorChat: (user: Profile) => void;
 }
 
-export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UsersTableProps) {
+export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onToggleReplayPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UsersTableProps) {
   // Controlled delete dialog - prevents closure/portal issues with inline AlertDialogs in loops
   const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
 
