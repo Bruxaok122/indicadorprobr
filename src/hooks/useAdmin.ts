@@ -198,6 +198,25 @@ export function useAdmin() {
     },
   });
 
+  // Toggle "replay admin dispatch" permission
+  const toggleReplayPermissionMutation = useMutation({
+    mutationFn: async ({ userId, canReplay }: { userId: string; canReplay: boolean }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ can_replay_admin_dispatch: canReplay } as any)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: (_, { canReplay }) => {
+      toast.success(canReplay ? "Permissão para repetir disparo admin concedida!" : "Permissão removida!");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao alterar permissão", { description: error.message });
+    },
+  });
+
+
   const clearTempBanMutation = useMutation({
     mutationFn: async (userId: string) => {
       const { error } = await supabase
