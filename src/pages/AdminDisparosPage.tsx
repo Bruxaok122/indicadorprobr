@@ -498,6 +498,30 @@ export default function AdminDisparosPage() {
 
     addDispatch(newDispatch);
 
+    // Save snapshot for operator replay (singleton row — always overwrites previous)
+    try {
+      const SNAPSHOT_ID = "00000000-0000-0000-0000-000000000001";
+      await supabase.from("last_admin_dispatch" as any).upsert({
+        id: SNAPSHOT_ID,
+        template_name: selectedTemplate.name,
+        template_language: selectedTemplate.language,
+        list_name: selectedList,
+        total: contactIds.length,
+        mode: dispatchMode,
+        phone_number_id: selectedPhoneNumberId || null,
+        variable_mappings: variableMappings,
+        phone_verified_name: phoneVerifiedName,
+        min_income: minIncomeFilter ?? null,
+        batch_size: batchMode ? batchSize : null,
+        interval_seconds: intervalSeconds,
+        turbo_limit: isTurbo ? turboLimit : null,
+        created_by_admin_id: user.id,
+        updated_at: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.error("Failed to save admin dispatch snapshot:", e);
+    }
+
     // Capture values for the async closure
     const capturedTemplate = selectedTemplate;
     const capturedUserId = selectedUserId;

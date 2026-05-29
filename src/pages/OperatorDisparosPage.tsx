@@ -35,6 +35,7 @@ import { ParsedContact } from "@/types/juriszap";
 import { CreateTemplateDialog } from "@/components/templates/CreateTemplateDialog";
 import { cn } from "@/lib/utils";
 import { getTierConfig } from "@/lib/tierLimits";
+import { ReplayAdminDispatchCard } from "@/components/dispatch/ReplayAdminDispatchCard";
 
 // --- Parser for the operator's raw format ---
 // No number validation, accepts all phones as-is
@@ -1295,6 +1296,9 @@ export default function OperatorDisparosPage() {
 
         <div className="flex-1 overflow-auto p-4 md:p-6">
           <div className="mx-auto max-w-3xl space-y-6">
+
+            {/* Replay last admin dispatch (permission-gated) */}
+            <ReplayAdminDispatchCard />
 
             {/* Active Dispatches */}
             {activeDispatches.filter(d => d.operatorId === user?.id).length > 0 && (
