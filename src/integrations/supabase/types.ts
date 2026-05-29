@@ -459,6 +459,63 @@ export type Database = {
         }
         Relationships: []
       }
+      last_admin_dispatch: {
+        Row: {
+          batch_size: number | null
+          created_at: string
+          created_by_admin_id: string | null
+          id: string
+          interval_seconds: number | null
+          list_name: string
+          min_income: number | null
+          mode: string
+          phone_number_id: string | null
+          phone_verified_name: string | null
+          template_language: string
+          template_name: string
+          total: number
+          turbo_limit: number | null
+          updated_at: string
+          variable_mappings: Json
+        }
+        Insert: {
+          batch_size?: number | null
+          created_at?: string
+          created_by_admin_id?: string | null
+          id?: string
+          interval_seconds?: number | null
+          list_name: string
+          min_income?: number | null
+          mode?: string
+          phone_number_id?: string | null
+          phone_verified_name?: string | null
+          template_language?: string
+          template_name: string
+          total?: number
+          turbo_limit?: number | null
+          updated_at?: string
+          variable_mappings?: Json
+        }
+        Update: {
+          batch_size?: number | null
+          created_at?: string
+          created_by_admin_id?: string | null
+          id?: string
+          interval_seconds?: number | null
+          list_name?: string
+          min_income?: number | null
+          mode?: string
+          phone_number_id?: string | null
+          phone_verified_name?: string | null
+          template_language?: string
+          template_name?: string
+          total?: number
+          turbo_limit?: number | null
+          updated_at?: string
+          variable_mappings?: Json
+        }
+        Relationships: []
+      }
       login_attempts: {
         Row: {
           created_at: string
@@ -601,6 +658,7 @@ export type Database = {
           ban_reason: string | null
           can_dispatch: boolean | null
           can_manage_numbers: boolean | null
+          can_replay_admin_dispatch: boolean | null
           can_use_shared_api: boolean | null
           created_at: string
           device_fingerprint: string | null
@@ -626,6 +684,7 @@ export type Database = {
           ban_reason?: string | null
           can_dispatch?: boolean | null
           can_manage_numbers?: boolean | null
+          can_replay_admin_dispatch?: boolean | null
           can_use_shared_api?: boolean | null
           created_at?: string
           device_fingerprint?: string | null
@@ -651,6 +710,7 @@ export type Database = {
           ban_reason?: string | null
           can_dispatch?: boolean | null
           can_manage_numbers?: boolean | null
+          can_replay_admin_dispatch?: boolean | null
           can_use_shared_api?: boolean | null
           created_at?: string
           device_fingerprint?: string | null
