@@ -20,6 +20,7 @@ interface UserCardProps {
   onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
   onToggleManageNumbers: (params: { userId: string; canManageNumbers: boolean }) => void;
   onToggleDispatch: (params: { userId: string; canDispatch: boolean }) => void;
+  onToggleReplayPermission?: (params: { userId: string; canReplay: boolean }) => void;
   onDelete: (user: Profile) => void;
   onClearTempBan: (userId: string) => void;
   onManagePhones: (user: Profile) => void;
@@ -29,7 +30,7 @@ interface UserCardProps {
   onMonitorChat: (user: Profile) => void;
 }
 
-export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UserCardProps) {
+export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onToggleReplayPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UserCardProps) {
    const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
  
    return (
@@ -283,6 +284,20 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleM
                  }
                />
              </div>
+             {onToggleReplayPermission && (
+               <div className="flex items-center gap-1" title="Repetir último disparo do admin">
+                 <span className="text-xs text-muted-foreground">🔁 Repetir</span>
+                 <Switch
+                   checked={(user as any).can_replay_admin_dispatch || false}
+                   onCheckedChange={(checked) =>
+                     onToggleReplayPermission({
+                       userId: user.user_id,
+                       canReplay: checked,
+                     })
+                   }
+                 />
+               </div>
+             )}
            </div>
           <div className="flex gap-1">
             <Button
