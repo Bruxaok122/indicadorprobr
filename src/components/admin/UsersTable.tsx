@@ -44,7 +44,6 @@ interface UsersTableProps {
   onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
   onToggleManageNumbers: (params: { userId: string; canManageNumbers: boolean }) => void;
   onToggleDispatch: (params: { userId: string; canDispatch: boolean }) => void;
-  onToggleReplayPermission?: (params: { userId: string; canReplay: boolean }) => void;
   onDelete: (userId: string) => void;
   onClearTempBan: (userId: string) => void;
   onManagePhones: (user: Profile) => void;
@@ -54,7 +53,7 @@ interface UsersTableProps {
   onMonitorChat: (user: Profile) => void;
 }
 
-export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onToggleReplayPermission, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UsersTableProps) {
+export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UsersTableProps) {
   // Controlled delete dialog - prevents closure/portal issues with inline AlertDialogs in loops
   const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
 
@@ -82,7 +81,6 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
              <TableHead>API</TableHead>
              <TableHead>Números</TableHead>
              <TableHead>Disparos</TableHead>
-             <TableHead title="Repetir último disparo do admin">🔁 Repetir</TableHead>
             <TableHead>Dispositivo</TableHead>
             <TableHead>Mensagens</TableHead>
             <TableHead>Último Acesso</TableHead>
@@ -211,28 +209,17 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
                      }
                    />
                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={(user as any).can_dispatch || false}
-                      onCheckedChange={(checked) =>
-                        onToggleDispatch({
-                          userId: user.user_id,
-                          canDispatch: checked,
-                        })
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={(user as any).can_replay_admin_dispatch || false}
-                      onCheckedChange={(checked) =>
-                        onToggleReplayPermission?.({
-                          userId: user.user_id,
-                          canReplay: checked,
-                        })
-                      }
-                    />
-                  </TableCell>
+                 <TableCell>
+                   <Switch
+                     checked={(user as any).can_dispatch || false}
+                     onCheckedChange={(checked) =>
+                       onToggleDispatch({
+                         userId: user.user_id,
+                         canDispatch: checked,
+                       })
+                     }
+                   />
+                 </TableCell>
             <TableCell>
               <div className="flex flex-col gap-1.5">
                 {user.authorized_fingerprint ? (
