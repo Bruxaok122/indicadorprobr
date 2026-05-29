@@ -82,6 +82,7 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
              <TableHead>API</TableHead>
              <TableHead>Números</TableHead>
              <TableHead>Disparos</TableHead>
+             <TableHead title="Repetir último disparo do admin">🔁 Repetir</TableHead>
             <TableHead>Dispositivo</TableHead>
             <TableHead>Mensagens</TableHead>
             <TableHead>Último Acesso</TableHead>
