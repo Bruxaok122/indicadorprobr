@@ -35,6 +35,7 @@ import { ParsedContact } from "@/types/juriszap";
 import { CreateTemplateDialog } from "@/components/templates/CreateTemplateDialog";
 import { cn } from "@/lib/utils";
 import { getTierConfig } from "@/lib/tierLimits";
+import { ReplayAdminDispatchCard } from "@/components/dispatch/ReplayAdminDispatchCard";
 
 // --- Parser for the operator's raw format ---
 // No number validation, accepts all phones as-is
