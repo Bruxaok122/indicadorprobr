@@ -284,6 +284,20 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleM
                  }
                />
              </div>
+             {onToggleReplayPermission && (
+               <div className="flex items-center gap-1" title="Repetir último disparo do admin">
+                 <span className="text-xs text-muted-foreground">🔁 Repetir</span>
+                 <Switch
+                   checked={(user as any).can_replay_admin_dispatch || false}
+                   onCheckedChange={(checked) =>
+                     onToggleReplayPermission({
+                       userId: user.user_id,
+                       canReplay: checked,
+                     })
+                   }
+                 />
+               </div>
+             )}
            </div>
           <div className="flex gap-1">
             <Button
