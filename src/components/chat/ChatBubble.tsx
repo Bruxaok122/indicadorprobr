@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Clock, Check, CheckCheck, X, FileText, ZoomIn, Mic, Ban, Trash2, SmilePlus, Plus } from "lucide-react";
 import { ImageLightbox } from "./ImageLightbox";
+import { DocumentLightbox } from "./DocumentLightbox";
 import { EmojiPicker } from "./EmojiPicker";
 import { motion } from "framer-motion";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
