@@ -148,13 +148,23 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: Cha
       );
     }
     if (message.message_type === "document") {
+      const hasUrl = !!message.document_url;
       return (
         <>
-          <div className="mb-1 flex items-center gap-2 rounded-md bg-black/5 dark:bg-white/5 p-2">
+          <button
+            type="button"
+            onClick={() => hasUrl && setDocLightboxOpen(true)}
+            disabled={!hasUrl}
+            className="mb-1 flex w-full items-center gap-2 rounded-md bg-black/5 dark:bg-white/5 p-2 text-left transition-colors hover:bg-black/10 dark:hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            title={hasUrl ? "Abrir em modo seguro" : "Documento indisponível"}
+          >
             <FileText className="h-5 w-5 shrink-0" />
-            <span className="text-sm font-medium truncate">{message.document_name || "Documento"}</span>
-          </div>
-          {message.content && <p className="whitespace-pre-wrap text-sm">{message.content}</p>}
+            <span className="text-sm font-medium truncate flex-1">{message.document_name || "Documento"}</span>
+            {hasUrl && <span className="text-[10px] uppercase tracking-wider opacity-60">Abrir</span>}
+          </button>
+          {message.content && message.content !== `[Documento: ${message.document_name || "arquivo"}]` && (
+            <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+          )}
         </>
       );
     }
