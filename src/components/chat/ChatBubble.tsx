@@ -283,6 +283,15 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: Cha
       {message.message_type === "image" && message.image_url && (
         <ImageLightbox src={message.image_url} alt="Imagem" open={lightboxOpen} onClose={() => setLightboxOpen(false)} />
       )}
+      {message.message_type === "document" && message.document_url && (
+        <DocumentLightbox
+          url={message.document_url}
+          name={message.document_name || undefined}
+          open={docLightboxOpen}
+          onClose={() => setDocLightboxOpen(false)}
+        />
+      
+      )}
     </>
   );
 }
