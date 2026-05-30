@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Clock, Check, CheckCheck, X, FileText, ZoomIn, Mic, Ban, Trash2, SmilePlus, Plus } from "lucide-react";
 import { ImageLightbox } from "./ImageLightbox";
+import { DocumentLightbox } from "./DocumentLightbox";
 import { EmojiPicker } from "./EmojiPicker";
 import { motion } from "framer-motion";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -71,6 +72,7 @@ function getErrorLabel(errorCode?: string | null): string | null {
 export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: ChatBubbleProps) {
   const isOutgoing = message.direction === "outgoing";
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [docLightboxOpen, setDocLightboxOpen] = useState(false);
   const canDelete = isOutgoing && !message.is_deleted;
 
   const renderContent = () => {
@@ -146,13 +148,23 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: Cha
       );
     }
     if (message.message_type === "document") {
+      const hasUrl = !!message.document_url;
       return (
         <>
-          <div className="mb-1 flex items-center gap-2 rounded-md bg-black/5 dark:bg-white/5 p-2">
+          <button
+            type="button"
+            onClick={() => hasUrl && setDocLightboxOpen(true)}
+            disabled={!hasUrl}
+            className="mb-1 flex w-full items-center gap-2 rounded-md bg-black/5 dark:bg-white/5 p-2 text-left transition-colors hover:bg-black/10 dark:hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            title={hasUrl ? "Abrir em modo seguro" : "Documento indisponível"}
+          >
             <FileText className="h-5 w-5 shrink-0" />
-            <span className="text-sm font-medium truncate">{message.document_name || "Documento"}</span>
-          </div>
-          {message.content && <p className="whitespace-pre-wrap text-sm">{message.content}</p>}
+            <span className="text-sm font-medium truncate flex-1">{message.document_name || "Documento"}</span>
+            {hasUrl && <span className="text-[10px] uppercase tracking-wider opacity-60">Abrir</span>}
+          </button>
+          {message.content && message.content !== `[Documento: ${message.document_name || "arquivo"}]` && (
+            <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+          )}
         </>
       );
     }
@@ -270,6 +282,14 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: Cha
 
       {message.message_type === "image" && message.image_url && (
         <ImageLightbox src={message.image_url} alt="Imagem" open={lightboxOpen} onClose={() => setLightboxOpen(false)} />
+      )}
+      {message.message_type === "document" && message.document_url && (
+        <DocumentLightbox
+          url={message.document_url}
+          name={message.document_name || undefined}
+          open={docLightboxOpen}
+          onClose={() => setDocLightboxOpen(false)}
+        />
       )}
     </>
   );

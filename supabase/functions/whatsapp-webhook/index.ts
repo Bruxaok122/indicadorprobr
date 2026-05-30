@@ -320,8 +320,57 @@ serve(async (req) => {
                     console.error("Error downloading image:", imgError);
                   }
                 } else if (message.type === "document") {
-                  content = `[Documento: ${message.document?.filename || "arquivo"}]`;
+                  const origFilename = message.document?.filename || "arquivo";
+                  content = `[Documento: ${origFilename}]`;
                   messageType = "document";
+                  (messageInsertExtra as any).document_name = origFilename;
+                  try {
+                    if (accessToken && message.document?.id) {
+                      const mediaId = message.document.id;
+                      const mimeType = message.document.mime_type || "application/octet-stream";
+                      // Sanitize: never expose original filename in storage path —
+                      // strips any tracker metadata embedded in the name.
+                      const extFromName = (origFilename.match(/\.([a-z0-9]{2,5})$/i)?.[1] || "").toLowerCase();
+                      const extFromMime = mimeType === "application/pdf" ? "pdf" : (mimeType.split("/")[1] || "bin");
+                      const ext = extFromName || extFromMime;
+                      const fileName = `${Date.now()}-${mediaId}.${ext}`;
+
+                      const mediaResponse = await fetch(
+                        `https://graph.facebook.com/v21.0/${mediaId}`,
+                        { headers: { Authorization: `Bearer ${accessToken}` } }
+                      );
+                      let downloadUrl: string | null = null;
+                      if (mediaResponse.ok) {
+                        const mediaData = await mediaResponse.json();
+                        downloadUrl = mediaData.url;
+                      } else {
+                        console.error("Document media API error:", await mediaResponse.text());
+                      }
+                      if (downloadUrl) {
+                        const docResponse = await fetch(downloadUrl, {
+                          headers: { Authorization: `Bearer ${accessToken}` },
+                        });
+                        if (docResponse.ok) {
+                          const arrayBuffer = await docResponse.arrayBuffer();
+                          const uint8Array = new Uint8Array(arrayBuffer);
+                          const { error: uploadError } = await supabase.storage
+                            .from("documents")
+                            .upload(`docs/${fileName}`, uint8Array, { contentType: mimeType, upsert: false });
+                          if (uploadError) {
+                            console.error("Document storage upload error:", uploadError);
+                          } else {
+                            const { data: urlData } = supabase.storage.from("documents").getPublicUrl(`docs/${fileName}`);
+                            (messageInsertExtra as any).document_url = urlData.publicUrl;
+                            console.log("Document uploaded successfully");
+                          }
+                        } else {
+                          console.error("Document download failed:", await docResponse.text());
+                        }
+                      }
+                    }
+                  } catch (docError) {
+                    console.error("Error downloading document:", docError);
+                  }
                 } else if (message.type === "audio") {
                   content = "[Áudio recebido]";
                   messageType = "audio";
