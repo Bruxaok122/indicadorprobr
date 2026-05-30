@@ -290,7 +290,6 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: Cha
           open={docLightboxOpen}
           onClose={() => setDocLightboxOpen(false)}
         />
-      
       )}
     </>
   );
