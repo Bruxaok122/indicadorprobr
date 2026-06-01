@@ -1699,10 +1699,7 @@ export default function OperatorDisparosPage() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Todos (sem filtro)</SelectItem>
-                                <SelectItem value="5000">Acima de R$ 5.000</SelectItem>
-                                <SelectItem value="10000">Acima de R$ 10.000</SelectItem>
-                                <SelectItem value="15000">Acima de R$ 15.000</SelectItem>
-                                <SelectItem value="20000">Acima de R$ 20.000</SelectItem>
+                                <SelectItem value="23000">Acima de R$ 23.000</SelectItem>
                               </SelectContent>
                             </Select>
                             <p className="text-xs text-muted-foreground">
