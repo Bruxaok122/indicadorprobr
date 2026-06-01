@@ -61,6 +61,7 @@ function getErrorLabel(errorCode?: string | null): string | null {
     case "131021": return "⏰ Janela de 24h expirada";
     case "131053": return "📵 Número inválido";
     case "131031": return "❌ Conta desativada pelo cliente";
+    case "131042": return "💳 Conta sem método de pagamento ativo na Meta";
     case "130472": return "⏰ Janela de 24h expirada";
     case "131056": return "🔄 Mensagem não entregue (tente novamente)";
     case "131048": return "⚠️ Spam detectado pela Meta";
