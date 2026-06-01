@@ -434,6 +434,7 @@ export default function OperatorDisparosPage() {
                 lawyer_name: contact.lawyer_name,
                 process_number: contact.process_number,
                 cpf: contact.cpf,
+                ...(contact.valor_da_causa !== undefined && { valor_da_causa: contact.valor_da_causa }),
               })
               .eq("id", existing.id);
             if (error) { failed++; console.error(error); } else successful++;
@@ -444,6 +445,7 @@ export default function OperatorDisparosPage() {
               lawyer_name: contact.lawyer_name,
               process_number: contact.process_number,
               cpf: contact.cpf,
+              valor_da_causa: contact.valor_da_causa,
               status: "novo",
               user_id: user!.id,
               contact_list: listName.trim(),
