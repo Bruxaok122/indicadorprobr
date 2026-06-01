@@ -52,24 +52,27 @@ export function useUnreadCounts(contactIds: string[]) {
     queryFn: async () => {
       if (!userId || contactIds.length === 0) return {} as Record<string, number>;
 
-      // Fetch incoming messages from the last 30 days for these contacts
+      // IMPORTANT: do NOT pass hundreds of UUIDs in .in() — it blows up the
+      // URL length limit and PostgREST silently drops the filter or returns
+      // empty (same bug that broke status ticks). RLS already scopes
+      // messages to the operator, so fetch globally and reduce client-side.
       const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from("messages")
         .select("contact_id, created_at")
-        .in("contact_id", contactIds)
         .eq("direction", "incoming")
         .gte("created_at", since)
         .order("created_at", { ascending: false })
-        .limit(1000);
+        .limit(3000);
 
       if (error || !data) return {} as Record<string, number>;
 
+      const idSet = new Set(contactIds);
       const counts: Record<string, number> = {};
       const currentMap = readMap(userId);
       for (const msg of data) {
+        if (!idSet.has(msg.contact_id)) continue;
         const opened = currentMap[msg.contact_id];
-        // If never opened, count all recent incoming. If opened, count newer than opened.
         if (!opened || new Date(msg.created_at).getTime() > new Date(opened).getTime()) {
           counts[msg.contact_id] = (counts[msg.contact_id] || 0) + 1;
         }
