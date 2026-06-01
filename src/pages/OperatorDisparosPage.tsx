@@ -384,12 +384,22 @@ export default function OperatorDisparosPage() {
       toast.error("Informe um nome para a lista");
       return;
     }
-    const contactsToImport: ParsedContact[] = parsedContacts.map(c => ({
+    const parseRenda = (r?: string): number | undefined => {
+      if (!r) return undefined;
+      // Brazilian format: "1.861,27" → 1861.27, or "1861,27" → 1861.27, or "1861.27" → 1861.27
+      const normalized = r.includes(",")
+        ? r.replace(/\./g, "").replace(",", ".")
+        : r;
+      const n = parseFloat(normalized);
+      return isFinite(n) ? n : undefined;
+    };
+    const contactsToImport = parsedContacts.map(c => ({
       name: c.name,
       phone: c.phone,
       lawyer_name: c.contra || "********",
       process_number: c.process || "Não informado",
       cpf: c.cpf,
+      valor_da_causa: parseRenda(c.renda),
     }));
 
     // Import with contact_list name — use direct supabase insert for operator's own contacts
