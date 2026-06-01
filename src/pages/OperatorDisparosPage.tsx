@@ -384,12 +384,22 @@ export default function OperatorDisparosPage() {
       toast.error("Informe um nome para a lista");
       return;
     }
-    const contactsToImport: ParsedContact[] = parsedContacts.map(c => ({
+    const parseRenda = (r?: string): number | undefined => {
+      if (!r) return undefined;
+      // Brazilian format: "1.861,27" → 1861.27, or "1861,27" → 1861.27, or "1861.27" → 1861.27
+      const normalized = r.includes(",")
+        ? r.replace(/\./g, "").replace(",", ".")
+        : r;
+      const n = parseFloat(normalized);
+      return isFinite(n) ? n : undefined;
+    };
+    const contactsToImport = parsedContacts.map(c => ({
       name: c.name,
       phone: c.phone,
       lawyer_name: c.contra || "********",
       process_number: c.process || "Não informado",
       cpf: c.cpf,
+      valor_da_causa: parseRenda(c.renda),
     }));
 
     // Import with contact_list name — use direct supabase insert for operator's own contacts
@@ -424,6 +434,7 @@ export default function OperatorDisparosPage() {
                 lawyer_name: contact.lawyer_name,
                 process_number: contact.process_number,
                 cpf: contact.cpf,
+                ...(contact.valor_da_causa !== undefined && { valor_da_causa: contact.valor_da_causa }),
               })
               .eq("id", existing.id);
             if (error) { failed++; console.error(error); } else successful++;
@@ -434,6 +445,7 @@ export default function OperatorDisparosPage() {
               lawyer_name: contact.lawyer_name,
               process_number: contact.process_number,
               cpf: contact.cpf,
+              valor_da_causa: contact.valor_da_causa,
               status: "novo",
               user_id: user!.id,
               contact_list: listName.trim(),
@@ -1699,10 +1711,7 @@ export default function OperatorDisparosPage() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="all">Todos (sem filtro)</SelectItem>
-                                <SelectItem value="5000">Acima de R$ 5.000</SelectItem>
-                                <SelectItem value="10000">Acima de R$ 10.000</SelectItem>
-                                <SelectItem value="15000">Acima de R$ 15.000</SelectItem>
-                                <SelectItem value="20000">Acima de R$ 20.000</SelectItem>
+                                <SelectItem value="23000">Acima de R$ 23.000</SelectItem>
                               </SelectContent>
                             </Select>
                             <p className="text-xs text-muted-foreground">
