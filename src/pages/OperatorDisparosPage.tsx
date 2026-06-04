@@ -994,158 +994,29 @@ export default function OperatorDisparosPage() {
                               <p><span className="font-semibold">Advogado:</span> {phoneVerifiedName || "—"}</p>
                               <p><span className="font-semibold">Template:</span> {selectedTemplate?.name || "—"}</p>
                               <p><span className="font-semibold">Lista:</span> {selectedList} ({listContactCount} contatos)</p>
-                              {minRenda !== "all" && (
-                                <p><span className="font-semibold">Renda mín.:</span> R$ {parseInt(minRenda).toLocaleString("pt-BR")}</p>
-                              )}
-                              {onlyVerifiedNames && (
-                                <p className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-green-500" /><span className="font-semibold">Somente nomes verificados</span></p>
-                              )}
-                            </div>
-
-                            {/* Shared dispatch toggle */}
-                            <button type="button" onClick={() => setSharedDispatch(v => !v)}
-                              className={cn(
-                                "w-full flex items-start gap-3 rounded-lg border p-3 text-left transition-all",
-                                sharedDispatch ? "border-violet bg-violet/10 ring-2 ring-violet/30" : "border-border hover:bg-muted/50"
-                              )}>
-                              <div className={cn(
-                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-                                sharedDispatch ? "bg-violet text-white" : "bg-muted text-muted-foreground"
-                              )}>
-                                <Users className="h-4 w-4" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-semibold">Disparo Compartilhado 👥</span>
-                                  {sharedDispatch && (
-                                    <span className="inline-flex items-center rounded-full bg-violet/20 px-1.5 py-0 text-[10px] font-bold text-violet">ATIVO</span>
-                                  )}
-                                </div>
-                                <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
-                                  Os contatos aparecerão para todos os operadores em modo leitura.
-                                </p>
-                              </div>
-                            </button>
-
-                            {/* Mode selector — same as admin */}
-                            <div className="rounded-lg border border-border p-3 space-y-3">
-                              <p className="text-xs font-medium text-muted-foreground">Modo de disparo</p>
-                              <div className="flex gap-2">
-                                <button onClick={() => setDispatchMode("batch")}
-                                  className={cn("flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
-                                    dispatchMode === "batch" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted")}>
-                                  <Layers className="h-4 w-4 mx-auto mb-1" /> Lote
-                                </button>
-                                <button onClick={() => setDispatchMode("individual")}
-                                  className={cn("flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
-                                    dispatchMode === "individual" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted")}>
-                                  <Timer className="h-4 w-4 mx-auto mb-1" /> Individual
-                                </button>
-                                <button onClick={() => setDispatchMode("turbo")}
-                                  className={cn("flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
-                                    dispatchMode === "turbo" ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400" : "border-border hover:bg-muted")}>
-                                  <Zap className="h-4 w-4 mx-auto mb-1" /> Turbo
-                                </button>
-                              </div>
-
-                              {dispatchMode === "individual" && (
-                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
-                                  <div className={`flex items-center gap-2 transition-opacity ${randomJitter412 ? "opacity-40" : ""}`}>
-                                    <Label htmlFor="interval" className="text-xs text-muted-foreground whitespace-nowrap">Intervalo:</Label>
-                                    <Input id="interval" type="number" min={1} max={300} value={intervalSeconds}
-                                      disabled={randomJitter412}
-                                      onChange={(e) => setIntervalSeconds(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-20 text-sm" />
-                                    <span className="text-xs text-muted-foreground">segundos</span>
-                                  </div>
-                                  <div className="flex items-start justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
-                                    <div className="min-w-0">
-                                      <Label htmlFor="rj-ind" className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
-                                        🎲 Jitter aleatório 4–12s
-                                      </Label>
-                                      <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
-                                        Sorteia um intervalo entre 4 e 12s a cada envio.
-                                      </p>
-                                    </div>
-                                    <Switch id="rj-ind" checked={randomJitter412} onCheckedChange={setRandomJitter412} />
-                                  </div>
-                                </motion.div>
-                              )}
-
-                              {dispatchMode === "batch" && (
-                                <>
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <Label htmlFor="batch-mode" className="text-xs font-medium cursor-pointer">Modo lote limitado</Label>
-                                      <p className="text-[10px] text-muted-foreground">Limita quantidade por disparo</p>
-                                    </div>
-                                    <Switch id="batch-mode" checked={batchMode} onCheckedChange={setBatchMode} />
-                                  </div>
-                                  {batchMode && (
-                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-                                      <Label htmlFor="batch-size" className="text-xs text-muted-foreground whitespace-nowrap">Quantidade:</Label>
-                                      <Input id="batch-size" type="number" min={1} max={listContactCount || 9999} value={batchSize}
-                                        onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-24 text-sm" />
-                                    </motion.div>
-                                  )}
-                                </>
-                              )}
-
-                              {dispatchMode === "turbo" && (
-                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <Label htmlFor="turbo-limit" className="text-xs text-muted-foreground whitespace-nowrap">Limite de envios:</Label>
-                                    <Input id="turbo-limit" type="number" min={1} max={10000} value={turboLimit}
-                                      onChange={(e) => setTurboLimit(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-24 text-sm" />
-                                  </div>
-                                  <div className="flex items-start justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
-                                    <div className="min-w-0">
-                                      <Label htmlFor="rj-turbo" className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
-                                        🎲 Jitter aleatório 4–12s
-                                      </Label>
-                                      <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
-                                        Sorteia um intervalo entre 4 e 12s a cada envio.
-                                      </p>
-                                    </div>
-                                    <Switch id="rj-turbo" checked={randomJitter412} onCheckedChange={setRandomJitter412} />
-                                  </div>
-                                  <div className="rounded border border-amber-500/30 bg-amber-500/5 p-2 text-[10px] text-amber-600 dark:text-amber-400 space-y-0.5">
-                                    <p className="font-semibold">⚡ Modo Turbo — SEM proteções Anti-Ban</p>
-                                    <p>• Envia continuamente sem pausas</p>
-                                    <p>• Para IMEDIATAMENTE em qualquer erro da API</p>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </div>
-
-                            {/* High income filter */}
-                            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 flex items-center justify-between gap-3">
-                              <div className="min-w-0">
-                                <Label htmlFor="high-inc" className="text-xs font-semibold cursor-pointer flex items-center gap-1.5">
-                                  💰 Apenas Renda Alta (≥ R$ 10.000)
-                                  {highIncomeOnly && (
-                                    <span className="inline-flex items-center rounded-full bg-amber-500/20 px-1.5 py-0 text-[10px] font-bold text-amber-600 dark:text-amber-400">ATIVO</span>
-                                  )}
-                                </Label>
-                                <p className="text-[10px] text-muted-foreground">
-                                  Quando ativo, dispara apenas para contatos com valor da causa ≥ R$ 10.000.
-                                </p>
-                              </div>
-                              <Switch id="high-inc" checked={highIncomeOnly} onCheckedChange={setHighIncomeOnly} />
-                            </div>
-
-                            {/* Anti-ban summary */}
-                            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-1.5">
-                              <p className="text-xs font-semibold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                                🛡️ Proteções Anti-Ban
+                              <p className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
+                                <Layers className="h-3.5 w-3.5" /> Modo Lote
                               </p>
-                              <div className="text-[10px] text-muted-foreground space-y-0.5">
-                                <p>• Blocos variáveis (16-24 msgs) com respiro 10-12 min</p>
-                                <p>• Delay progressivo (aumenta 15% por bloco)</p>
-                                <p>• Limite diário: {ANTI_BAN_DAILY_LIMIT} mensagens por sessão</p>
-                                <p>• Cooldown de emergência (3 erros consecutivos = 5 min)</p>
-                                <p>• Circuit breaker em caso de bloqueio da Meta</p>
-                              </div>
                             </div>
+
+                            {/* Optional limit for the batch */}
+                            <div className="rounded-lg border border-border p-3 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <Label htmlFor="batch-mode" className="text-xs font-medium cursor-pointer">Modo lote limitado</Label>
+                                  <p className="text-[10px] text-muted-foreground">Limita quantidade por disparo</p>
+                                </div>
+                                <Switch id="batch-mode" checked={batchMode} onCheckedChange={setBatchMode} />
+                              </div>
+                              {batchMode && (
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
+                                  <Label htmlFor="batch-size" className="text-xs text-muted-foreground whitespace-nowrap">Quantidade:</Label>
+                                  <Input id="batch-size" type="number" min={1} max={listContactCount || 9999} value={batchSize}
+                                    onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-24 text-sm" />
+                                </motion.div>
+                              )}
+                            </div>
+
 
                             <Button className="w-full gap-2" size="lg" onClick={handleSend}
                               disabled={!selectedTemplate || !selectedList || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId)}>
