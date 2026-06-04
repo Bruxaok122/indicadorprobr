@@ -973,36 +973,6 @@ export default function OperatorDisparosPage() {
                               )}
                             </div>
 
-                            <div className="space-y-2">
-                              <Label>Filtro de Renda</Label>
-                              <Select value={minRenda} onValueChange={setMinRenda}>
-                                <SelectTrigger><SelectValue placeholder="Todos os contatos" /></SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="all">Todos (sem filtro)</SelectItem>
-                                  <SelectItem value="23000">Acima de R$ 23.000</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label className="flex items-center gap-2">
-                                <ShieldCheck className="h-4 w-4 text-green-500" /> Filtro de Nome Verificado
-                              </Label>
-                              <div
-                                className={cn(
-                                  "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                                  onlyVerifiedNames ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "hover:bg-muted/50"
-                                )}
-                                onClick={() => setOnlyVerifiedNames(!onlyVerifiedNames)}>
-                                <Checkbox checked={onlyVerifiedNames} onCheckedChange={(v) => setOnlyVerifiedNames(!!v)} />
-                                <div>
-                                  <p className="text-sm font-medium">Somente nomes confirmados</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Envia apenas para contatos cujo nome do WhatsApp corresponde ao nome cadastrado.
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
 
                             <div className="flex justify-between pt-2">
                               <Button variant="outline" onClick={() => setWizardStep(1)}>
