@@ -202,7 +202,7 @@ export default function OperatorDisparosPage() {
   const minRenda = "all";
   const onlyVerifiedNames = false;
   const sharedDispatch = false;
-  const dispatchMode: DispatchMode = "batch";
+  const dispatchMode = "batch" as DispatchMode;
   const intervalSeconds = persisted.intervalSeconds ?? 65;
   const randomJitter412 = false;
   const [batchMode, setBatchMode] = useState(persisted.batchMode ?? false);
