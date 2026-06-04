@@ -1298,6 +1298,50 @@ export default function OperatorDisparosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Avulso Dispatch Dialog */}
+      <Dialog open={showAvulsoDialog} onOpenChange={(o) => !avulsoSending && setShowAvulsoDialog(o)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Disparar para contato avulso</DialogTitle>
+            <DialogDescription>
+              Cria o contato e envia o template <span className="font-mono">{selectedTemplate?.name || "—"}</span> imediatamente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Nome *</Label>
+              <Input value={avulsoName} onChange={(e) => setAvulsoName(e.target.value)} placeholder="Nome do cliente" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Telefone (com DDD) *</Label>
+              <Input value={avulsoPhone} onChange={(e) => setAvulsoPhone(e.target.value)} placeholder="Ex: 11970178814" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">CPF</Label>
+                <Input value={avulsoCpf} onChange={(e) => setAvulsoCpf(e.target.value)} placeholder="Opcional" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Parte Contrária</Label>
+                <Input value={avulsoContra} onChange={(e) => setAvulsoContra(e.target.value)} placeholder="Opcional" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Processo</Label>
+              <Input value={avulsoProcesso} onChange={(e) => setAvulsoProcesso(e.target.value)} placeholder="Opcional" />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAvulsoDialog(false)} disabled={avulsoSending}>Cancelar</Button>
+            <Button onClick={handleAvulsoSend} disabled={avulsoSending || !avulsoName.trim() || !avulsoPhone.trim()}>
+              {avulsoSending ? <LoadingSpinner size="sm" /> : <><Send className="mr-2 h-4 w-4" /> Enviar</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </AppLayout>
   );
 }
