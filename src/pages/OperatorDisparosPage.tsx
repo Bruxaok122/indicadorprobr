@@ -592,6 +592,112 @@ export default function OperatorDisparosPage() {
     toast.info("Disparo iniciado!");
   };
 
+  // --- Avulso: create a single contact and dispatch immediately ---
+  const handleAvulsoSend = async () => {
+    if (!user?.id || !selectedTemplate) return;
+    const digits = avulsoPhone.replace(/\D/g, "");
+    let normalized = digits;
+    if (normalized.length === 11) normalized = "55" + normalized;
+    else if (!normalized.startsWith("55")) normalized = "55" + normalized;
+    if (normalized.length < 12) {
+      toast.error("Telefone inválido");
+      return;
+    }
+    if (!avulsoName.trim()) {
+      toast.error("Informe o nome do contato");
+      return;
+    }
+    if (phones.length > 0 && !selectedPhoneNumberId) {
+      toast.error("Selecione um número de disparo");
+      return;
+    }
+
+    setAvulsoSending(true);
+    try {
+      // Upsert contact: reuse existing record for this phone if present (operator's pool)
+      let contactId: string | null = null;
+      const { data: existing } = await supabase
+        .from("contacts")
+        .select("id, status")
+        .eq("phone", normalized)
+        .or(`user_id.eq.${user.id},user_id.is.null`)
+        .neq("status", "encerrado")
+        .order("last_message_at", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase.from("contacts").update({
+          status: "novo",
+          name: avulsoName.trim(),
+          lawyer_name: avulsoContra.trim() || "********",
+          process_number: avulsoProcesso.trim() || "Não informado",
+          cpf: avulsoCpf.trim() || null,
+        }).eq("id", existing.id);
+        if (error) throw error;
+        contactId = existing.id;
+      } else {
+        const { data: created, error } = await supabase.from("contacts").insert({
+          name: avulsoName.trim(),
+          phone: normalized,
+          lawyer_name: avulsoContra.trim() || "********",
+          process_number: avulsoProcesso.trim() || "Não informado",
+          cpf: avulsoCpf.trim() || null,
+          status: "novo",
+          user_id: user.id,
+        }).select("id").single();
+        if (error) throw error;
+        contactId = created.id;
+      }
+
+      const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
+        body: {
+          contactIds: [contactId],
+          templateName: selectedTemplate.name,
+          templateLanguage: selectedTemplate.language,
+          userId: user.id,
+          assignedUserId: user.id,
+          selectedPhoneNumberId: selectedPhoneNumberId || undefined,
+          variableMappings,
+          phoneVerifiedName,
+          dispatchMode: "private",
+        },
+      });
+
+      if (sendError) throw new Error(await getAvulsoErrorMessage(sendError));
+      if (result?.results?.failed > 0) {
+        const errMsg = result.results.errors?.[0] || "Falha no envio";
+        toast.error("Envio falhou", { description: errMsg });
+      } else {
+        toast.success("Mensagem enviada!");
+        setShowAvulsoDialog(false);
+        setAvulsoName(""); setAvulsoPhone(""); setAvulsoCpf("");
+        setAvulsoContra(""); setAvulsoProcesso("");
+      }
+    } catch (err: any) {
+      toast.error("Erro no envio", { description: err?.message || String(err) });
+    } finally {
+      setAvulsoSending(false);
+    }
+  };
+
+  async function getAvulsoErrorMessage(err: any): Promise<string> {
+    const fallback = err?.message || "Falha ao enviar";
+    const resp = err?.context;
+    if (resp && typeof resp.clone === "function") {
+      try {
+        const txt = await resp.clone().text();
+        if (txt) {
+          try { const p = JSON.parse(txt); return p?.error || p?.message || fallback; }
+          catch { return txt; }
+        }
+      } catch {}
+    }
+    return fallback;
+  }
+
+
+
   // --- List management ---
   const loadListContacts = async (lname: string) => {
     if (!user?.id) return;
