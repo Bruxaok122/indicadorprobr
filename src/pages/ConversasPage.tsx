@@ -122,6 +122,21 @@ export default function ConversasPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContactId]);
 
+  // Close open chat on ESC (WhatsApp Web style), unless user is typing in an input
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (!selectedContactId) return;
+      const tag = (document.activeElement?.tagName || "").toLowerCase();
+      const editable = (document.activeElement as HTMLElement | null)?.isContentEditable;
+      if (tag === "input" || tag === "textarea" || editable) return;
+      setSelectedContactId(null);
+      if (isMobile) setMobileShowChat(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedContactId, isMobile]);
+
   // Play notification only when another contact transitions to "respondido"
   // (first customer reply after staying in pending/shared pending)
   useEffect(() => {
