@@ -1024,11 +1024,19 @@ export default function OperatorDisparosPage() {
                               Disparar para {effectiveCount} contato{effectiveCount !== 1 ? "s" : ""}
                             </Button>
 
+                            {/* Single contact (avulso) shortcut */}
+                            <Button variant="outline" className="w-full gap-2" size="sm"
+                              onClick={() => setShowAvulsoDialog(true)}
+                              disabled={!selectedTemplate || (phones.length > 0 && !selectedPhoneNumberId)}>
+                              <Plus className="h-4 w-4" /> Disparar para contato avulso
+                            </Button>
+
                             <div className="flex justify-start pt-2">
                               <Button variant="outline" onClick={() => setWizardStep(2)}>
                                 <ChevronLeft className="mr-2 h-4 w-4" /> Voltar
                               </Button>
                             </div>
+
                           </motion.div>
                         )}
                       </AnimatePresence>
