@@ -198,17 +198,27 @@ export default function OperatorDisparosPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
   const [variableMappings, setVariableMappings] = useState<Record<string, string>>(persisted.variableMappings || {});
   const [selectedList, setSelectedList] = useState(persisted.selectedList || "");
-  const [minRenda, setMinRenda] = useState<string>(persisted.minRenda || "all");
-  const [onlyVerifiedNames, setOnlyVerifiedNames] = useState(persisted.onlyVerifiedNames ?? false);
-  const [sharedDispatch, setSharedDispatch] = useState(persisted.sharedDispatch ?? false);
-  const [dispatchMode, setDispatchMode] = useState<DispatchMode>(persisted.dispatchMode || "batch");
-  const [intervalSeconds, setIntervalSeconds] = useState(persisted.intervalSeconds ?? 65);
-  const [randomJitter412, setRandomJitter412] = useState(persisted.randomJitter412 ?? false);
+  // Operator-side hardcoded values: no income / verified / shared / mode options
+  const minRenda = "all";
+  const onlyVerifiedNames = false;
+  const sharedDispatch = false;
+  const dispatchMode = "batch" as DispatchMode;
+  const intervalSeconds = persisted.intervalSeconds ?? 65;
+  const randomJitter412 = false;
   const [batchMode, setBatchMode] = useState(persisted.batchMode ?? false);
   const [batchSize, setBatchSize] = useState(persisted.batchSize ?? 50);
-  const [turboLimit, setTurboLimit] = useState(persisted.turboLimit ?? 100);
-  const [highIncomeOnly, setHighIncomeOnly] = useState(persisted.highIncomeOnly ?? false);
+  const turboLimit = persisted.turboLimit ?? 100;
+  const highIncomeOnly = false;
   const [wizardStep, setWizardStep] = useState(persisted.wizardStep ?? 0);
+
+  // Single-contact ("avulso") dispatch dialog state
+  const [showAvulsoDialog, setShowAvulsoDialog] = useState(false);
+  const [avulsoName, setAvulsoName] = useState("");
+  const [avulsoPhone, setAvulsoPhone] = useState("");
+  const [avulsoCpf, setAvulsoCpf] = useState("");
+  const [avulsoContra, setAvulsoContra] = useState("");
+  const [avulsoProcesso, setAvulsoProcesso] = useState("");
+  const [avulsoSending, setAvulsoSending] = useState(false);
 
   // Non-persisted UI
   const [availableLists, setAvailableLists] = useState<{ name: string; count: number }[]>([]);
@@ -582,6 +592,112 @@ export default function OperatorDisparosPage() {
     toast.info("Disparo iniciado!");
   };
 
+  // --- Avulso: create a single contact and dispatch immediately ---
+  const handleAvulsoSend = async () => {
+    if (!user?.id || !selectedTemplate) return;
+    const digits = avulsoPhone.replace(/\D/g, "");
+    let normalized = digits;
+    if (normalized.length === 11) normalized = "55" + normalized;
+    else if (!normalized.startsWith("55")) normalized = "55" + normalized;
+    if (normalized.length < 12) {
+      toast.error("Telefone inválido");
+      return;
+    }
+    if (!avulsoName.trim()) {
+      toast.error("Informe o nome do contato");
+      return;
+    }
+    if (phones.length > 0 && !selectedPhoneNumberId) {
+      toast.error("Selecione um número de disparo");
+      return;
+    }
+
+    setAvulsoSending(true);
+    try {
+      // Upsert contact: reuse existing record for this phone if present (operator's pool)
+      let contactId: string | null = null;
+      const { data: existing } = await supabase
+        .from("contacts")
+        .select("id, status")
+        .eq("phone", normalized)
+        .or(`user_id.eq.${user.id},user_id.is.null`)
+        .neq("status", "encerrado")
+        .order("last_message_at", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase.from("contacts").update({
+          status: "novo",
+          name: avulsoName.trim(),
+          lawyer_name: avulsoContra.trim() || "********",
+          process_number: avulsoProcesso.trim() || "Não informado",
+          cpf: avulsoCpf.trim() || null,
+        }).eq("id", existing.id);
+        if (error) throw error;
+        contactId = existing.id;
+      } else {
+        const { data: created, error } = await supabase.from("contacts").insert({
+          name: avulsoName.trim(),
+          phone: normalized,
+          lawyer_name: avulsoContra.trim() || "********",
+          process_number: avulsoProcesso.trim() || "Não informado",
+          cpf: avulsoCpf.trim() || null,
+          status: "novo",
+          user_id: user.id,
+        }).select("id").single();
+        if (error) throw error;
+        contactId = created.id;
+      }
+
+      const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
+        body: {
+          contactIds: [contactId],
+          templateName: selectedTemplate.name,
+          templateLanguage: selectedTemplate.language,
+          userId: user.id,
+          assignedUserId: user.id,
+          selectedPhoneNumberId: selectedPhoneNumberId || undefined,
+          variableMappings,
+          phoneVerifiedName,
+          dispatchMode: "private",
+        },
+      });
+
+      if (sendError) throw new Error(await getAvulsoErrorMessage(sendError));
+      if (result?.results?.failed > 0) {
+        const errMsg = result.results.errors?.[0] || "Falha no envio";
+        toast.error("Envio falhou", { description: errMsg });
+      } else {
+        toast.success("Mensagem enviada!");
+        setShowAvulsoDialog(false);
+        setAvulsoName(""); setAvulsoPhone(""); setAvulsoCpf("");
+        setAvulsoContra(""); setAvulsoProcesso("");
+      }
+    } catch (err: any) {
+      toast.error("Erro no envio", { description: err?.message || String(err) });
+    } finally {
+      setAvulsoSending(false);
+    }
+  };
+
+  async function getAvulsoErrorMessage(err: any): Promise<string> {
+    const fallback = err?.message || "Falha ao enviar";
+    const resp = err?.context;
+    if (resp && typeof resp.clone === "function") {
+      try {
+        const txt = await resp.clone().text();
+        if (txt) {
+          try { const p = JSON.parse(txt); return p?.error || p?.message || fallback; }
+          catch { return txt; }
+        }
+      } catch {}
+    }
+    return fallback;
+  }
+
+
+
   // --- List management ---
   const loadListContacts = async (lname: string) => {
     if (!user?.id) return;
@@ -629,9 +745,7 @@ export default function OperatorDisparosPage() {
   };
 
   const listContactCount = availableLists.find(l => l.name === selectedList)?.count || 0;
-  const effectiveCount = dispatchMode === "turbo"
-    ? Math.min(turboLimit, listContactCount)
-    : (batchMode ? Math.min(batchSize, listContactCount) : listContactCount);
+  const effectiveCount = batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
 
   const isStep0Valid = phones.length === 0 || !!selectedPhoneNumberId;
   const isStep1Valid = !!selectedTemplate;
@@ -965,36 +1079,6 @@ export default function OperatorDisparosPage() {
                               )}
                             </div>
 
-                            <div className="space-y-2">
-                              <Label>Filtro de Renda</Label>
-                              <Select value={minRenda} onValueChange={setMinRenda}>
-                                <SelectTrigger><SelectValue placeholder="Todos os contatos" /></SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="all">Todos (sem filtro)</SelectItem>
-                                  <SelectItem value="23000">Acima de R$ 23.000</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label className="flex items-center gap-2">
-                                <ShieldCheck className="h-4 w-4 text-green-500" /> Filtro de Nome Verificado
-                              </Label>
-                              <div
-                                className={cn(
-                                  "flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors",
-                                  onlyVerifiedNames ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "hover:bg-muted/50"
-                                )}
-                                onClick={() => setOnlyVerifiedNames(!onlyVerifiedNames)}>
-                                <Checkbox checked={onlyVerifiedNames} onCheckedChange={(v) => setOnlyVerifiedNames(!!v)} />
-                                <div>
-                                  <p className="text-sm font-medium">Somente nomes confirmados</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Envia apenas para contatos cujo nome do WhatsApp corresponde ao nome cadastrado.
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
 
                             <div className="flex justify-between pt-2">
                               <Button variant="outline" onClick={() => setWizardStep(1)}>
@@ -1016,158 +1100,29 @@ export default function OperatorDisparosPage() {
                               <p><span className="font-semibold">Advogado:</span> {phoneVerifiedName || "—"}</p>
                               <p><span className="font-semibold">Template:</span> {selectedTemplate?.name || "—"}</p>
                               <p><span className="font-semibold">Lista:</span> {selectedList} ({listContactCount} contatos)</p>
-                              {minRenda !== "all" && (
-                                <p><span className="font-semibold">Renda mín.:</span> R$ {parseInt(minRenda).toLocaleString("pt-BR")}</p>
-                              )}
-                              {onlyVerifiedNames && (
-                                <p className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-green-500" /><span className="font-semibold">Somente nomes verificados</span></p>
-                              )}
-                            </div>
-
-                            {/* Shared dispatch toggle */}
-                            <button type="button" onClick={() => setSharedDispatch(v => !v)}
-                              className={cn(
-                                "w-full flex items-start gap-3 rounded-lg border p-3 text-left transition-all",
-                                sharedDispatch ? "border-violet bg-violet/10 ring-2 ring-violet/30" : "border-border hover:bg-muted/50"
-                              )}>
-                              <div className={cn(
-                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-                                sharedDispatch ? "bg-violet text-white" : "bg-muted text-muted-foreground"
-                              )}>
-                                <Users className="h-4 w-4" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-semibold">Disparo Compartilhado 👥</span>
-                                  {sharedDispatch && (
-                                    <span className="inline-flex items-center rounded-full bg-violet/20 px-1.5 py-0 text-[10px] font-bold text-violet">ATIVO</span>
-                                  )}
-                                </div>
-                                <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
-                                  Os contatos aparecerão para todos os operadores em modo leitura.
-                                </p>
-                              </div>
-                            </button>
-
-                            {/* Mode selector — same as admin */}
-                            <div className="rounded-lg border border-border p-3 space-y-3">
-                              <p className="text-xs font-medium text-muted-foreground">Modo de disparo</p>
-                              <div className="flex gap-2">
-                                <button onClick={() => setDispatchMode("batch")}
-                                  className={cn("flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
-                                    dispatchMode === "batch" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted")}>
-                                  <Layers className="h-4 w-4 mx-auto mb-1" /> Lote
-                                </button>
-                                <button onClick={() => setDispatchMode("individual")}
-                                  className={cn("flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
-                                    dispatchMode === "individual" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted")}>
-                                  <Timer className="h-4 w-4 mx-auto mb-1" /> Individual
-                                </button>
-                                <button onClick={() => setDispatchMode("turbo")}
-                                  className={cn("flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors",
-                                    dispatchMode === "turbo" ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400" : "border-border hover:bg-muted")}>
-                                  <Zap className="h-4 w-4 mx-auto mb-1" /> Turbo
-                                </button>
-                              </div>
-
-                              {dispatchMode === "individual" && (
-                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
-                                  <div className={`flex items-center gap-2 transition-opacity ${randomJitter412 ? "opacity-40" : ""}`}>
-                                    <Label htmlFor="interval" className="text-xs text-muted-foreground whitespace-nowrap">Intervalo:</Label>
-                                    <Input id="interval" type="number" min={1} max={300} value={intervalSeconds}
-                                      disabled={randomJitter412}
-                                      onChange={(e) => setIntervalSeconds(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-20 text-sm" />
-                                    <span className="text-xs text-muted-foreground">segundos</span>
-                                  </div>
-                                  <div className="flex items-start justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
-                                    <div className="min-w-0">
-                                      <Label htmlFor="rj-ind" className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
-                                        🎲 Jitter aleatório 4–12s
-                                      </Label>
-                                      <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
-                                        Sorteia um intervalo entre 4 e 12s a cada envio.
-                                      </p>
-                                    </div>
-                                    <Switch id="rj-ind" checked={randomJitter412} onCheckedChange={setRandomJitter412} />
-                                  </div>
-                                </motion.div>
-                              )}
-
-                              {dispatchMode === "batch" && (
-                                <>
-                                  <div className="flex items-center justify-between">
-                                    <div>
-                                      <Label htmlFor="batch-mode" className="text-xs font-medium cursor-pointer">Modo lote limitado</Label>
-                                      <p className="text-[10px] text-muted-foreground">Limita quantidade por disparo</p>
-                                    </div>
-                                    <Switch id="batch-mode" checked={batchMode} onCheckedChange={setBatchMode} />
-                                  </div>
-                                  {batchMode && (
-                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-                                      <Label htmlFor="batch-size" className="text-xs text-muted-foreground whitespace-nowrap">Quantidade:</Label>
-                                      <Input id="batch-size" type="number" min={1} max={listContactCount || 9999} value={batchSize}
-                                        onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-24 text-sm" />
-                                    </motion.div>
-                                  )}
-                                </>
-                              )}
-
-                              {dispatchMode === "turbo" && (
-                                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <Label htmlFor="turbo-limit" className="text-xs text-muted-foreground whitespace-nowrap">Limite de envios:</Label>
-                                    <Input id="turbo-limit" type="number" min={1} max={10000} value={turboLimit}
-                                      onChange={(e) => setTurboLimit(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-24 text-sm" />
-                                  </div>
-                                  <div className="flex items-start justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
-                                    <div className="min-w-0">
-                                      <Label htmlFor="rj-turbo" className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
-                                        🎲 Jitter aleatório 4–12s
-                                      </Label>
-                                      <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
-                                        Sorteia um intervalo entre 4 e 12s a cada envio.
-                                      </p>
-                                    </div>
-                                    <Switch id="rj-turbo" checked={randomJitter412} onCheckedChange={setRandomJitter412} />
-                                  </div>
-                                  <div className="rounded border border-amber-500/30 bg-amber-500/5 p-2 text-[10px] text-amber-600 dark:text-amber-400 space-y-0.5">
-                                    <p className="font-semibold">⚡ Modo Turbo — SEM proteções Anti-Ban</p>
-                                    <p>• Envia continuamente sem pausas</p>
-                                    <p>• Para IMEDIATAMENTE em qualquer erro da API</p>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </div>
-
-                            {/* High income filter */}
-                            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 flex items-center justify-between gap-3">
-                              <div className="min-w-0">
-                                <Label htmlFor="high-inc" className="text-xs font-semibold cursor-pointer flex items-center gap-1.5">
-                                  💰 Apenas Renda Alta (≥ R$ 10.000)
-                                  {highIncomeOnly && (
-                                    <span className="inline-flex items-center rounded-full bg-amber-500/20 px-1.5 py-0 text-[10px] font-bold text-amber-600 dark:text-amber-400">ATIVO</span>
-                                  )}
-                                </Label>
-                                <p className="text-[10px] text-muted-foreground">
-                                  Quando ativo, dispara apenas para contatos com valor da causa ≥ R$ 10.000.
-                                </p>
-                              </div>
-                              <Switch id="high-inc" checked={highIncomeOnly} onCheckedChange={setHighIncomeOnly} />
-                            </div>
-
-                            {/* Anti-ban summary */}
-                            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-1.5">
-                              <p className="text-xs font-semibold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                                🛡️ Proteções Anti-Ban
+                              <p className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
+                                <Layers className="h-3.5 w-3.5" /> Modo Lote
                               </p>
-                              <div className="text-[10px] text-muted-foreground space-y-0.5">
-                                <p>• Blocos variáveis (16-24 msgs) com respiro 10-12 min</p>
-                                <p>• Delay progressivo (aumenta 15% por bloco)</p>
-                                <p>• Limite diário: {ANTI_BAN_DAILY_LIMIT} mensagens por sessão</p>
-                                <p>• Cooldown de emergência (3 erros consecutivos = 5 min)</p>
-                                <p>• Circuit breaker em caso de bloqueio da Meta</p>
-                              </div>
                             </div>
+
+                            {/* Optional limit for the batch */}
+                            <div className="rounded-lg border border-border p-3 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <Label htmlFor="batch-mode" className="text-xs font-medium cursor-pointer">Modo lote limitado</Label>
+                                  <p className="text-[10px] text-muted-foreground">Limita quantidade por disparo</p>
+                                </div>
+                                <Switch id="batch-mode" checked={batchMode} onCheckedChange={setBatchMode} />
+                              </div>
+                              {batchMode && (
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
+                                  <Label htmlFor="batch-size" className="text-xs text-muted-foreground whitespace-nowrap">Quantidade:</Label>
+                                  <Input id="batch-size" type="number" min={1} max={listContactCount || 9999} value={batchSize}
+                                    onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-24 text-sm" />
+                                </motion.div>
+                              )}
+                            </div>
+
 
                             <Button className="w-full gap-2" size="lg" onClick={handleSend}
                               disabled={!selectedTemplate || !selectedList || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId)}>
@@ -1175,11 +1130,19 @@ export default function OperatorDisparosPage() {
                               Disparar para {effectiveCount} contato{effectiveCount !== 1 ? "s" : ""}
                             </Button>
 
+                            {/* Single contact (avulso) shortcut */}
+                            <Button variant="outline" className="w-full gap-2" size="sm"
+                              onClick={() => setShowAvulsoDialog(true)}
+                              disabled={!selectedTemplate || (phones.length > 0 && !selectedPhoneNumberId)}>
+                              <Plus className="h-4 w-4" /> Disparar para contato avulso
+                            </Button>
+
                             <div className="flex justify-start pt-2">
                               <Button variant="outline" onClick={() => setWizardStep(2)}>
                                 <ChevronLeft className="mr-2 h-4 w-4" /> Voltar
                               </Button>
                             </div>
+
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -1335,6 +1298,50 @@ export default function OperatorDisparosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Avulso Dispatch Dialog */}
+      <Dialog open={showAvulsoDialog} onOpenChange={(o) => !avulsoSending && setShowAvulsoDialog(o)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Disparar para contato avulso</DialogTitle>
+            <DialogDescription>
+              Cria o contato e envia o template <span className="font-mono">{selectedTemplate?.name || "—"}</span> imediatamente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Nome *</Label>
+              <Input value={avulsoName} onChange={(e) => setAvulsoName(e.target.value)} placeholder="Nome do cliente" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Telefone (com DDD) *</Label>
+              <Input value={avulsoPhone} onChange={(e) => setAvulsoPhone(e.target.value)} placeholder="Ex: 11970178814" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">CPF</Label>
+                <Input value={avulsoCpf} onChange={(e) => setAvulsoCpf(e.target.value)} placeholder="Opcional" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Parte Contrária</Label>
+                <Input value={avulsoContra} onChange={(e) => setAvulsoContra(e.target.value)} placeholder="Opcional" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Processo</Label>
+              <Input value={avulsoProcesso} onChange={(e) => setAvulsoProcesso(e.target.value)} placeholder="Opcional" />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAvulsoDialog(false)} disabled={avulsoSending}>Cancelar</Button>
+            <Button onClick={handleAvulsoSend} disabled={avulsoSending || !avulsoName.trim() || !avulsoPhone.trim()}>
+              {avulsoSending ? <LoadingSpinner size="sm" /> : <><Send className="mr-2 h-4 w-4" /> Enviar</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </AppLayout>
   );
 }
