@@ -198,17 +198,27 @@ export default function OperatorDisparosPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
   const [variableMappings, setVariableMappings] = useState<Record<string, string>>(persisted.variableMappings || {});
   const [selectedList, setSelectedList] = useState(persisted.selectedList || "");
-  const [minRenda, setMinRenda] = useState<string>(persisted.minRenda || "all");
-  const [onlyVerifiedNames, setOnlyVerifiedNames] = useState(persisted.onlyVerifiedNames ?? false);
-  const [sharedDispatch, setSharedDispatch] = useState(persisted.sharedDispatch ?? false);
-  const [dispatchMode, setDispatchMode] = useState<DispatchMode>(persisted.dispatchMode || "batch");
-  const [intervalSeconds, setIntervalSeconds] = useState(persisted.intervalSeconds ?? 65);
-  const [randomJitter412, setRandomJitter412] = useState(persisted.randomJitter412 ?? false);
+  // Operator-side hardcoded values: no income / verified / shared / mode options
+  const minRenda = "all";
+  const onlyVerifiedNames = false;
+  const sharedDispatch = false;
+  const dispatchMode: DispatchMode = "batch";
+  const intervalSeconds = persisted.intervalSeconds ?? 65;
+  const randomJitter412 = false;
   const [batchMode, setBatchMode] = useState(persisted.batchMode ?? false);
   const [batchSize, setBatchSize] = useState(persisted.batchSize ?? 50);
-  const [turboLimit, setTurboLimit] = useState(persisted.turboLimit ?? 100);
-  const [highIncomeOnly, setHighIncomeOnly] = useState(persisted.highIncomeOnly ?? false);
+  const turboLimit = persisted.turboLimit ?? 100;
+  const highIncomeOnly = false;
   const [wizardStep, setWizardStep] = useState(persisted.wizardStep ?? 0);
+
+  // Single-contact ("avulso") dispatch dialog state
+  const [showAvulsoDialog, setShowAvulsoDialog] = useState(false);
+  const [avulsoName, setAvulsoName] = useState("");
+  const [avulsoPhone, setAvulsoPhone] = useState("");
+  const [avulsoCpf, setAvulsoCpf] = useState("");
+  const [avulsoContra, setAvulsoContra] = useState("");
+  const [avulsoProcesso, setAvulsoProcesso] = useState("");
+  const [avulsoSending, setAvulsoSending] = useState(false);
 
   // Non-persisted UI
   const [availableLists, setAvailableLists] = useState<{ name: string; count: number }[]>([]);
