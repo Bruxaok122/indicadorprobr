@@ -639,9 +639,7 @@ export default function OperatorDisparosPage() {
   };
 
   const listContactCount = availableLists.find(l => l.name === selectedList)?.count || 0;
-  const effectiveCount = dispatchMode === "turbo"
-    ? Math.min(turboLimit, listContactCount)
-    : (batchMode ? Math.min(batchSize, listContactCount) : listContactCount);
+  const effectiveCount = batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
 
   const isStep0Valid = phones.length === 0 || !!selectedPhoneNumberId;
   const isStep1Valid = !!selectedTemplate;
