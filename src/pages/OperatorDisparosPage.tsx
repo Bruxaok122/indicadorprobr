@@ -776,10 +776,19 @@ export default function OperatorDisparosPage() {
 
   const listContactCount = availableLists.find(l => l.name === selectedList)?.count || 0;
   const effectiveCount = batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
+  const avulsoPhoneDigits = avulsoPhone.replace(/\D/g, "");
+  const isAvulsoValid = !!avulsoName.trim() && avulsoPhoneDigits.length >= 10;
 
   const isStep0Valid = phones.length === 0 || !!selectedPhoneNumberId;
   const isStep1Valid = !!selectedTemplate;
-  const isStep2Valid = !!selectedList && listContactCount > 0;
+  const isStep2Valid = dispatchType === "avulso"
+    ? isAvulsoValid
+    : (!!selectedList && listContactCount > 0);
+
+  // Step labels change based on dispatch type
+  const stepLabels = dispatchType === "avulso"
+    ? ["Número", "Template", "Contato", "Enviar"]
+    : ["Número", "Template", "Lista", "Enviar"];
 
   return (
     <AppLayout>
