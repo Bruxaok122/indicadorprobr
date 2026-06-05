@@ -358,3 +358,60 @@ function QuickReactRow({ messageId, onReact }: { messageId: string; onReact: (id
     </div>
   );
 }
+
+export function getReplyPreview(msg: Message): { label: string; icon: "text" | "image" | "audio" | "document" | "sticker" } {
+  if (msg.is_deleted) return { label: "Mensagem apagada", icon: "text" };
+  switch (msg.message_type) {
+    case "image":
+      return { label: msg.content && msg.content !== "[Imagem recebida]" ? msg.content : "Imagem", icon: "image" };
+    case "audio":
+      return { label: "Mensagem de voz", icon: "audio" };
+    case "document":
+      return { label: msg.document_name || "Documento", icon: "document" };
+    case "sticker":
+      return { label: "Figurinha", icon: "sticker" };
+    case "template":
+      return { label: msg.content || msg.template_name || "Template", icon: "text" };
+    default: {
+      const txt = (msg.content || "").replace(/##\S+?:\S*?##\s*/g, "").trim();
+      return { label: txt || "Mensagem", icon: "text" };
+    }
+  }
+}
+
+function ReplyQuote({ parent, isOutgoing }: { parent: Message; isOutgoing: boolean }) {
+  const { label, icon } = getReplyPreview(parent);
+  const authorLabel = parent.direction === "outgoing" ? "Você" : "Cliente";
+  const Icon =
+    icon === "image" ? ImageIcon :
+    icon === "audio" ? Mic :
+    icon === "document" ? FileText :
+    icon === "sticker" ? Sticker : null;
+  return (
+    <div
+      className={cn(
+        "mb-1 flex gap-2 rounded-md border-l-4 py-1 pl-2 pr-2 text-xs",
+        isOutgoing
+          ? "border-emerald-700/60 bg-black/5 dark:bg-white/5"
+          : "border-violet-500/70 bg-black/5 dark:bg-white/5",
+      )}
+    >
+      <div className="min-w-0 flex-1">
+        <p className={cn(
+          "font-semibold leading-tight",
+          parent.direction === "outgoing" ? "text-emerald-700 dark:text-emerald-400" : "text-violet-600 dark:text-violet-300",
+        )}>
+          {authorLabel}
+        </p>
+        <p className="flex items-center gap-1 truncate opacity-80">
+          {Icon && <Icon className="h-3 w-3 shrink-0" />}
+          <span className="truncate">{label}</span>
+        </p>
+      </div>
+      {parent.message_type === "image" && parent.image_url && (
+        <img src={parent.image_url} alt="" className="h-10 w-10 rounded object-cover shrink-0" />
+      )}
+    </div>
+  );
+}
+
