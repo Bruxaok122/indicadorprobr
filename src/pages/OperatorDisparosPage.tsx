@@ -131,6 +131,8 @@ const CONTACT_FIELD_OPTIONS = [
 // --- Wizard state persistence ---
 const WIZARD_STORAGE_KEY = "operator-dispatch-wizard-v1";
 
+type DispatchType = "lista" | "avulso";
+
 interface PersistedWizardState {
   selectedPhoneNumberId: string;
   customAdvogadoName: string;
@@ -141,6 +143,7 @@ interface PersistedWizardState {
   onlyVerifiedNames: boolean;
   sharedDispatch: boolean;
   dispatchMode: DispatchMode;
+  dispatchType: DispatchType;
   intervalSeconds: number;
   randomJitter412: boolean;
   batchMode: boolean;
@@ -198,6 +201,7 @@ export default function OperatorDisparosPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
   const [variableMappings, setVariableMappings] = useState<Record<string, string>>(persisted.variableMappings || {});
   const [selectedList, setSelectedList] = useState(persisted.selectedList || "");
+  const [dispatchType, setDispatchType] = useState<DispatchType>(persisted.dispatchType || "lista");
   // Operator-side hardcoded values: no income / verified / shared / mode options
   const minRenda = "all";
   const onlyVerifiedNames = false;
@@ -211,7 +215,10 @@ export default function OperatorDisparosPage() {
   const highIncomeOnly = false;
   const [wizardStep, setWizardStep] = useState(persisted.wizardStep ?? 0);
 
-  // Single-contact ("avulso") dispatch dialog state
+  // Admin-defined max batch size (null = unlimited)
+  const adminMaxBatchSize = (profile as any)?.max_batch_size ?? null;
+
+  // Single-contact ("avulso") dispatch dialog state (kept for legacy shortcut)
   const [showAvulsoDialog, setShowAvulsoDialog] = useState(false);
   const [avulsoName, setAvulsoName] = useState("");
   const [avulsoPhone, setAvulsoPhone] = useState("");
