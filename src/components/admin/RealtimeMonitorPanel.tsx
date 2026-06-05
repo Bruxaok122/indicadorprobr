@@ -9,9 +9,10 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LiveChatViewer } from "./LiveChatViewer";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Activity, Users, MessageCircle, ArrowDownToLine, ArrowUpFromLine,
-  AlertCircle, Eye, Search, Bot, Clock, Circle,
+  AlertCircle, Eye, Search, Bot, Clock, Circle, AlertTriangle, BellRing,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -66,6 +67,7 @@ function MinutesBadge({ minutes }: { minutes: number | null }) {
 
 export function RealtimeMonitorPanel() {
   const { data, isLoading } = useRealtimeMonitor();
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
   const [operatorFilter, setOperatorFilter] = useState<string | null>(null);
   const [viewer, setViewer] = useState<ActiveChatRow | null>(null);
@@ -86,6 +88,17 @@ export function RealtimeMonitorPanel() {
       );
     });
   }, [chats, search, operatorFilter]);
+
+  // Alerts: client awaiting reply 15+ min, OR severe wait 60+ min
+  const alerts = useMemo(() => {
+    return chats
+      .filter((c) =>
+        c.last_direction === "incoming" &&
+        c.minutes_since_last != null &&
+        c.minutes_since_last >= 15
+      )
+      .sort((a, b) => (b.minutes_since_last || 0) - (a.minutes_since_last || 0));
+  }, [chats]);
 
   if (isLoading && !data) {
     return (
