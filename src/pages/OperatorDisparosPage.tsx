@@ -947,8 +947,37 @@ export default function OperatorDisparosPage() {
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Send className="h-5 w-5 text-accent" /> Configurar Disparo
                     </CardTitle>
-                    <div className="flex items-center gap-1 pt-2">
-                      {["Número", "Template", "Lista", "Enviar"].map((label, i) => (
+
+                    {/* Tipo de disparo — Lista vs Avulso (definido no início) */}
+                    <div className="mt-2 rounded-lg border p-1 grid grid-cols-2 gap-1 bg-muted/30">
+                      <button
+                        type="button"
+                        onClick={() => { setDispatchType("lista"); if (wizardStep > 2) setWizardStep(2); }}
+                        className={cn(
+                          "rounded-md py-1.5 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
+                          dispatchType === "lista"
+                            ? "bg-primary text-primary-foreground shadow"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <Users className="h-3.5 w-3.5" /> Lista
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setDispatchType("avulso"); if (wizardStep > 2) setWizardStep(2); }}
+                        className={cn(
+                          "rounded-md py-1.5 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
+                          dispatchType === "avulso"
+                            ? "bg-primary text-primary-foreground shadow"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Avulso (1 contato)
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-1 pt-3">
+                      {stepLabels.map((label, i) => (
                         <div key={i} className="flex items-center gap-1 flex-1">
                           <button
                             onClick={() => i < wizardStep && setWizardStep(i)}
