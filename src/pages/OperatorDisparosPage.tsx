@@ -537,6 +537,28 @@ export default function OperatorDisparosPage() {
     const isTurbo = dispatchMode === "turbo";
     const minIncomeFilter = highIncomeOnly ? 10000 : (minRenda !== "all" ? parseInt(minRenda) : undefined);
 
+    // Admin-defined batch limit enforcement
+    if (adminMaxBatchSize != null) {
+      if (batchMode) {
+        if (batchSize > adminMaxBatchSize) {
+          toast.error(
+            `Limite máximo do administrador: ${adminMaxBatchSize} contatos por disparo. Reduza a quantidade.`,
+            { duration: 8000 },
+          );
+          return;
+        }
+      } else {
+        // No batch mode → would send the entire list
+        if (listContactCount > adminMaxBatchSize) {
+          toast.error(
+            `Lista possui ${listContactCount} contatos, mas o administrador limitou a ${adminMaxBatchSize} por disparo. Ative o modo lote limitado.`,
+            { duration: 10000 },
+          );
+          return;
+        }
+      }
+    }
+
     const limit = isTurbo ? turboLimit : (batchMode ? batchSize : undefined);
     let contactIds = await fetchRemainingForOperator(selectedList, limit, minIncomeFilter);
 
