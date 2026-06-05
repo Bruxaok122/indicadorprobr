@@ -151,8 +151,17 @@ export function RealtimeMonitorPanel() {
         />
       </div>
 
-      <Tabs defaultValue="chats" className="space-y-4">
-        <TabsList>
+      <Tabs defaultValue={alerts.length > 0 ? "alertas" : "chats"} className="space-y-4">
+        <TabsList className="w-full sm:w-auto flex-wrap h-auto">
+          <TabsTrigger value="alertas" className="gap-1.5">
+            <BellRing className={alerts.length > 0 ? "h-4 w-4 text-amber-500" : "h-4 w-4"} />
+            Alertas
+            {alerts.length > 0 && (
+              <Badge className="ml-1 h-4 px-1.5 bg-amber-500 hover:bg-amber-500 text-[10px]">
+                {alerts.length}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="chats" className="gap-1.5">
             <MessageCircle className="h-4 w-4" /> Atendimentos ({chats.length})
           </TabsTrigger>
@@ -160,6 +169,79 @@ export function RealtimeMonitorPanel() {
             <Users className="h-4 w-4" /> Operadores ({operators.length})
           </TabsTrigger>
         </TabsList>
+
+        {/* ALERTAS */}
+        <TabsContent value="alertas" className="space-y-3">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                Atendimentos que precisam de atenção
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Clientes que enviaram mensagem há 15 minutos ou mais e ainda não foram respondidos.
+              </p>
+            </CardHeader>
+            <CardContent className={isMobile ? "p-3" : "p-0"}>
+              {alerts.length === 0 ? (
+                <p className="text-center py-8 text-sm text-muted-foreground">
+                  ✓ Nenhum cliente esperando resposta há mais de 15 min.
+                </p>
+              ) : isMobile ? (
+                <div className="space-y-2">
+                  {alerts.map((c) => (
+                    <ChatMobileCard key={c.contact_id} chat={c} onOpen={() => setViewer(c)} highlight />
+                  ))}
+                </div>
+              ) : (
+                <ScrollArea className="h-[520px]">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-card z-10">
+                      <TableRow>
+                        <TableHead className="text-xs">Contato</TableHead>
+                        <TableHead className="text-xs">Operador</TableHead>
+                        <TableHead className="text-xs">Última mensagem do cliente</TableHead>
+                        <TableHead className="text-xs text-center">Esperando há</TableHead>
+                        <TableHead className="text-xs text-right">Ação</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {alerts.map((c) => (
+                        <TableRow key={c.contact_id} className="bg-amber-500/5">
+                          <TableCell className="py-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="h-7 w-7 shrink-0 rounded-full bg-amber-500/20 flex items-center justify-center text-[11px] font-semibold text-amber-600">
+                                {c.contact_name.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium truncate max-w-[180px]">{c.contact_name}</p>
+                                <p className="text-[11px] text-muted-foreground">{c.contact_phone}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-2 text-xs">{c.operator_name}</TableCell>
+                          <TableCell className="py-2">
+                            <p className="text-xs text-muted-foreground truncate max-w-[260px]">
+                              {c.last_message_preview || "—"}
+                            </p>
+                          </TableCell>
+                          <TableCell className="py-2 text-center">
+                            <MinutesBadge minutes={c.minutes_since_last} />
+                          </TableCell>
+                          <TableCell className="py-2 text-right">
+                            <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => setViewer(c)}>
+                              <Eye className="h-3.5 w-3.5" /> Ver
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* ATENDIMENTOS */}
         <TabsContent value="chats" className="space-y-3">
@@ -190,29 +272,33 @@ export function RealtimeMonitorPanel() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[520px]">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-card z-10">
-                    <TableRow>
-                      <TableHead className="text-xs">Contato</TableHead>
-                      <TableHead className="text-xs">Operador</TableHead>
-                      <TableHead className="text-xs">Última mensagem</TableHead>
-                      <TableHead className="text-xs text-center">Há</TableHead>
-                      <TableHead className="text-xs text-center">Recebidas hoje</TableHead>
-                      <TableHead className="text-xs text-center">Status</TableHead>
-                      <TableHead className="text-xs text-right">Ação</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredChats.length === 0 ? (
+            <CardContent className={isMobile ? "p-3" : "p-0"}>
+              {filteredChats.length === 0 ? (
+                <p className="text-center py-8 text-sm text-muted-foreground">
+                  Nenhum atendimento encontrado
+                </p>
+              ) : isMobile ? (
+                <div className="space-y-2">
+                  {filteredChats.map((c) => (
+                    <ChatMobileCard key={c.contact_id} chat={c} onOpen={() => setViewer(c)} />
+                  ))}
+                </div>
+              ) : (
+                <ScrollArea className="h-[520px]">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-card z-10">
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-sm text-muted-foreground">
-                          Nenhum atendimento encontrado
-                        </TableCell>
+                        <TableHead className="text-xs">Contato</TableHead>
+                        <TableHead className="text-xs">Operador</TableHead>
+                        <TableHead className="text-xs">Última mensagem</TableHead>
+                        <TableHead className="text-xs text-center">Há</TableHead>
+                        <TableHead className="text-xs text-center">Recebidas hoje</TableHead>
+                        <TableHead className="text-xs text-center">Status</TableHead>
+                        <TableHead className="text-xs text-right">Ação</TableHead>
                       </TableRow>
-                    ) : (
-                      filteredChats.map((c) => (
+                    </TableHeader>
+                    <TableBody>
+                      {filteredChats.map((c) => (
                         <TableRow key={c.contact_id}>
                           <TableCell className="py-2">
                             <div className="flex items-center gap-2 min-w-0">
@@ -220,9 +306,7 @@ export function RealtimeMonitorPanel() {
                                 {c.contact_name.charAt(0).toUpperCase()}
                               </div>
                               <div className="min-w-0">
-                                <p className="text-sm font-medium truncate max-w-[180px]">
-                                  {c.contact_name}
-                                </p>
+                                <p className="text-sm font-medium truncate max-w-[180px]">{c.contact_name}</p>
                                 <p className="text-[11px] text-muted-foreground">{c.contact_phone}</p>
                               </div>
                             </div>
@@ -264,21 +348,16 @@ export function RealtimeMonitorPanel() {
                             </div>
                           </TableCell>
                           <TableCell className="py-2 text-right">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 gap-1"
-                              onClick={() => setViewer(c)}
-                            >
+                            <Button size="sm" variant="ghost" className="h-7 gap-1" onClick={() => setViewer(c)}>
                               <Eye className="h-3.5 w-3.5" /> Ver
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -292,29 +371,41 @@ export function RealtimeMonitorPanel() {
                 Atividade dos operadores
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[520px]">
-                <Table>
-                  <TableHeader className="sticky top-0 bg-card z-10">
-                    <TableRow>
-                      <TableHead className="text-xs">Operador</TableHead>
-                      <TableHead className="text-xs text-center">Status</TableHead>
-                      <TableHead className="text-xs text-center">Conversas (24h)</TableHead>
-                      <TableHead className="text-xs text-center">Enviadas hoje</TableHead>
-                      <TableHead className="text-xs text-center">Recebidas hoje</TableHead>
-                      <TableHead className="text-xs">Última atividade</TableHead>
-                      <TableHead className="text-xs text-right">Ação</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {operators.length === 0 ? (
+            <CardContent className={isMobile ? "p-3" : "p-0"}>
+              {operators.length === 0 ? (
+                <p className="text-center py-8 text-sm text-muted-foreground">Nenhum operador</p>
+              ) : isMobile ? (
+                <div className="space-y-2">
+                  {operators.map((op) => (
+                    <OperatorMobileCard
+                      key={op.user_id}
+                      op={op}
+                      onSeeChats={() => {
+                        setOperatorFilter(op.user_id);
+                        const btn = document.querySelector<HTMLButtonElement>(
+                          '[role="tab"][value="chats"]'
+                        );
+                        btn?.click();
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <ScrollArea className="h-[520px]">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-card z-10">
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-sm text-muted-foreground">
-                          Nenhum operador
-                        </TableCell>
+                        <TableHead className="text-xs">Operador</TableHead>
+                        <TableHead className="text-xs text-center">Status</TableHead>
+                        <TableHead className="text-xs text-center">Conversas (24h)</TableHead>
+                        <TableHead className="text-xs text-center">Enviadas hoje</TableHead>
+                        <TableHead className="text-xs text-center">Recebidas hoje</TableHead>
+                        <TableHead className="text-xs">Última atividade</TableHead>
+                        <TableHead className="text-xs text-right">Ação</TableHead>
                       </TableRow>
-                    ) : (
-                      operators.map((op) => (
+                    </TableHeader>
+                    <TableBody>
+                      {operators.map((op) => (
                         <TableRow key={op.user_id}>
                           <TableCell className="py-2">
                             <div className="flex items-center gap-2">
@@ -360,7 +451,6 @@ export function RealtimeMonitorPanel() {
                               className="h-7 gap-1"
                               onClick={() => {
                                 setOperatorFilter(op.user_id);
-                                // Switch to chats tab via simulated click
                                 const btn = document.querySelector<HTMLButtonElement>(
                                   '[role="tab"][value="chats"]'
                                 );
@@ -371,11 +461,11 @@ export function RealtimeMonitorPanel() {
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </ScrollArea>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
