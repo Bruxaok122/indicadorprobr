@@ -253,6 +253,7 @@ export default function OperatorDisparosPage() {
       selectedTemplateName: selectedTemplate?.name || "",
       variableMappings,
       selectedList,
+      dispatchType,
       minRenda,
       onlyVerifiedNames,
       sharedDispatch,
@@ -267,7 +268,7 @@ export default function OperatorDisparosPage() {
     });
   }, [
     selectedPhoneNumberId, customAdvogadoName, selectedTemplate, variableMappings,
-    selectedList, minRenda, onlyVerifiedNames, sharedDispatch, dispatchMode,
+    selectedList, dispatchType, minRenda, onlyVerifiedNames, sharedDispatch, dispatchMode,
     intervalSeconds, randomJitter412, batchMode, batchSize, turboLimit,
     highIncomeOnly, wizardStep,
   ]);
