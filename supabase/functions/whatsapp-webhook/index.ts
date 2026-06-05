@@ -243,6 +243,24 @@ serve(async (req) => {
                 let imageUrl: string | undefined;
                 const messageInsertExtra: Record<string, any> = {};
 
+                // Resolve reply/quote context (when client replies to a previous message)
+                // Skip for reaction (uses reacts_to_message_id) and unsupported (deletion handling).
+                if (
+                  message.context?.id &&
+                  message.type !== "reaction" &&
+                  message.type !== "unsupported"
+                ) {
+                  const { data: parentMsg } = await supabase
+                    .from("messages")
+                    .select("id")
+                    .eq("whatsapp_message_id", message.context.id)
+                    .maybeSingle();
+                  if (parentMsg?.id) {
+                    messageInsertExtra.reply_to_message_id = parentMsg.id;
+                  }
+                }
+
+
                 // Fetch access token once — used for downloading any media
                 let accessToken: string | null = null;
                 try {
