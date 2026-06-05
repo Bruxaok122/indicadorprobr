@@ -1,9 +1,11 @@
+import { useState, useEffect } from "react";
 import { Profile } from "@/types/juriszap";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Lock, Unlock, Trash2, Timer, Monitor, Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye, ShieldCheck } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Lock, Unlock, Trash2, Timer, Monitor, Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye, ShieldCheck, Layers } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -27,11 +29,18 @@ interface UserCardProps {
   onAuthorizeDevice: (userId: string) => void;
   onResetDevice: (userId: string) => void;
   onMonitorChat: (user: Profile) => void;
+  onSetMaxBatchSize?: (params: { userId: string; maxBatchSize: number | null }) => void;
 }
 
-export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UserCardProps) {
+export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat, onSetMaxBatchSize }: UserCardProps) {
    const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
- 
+   const [batchLimitDraft, setBatchLimitDraft] = useState<string>(
+     user.max_batch_size != null ? String(user.max_batch_size) : ""
+   );
+   useEffect(() => {
+     setBatchLimitDraft(user.max_batch_size != null ? String(user.max_batch_size) : "");
+   }, [user.max_batch_size]);
+
    return (
      <Card className="w-full">
        <CardContent className="p-4 space-y-3">
