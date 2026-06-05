@@ -352,6 +352,7 @@ export default function ConversasPage() {
                   templatesAvailable={templates.length > 0} onOpenTemplateDialog={() => setShowTemplateDialog(true)}
                   onDeleteMessage={deleteMessage}
                   onReact={(messageId, emoji) => sendReaction({ messageId, emoji })}
+                  onReply={(msg) => setReplyToId(msg.id)}
                 />
                 <ChatInput
                   messageText={messageText} setMessageText={setMessageText} canSendFreeText={canSendFreeText}
@@ -368,7 +369,10 @@ export default function ConversasPage() {
                     if (!selectedContactId) return;
                     sendAudio({ contactId: selectedContactId, audioBlob: blob, selectedPhoneNumberId: selectedPhoneNumberId || undefined });
                   }}
+                  replyTo={replyToMessage}
+                  onCancelReply={() => setReplyToId(null)}
                 />
+
               </>
             ) : (
               <div className={cn("flex flex-1 flex-col items-center justify-center chat-wallpaper", isMobile && "hidden")}>
