@@ -131,6 +131,8 @@ const CONTACT_FIELD_OPTIONS = [
 // --- Wizard state persistence ---
 const WIZARD_STORAGE_KEY = "operator-dispatch-wizard-v1";
 
+type DispatchType = "lista" | "avulso";
+
 interface PersistedWizardState {
   selectedPhoneNumberId: string;
   customAdvogadoName: string;
@@ -141,6 +143,7 @@ interface PersistedWizardState {
   onlyVerifiedNames: boolean;
   sharedDispatch: boolean;
   dispatchMode: DispatchMode;
+  dispatchType: DispatchType;
   intervalSeconds: number;
   randomJitter412: boolean;
   batchMode: boolean;
@@ -198,6 +201,7 @@ export default function OperatorDisparosPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
   const [variableMappings, setVariableMappings] = useState<Record<string, string>>(persisted.variableMappings || {});
   const [selectedList, setSelectedList] = useState(persisted.selectedList || "");
+  const [dispatchType, setDispatchType] = useState<DispatchType>(persisted.dispatchType || "lista");
   // Operator-side hardcoded values: no income / verified / shared / mode options
   const minRenda = "all";
   const onlyVerifiedNames = false;
@@ -211,7 +215,10 @@ export default function OperatorDisparosPage() {
   const highIncomeOnly = false;
   const [wizardStep, setWizardStep] = useState(persisted.wizardStep ?? 0);
 
-  // Single-contact ("avulso") dispatch dialog state
+  // Admin-defined max batch size (null = unlimited)
+  const adminMaxBatchSize = (profile as any)?.max_batch_size ?? null;
+
+  // Single-contact ("avulso") dispatch dialog state (kept for legacy shortcut)
   const [showAvulsoDialog, setShowAvulsoDialog] = useState(false);
   const [avulsoName, setAvulsoName] = useState("");
   const [avulsoPhone, setAvulsoPhone] = useState("");
@@ -246,6 +253,7 @@ export default function OperatorDisparosPage() {
       selectedTemplateName: selectedTemplate?.name || "",
       variableMappings,
       selectedList,
+      dispatchType,
       minRenda,
       onlyVerifiedNames,
       sharedDispatch,
@@ -260,7 +268,7 @@ export default function OperatorDisparosPage() {
     });
   }, [
     selectedPhoneNumberId, customAdvogadoName, selectedTemplate, variableMappings,
-    selectedList, minRenda, onlyVerifiedNames, sharedDispatch, dispatchMode,
+    selectedList, dispatchType, minRenda, onlyVerifiedNames, sharedDispatch, dispatchMode,
     intervalSeconds, randomJitter412, batchMode, batchSize, turboLimit,
     highIncomeOnly, wizardStep,
   ]);
@@ -529,6 +537,28 @@ export default function OperatorDisparosPage() {
     const isTurbo = dispatchMode === "turbo";
     const minIncomeFilter = highIncomeOnly ? 10000 : (minRenda !== "all" ? parseInt(minRenda) : undefined);
 
+    // Admin-defined batch limit enforcement
+    if (adminMaxBatchSize != null) {
+      if (batchMode) {
+        if (batchSize > adminMaxBatchSize) {
+          toast.error(
+            `Limite máximo do administrador: ${adminMaxBatchSize} contatos por disparo. Reduza a quantidade.`,
+            { duration: 8000 },
+          );
+          return;
+        }
+      } else {
+        // No batch mode → would send the entire list
+        if (listContactCount > adminMaxBatchSize) {
+          toast.error(
+            `Lista possui ${listContactCount} contatos, mas o administrador limitou a ${adminMaxBatchSize} por disparo. Ative o modo lote limitado.`,
+            { duration: 10000 },
+          );
+          return;
+        }
+      }
+    }
+
     const limit = isTurbo ? turboLimit : (batchMode ? batchSize : undefined);
     let contactIds = await fetchRemainingForOperator(selectedList, limit, minIncomeFilter);
 
@@ -746,10 +776,19 @@ export default function OperatorDisparosPage() {
 
   const listContactCount = availableLists.find(l => l.name === selectedList)?.count || 0;
   const effectiveCount = batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
+  const avulsoPhoneDigits = avulsoPhone.replace(/\D/g, "");
+  const isAvulsoValid = !!avulsoName.trim() && avulsoPhoneDigits.length >= 10;
 
   const isStep0Valid = phones.length === 0 || !!selectedPhoneNumberId;
   const isStep1Valid = !!selectedTemplate;
-  const isStep2Valid = !!selectedList && listContactCount > 0;
+  const isStep2Valid = dispatchType === "avulso"
+    ? isAvulsoValid
+    : (!!selectedList && listContactCount > 0);
+
+  // Step labels change based on dispatch type
+  const stepLabels = dispatchType === "avulso"
+    ? ["Número", "Template", "Contato", "Enviar"]
+    : ["Número", "Template", "Lista", "Enviar"];
 
   return (
     <AppLayout>
@@ -908,8 +947,37 @@ export default function OperatorDisparosPage() {
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Send className="h-5 w-5 text-accent" /> Configurar Disparo
                     </CardTitle>
-                    <div className="flex items-center gap-1 pt-2">
-                      {["Número", "Template", "Lista", "Enviar"].map((label, i) => (
+
+                    {/* Tipo de disparo — Lista vs Avulso (definido no início) */}
+                    <div className="mt-2 rounded-lg border p-1 grid grid-cols-2 gap-1 bg-muted/30">
+                      <button
+                        type="button"
+                        onClick={() => { setDispatchType("lista"); if (wizardStep > 2) setWizardStep(2); }}
+                        className={cn(
+                          "rounded-md py-1.5 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
+                          dispatchType === "lista"
+                            ? "bg-primary text-primary-foreground shadow"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <Users className="h-3.5 w-3.5" /> Lista
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setDispatchType("avulso"); if (wizardStep > 2) setWizardStep(2); }}
+                        className={cn(
+                          "rounded-md py-1.5 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
+                          dispatchType === "avulso"
+                            ? "bg-primary text-primary-foreground shadow"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Avulso (1 contato)
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-1 pt-3">
+                      {stepLabels.map((label, i) => (
                         <div key={i} className="flex items-center gap-1 flex-1">
                           <button
                             onClick={() => i < wizardStep && setWizardStep(i)}
@@ -1053,32 +1121,59 @@ export default function OperatorDisparosPage() {
                           </motion.div>
                         )}
 
-                        {/* Step 2: List + filters */}
+                        {/* Step 2: List OR Avulso form */}
                         {wizardStep === 2 && (
                           <motion.div key="s2" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-4">
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <Label>Lista de Contatos</Label>
-                                <Button variant="ghost" size="sm" className="h-7 px-2" onClick={refreshLists} disabled={loadingLists}>
-                                  <RefreshCw className={cn("h-3.5 w-3.5", loadingLists && "animate-spin")} />
-                                </Button>
+                            {dispatchType === "lista" ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <Label>Lista de Contatos</Label>
+                                  <Button variant="ghost" size="sm" className="h-7 px-2" onClick={refreshLists} disabled={loadingLists}>
+                                    <RefreshCw className={cn("h-3.5 w-3.5", loadingLists && "animate-spin")} />
+                                  </Button>
+                                </div>
+                                {loadingLists ? (
+                                  <LoadingSpinner size="sm" text="Carregando listas..." />
+                                ) : availableLists.length === 0 ? (
+                                  <p className="text-sm text-muted-foreground">Nenhuma lista disponível. Importe contatos primeiro.</p>
+                                ) : (
+                                  <Select value={selectedList} onValueChange={setSelectedList}>
+                                    <SelectTrigger><SelectValue placeholder="Selecione a lista..." /></SelectTrigger>
+                                    <SelectContent>
+                                      {availableLists.map(l => (
+                                        <SelectItem key={l.name} value={l.name}>{l.name} ({l.count} contatos)</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
                               </div>
-                              {loadingLists ? (
-                                <LoadingSpinner size="sm" text="Carregando listas..." />
-                              ) : availableLists.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">Nenhuma lista disponível. Importe contatos primeiro.</p>
-                              ) : (
-                                <Select value={selectedList} onValueChange={setSelectedList}>
-                                  <SelectTrigger><SelectValue placeholder="Selecione a lista..." /></SelectTrigger>
-                                  <SelectContent>
-                                    {availableLists.map(l => (
-                                      <SelectItem key={l.name} value={l.name}>{l.name} ({l.count} contatos)</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            </div>
-
+                            ) : (
+                              <div className="space-y-3">
+                                <Label className="text-xs font-semibold">Dados do contato avulso</Label>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Nome *</Label>
+                                  <Input value={avulsoName} onChange={(e) => setAvulsoName(e.target.value)} placeholder="Nome do cliente" />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Telefone (com DDD) *</Label>
+                                  <Input value={avulsoPhone} onChange={(e) => setAvulsoPhone(e.target.value)} placeholder="Ex: 11970178814" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs">CPF</Label>
+                                    <Input value={avulsoCpf} onChange={(e) => setAvulsoCpf(e.target.value)} placeholder="Opcional" />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-xs">Parte Contrária</Label>
+                                    <Input value={avulsoContra} onChange={(e) => setAvulsoContra(e.target.value)} placeholder="Opcional" />
+                                  </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs">Processo</Label>
+                                  <Input value={avulsoProcesso} onChange={(e) => setAvulsoProcesso(e.target.value)} placeholder="Opcional" />
+                                </div>
+                              </div>
+                            )}
 
                             <div className="flex justify-between pt-2">
                               <Button variant="outline" onClick={() => setWizardStep(1)}>
@@ -1091,7 +1186,7 @@ export default function OperatorDisparosPage() {
                           </motion.div>
                         )}
 
-                        {/* Step 3: Mode + Send (admin-style: batch / individual / turbo) */}
+                        {/* Step 3: Mode + Send */}
                         {wizardStep === 3 && (
                           <motion.div key="s3" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-4">
                             {/* Summary */}
@@ -1099,43 +1194,71 @@ export default function OperatorDisparosPage() {
                               <p><span className="font-semibold">Número:</span> {selectedPhoneData?.display_phone_number || "—"}</p>
                               <p><span className="font-semibold">Advogado:</span> {phoneVerifiedName || "—"}</p>
                               <p><span className="font-semibold">Template:</span> {selectedTemplate?.name || "—"}</p>
-                              <p><span className="font-semibold">Lista:</span> {selectedList} ({listContactCount} contatos)</p>
+                              {dispatchType === "lista" ? (
+                                <p><span className="font-semibold">Lista:</span> {selectedList} ({listContactCount} contatos)</p>
+                              ) : (
+                                <p><span className="font-semibold">Contato:</span> {avulsoName} — {avulsoPhone}</p>
+                              )}
                               <p className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
-                                <Layers className="h-3.5 w-3.5" /> Modo Lote
+                                {dispatchType === "avulso" ? (
+                                  <><Plus className="h-3.5 w-3.5" /> Disparo avulso</>
+                                ) : (
+                                  <><Layers className="h-3.5 w-3.5" /> Modo Lote</>
+                                )}
                               </p>
-                            </div>
-
-                            {/* Optional limit for the batch */}
-                            <div className="rounded-lg border border-border p-3 space-y-3">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <Label htmlFor="batch-mode" className="text-xs font-medium cursor-pointer">Modo lote limitado</Label>
-                                  <p className="text-[10px] text-muted-foreground">Limita quantidade por disparo</p>
-                                </div>
-                                <Switch id="batch-mode" checked={batchMode} onCheckedChange={setBatchMode} />
-                              </div>
-                              {batchMode && (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
-                                  <Label htmlFor="batch-size" className="text-xs text-muted-foreground whitespace-nowrap">Quantidade:</Label>
-                                  <Input id="batch-size" type="number" min={1} max={listContactCount || 9999} value={batchSize}
-                                    onChange={(e) => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-24 text-sm" />
-                                </motion.div>
+                              {adminMaxBatchSize != null && dispatchType === "lista" && (
+                                <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                                  Limite do administrador: {adminMaxBatchSize} contatos por disparo
+                                </p>
                               )}
                             </div>
 
+                            {/* Optional limit for the batch — only relevant for list dispatch */}
+                            {dispatchType === "lista" && (
+                              <div className="rounded-lg border border-border p-3 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <Label htmlFor="batch-mode" className="text-xs font-medium cursor-pointer">Modo lote limitado</Label>
+                                    <p className="text-[10px] text-muted-foreground">Limita quantidade por disparo</p>
+                                  </div>
+                                  <Switch id="batch-mode" checked={batchMode} onCheckedChange={setBatchMode} />
+                                </div>
+                                {batchMode && (
+                                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2">
+                                    <Label htmlFor="batch-size" className="text-xs text-muted-foreground whitespace-nowrap">Quantidade:</Label>
+                                    <Input
+                                      id="batch-size"
+                                      type="number"
+                                      min={1}
+                                      max={Math.min(listContactCount || 9999, adminMaxBatchSize ?? 9999)}
+                                      value={batchSize}
+                                      onChange={(e) => {
+                                        const v = Math.max(1, parseInt(e.target.value) || 1);
+                                        setBatchSize(adminMaxBatchSize != null ? Math.min(v, adminMaxBatchSize) : v);
+                                      }}
+                                      className="h-8 w-24 text-sm"
+                                    />
+                                    {adminMaxBatchSize != null && (
+                                      <span className="text-[11px] text-muted-foreground">/ máx {adminMaxBatchSize}</span>
+                                    )}
+                                  </motion.div>
+                                )}
+                              </div>
+                            )}
 
-                            <Button className="w-full gap-2" size="lg" onClick={handleSend}
-                              disabled={!selectedTemplate || !selectedList || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId)}>
-                              <Send className="h-4 w-4" />
-                              Disparar para {effectiveCount} contato{effectiveCount !== 1 ? "s" : ""}
-                            </Button>
 
-                            {/* Single contact (avulso) shortcut */}
-                            <Button variant="outline" className="w-full gap-2" size="sm"
-                              onClick={() => setShowAvulsoDialog(true)}
-                              disabled={!selectedTemplate || (phones.length > 0 && !selectedPhoneNumberId)}>
-                              <Plus className="h-4 w-4" /> Disparar para contato avulso
-                            </Button>
+                            {dispatchType === "lista" ? (
+                              <Button className="w-full gap-2" size="lg" onClick={handleSend}
+                                disabled={!selectedTemplate || !selectedList || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId)}>
+                                <Send className="h-4 w-4" />
+                                Disparar para {effectiveCount} contato{effectiveCount !== 1 ? "s" : ""}
+                              </Button>
+                            ) : (
+                              <Button className="w-full gap-2" size="lg" onClick={handleAvulsoSend}
+                                disabled={avulsoSending || !isAvulsoValid || !selectedTemplate || (phones.length > 0 && !selectedPhoneNumberId)}>
+                                {avulsoSending ? <LoadingSpinner size="sm" /> : <><Send className="h-4 w-4" /> Enviar para {avulsoName || "contato"}</>}
+                              </Button>
+                            )}
 
                             <div className="flex justify-start pt-2">
                               <Button variant="outline" onClick={() => setWizardStep(2)}>

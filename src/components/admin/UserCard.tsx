@@ -1,9 +1,11 @@
+import { useState, useEffect } from "react";
 import { Profile } from "@/types/juriszap";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Lock, Unlock, Trash2, Timer, Monitor, Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye, ShieldCheck } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Lock, Unlock, Trash2, Timer, Monitor, Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye, ShieldCheck, Layers } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -27,11 +29,18 @@ interface UserCardProps {
   onAuthorizeDevice: (userId: string) => void;
   onResetDevice: (userId: string) => void;
   onMonitorChat: (user: Profile) => void;
+  onSetMaxBatchSize?: (params: { userId: string; maxBatchSize: number | null }) => void;
 }
 
-export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UserCardProps) {
+export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat, onSetMaxBatchSize }: UserCardProps) {
    const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
- 
+   const [batchLimitDraft, setBatchLimitDraft] = useState<string>(
+     user.max_batch_size != null ? String(user.max_batch_size) : ""
+   );
+   useEffect(() => {
+     setBatchLimitDraft(user.max_batch_size != null ? String(user.max_batch_size) : "");
+   }, [user.max_batch_size]);
+
    return (
      <Card className="w-full">
        <CardContent className="p-4 space-y-3">
@@ -223,6 +232,46 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleM
             )}
           </div>
         </div>
+
+        {/* Batch dispatch limit */}
+        {onSetMaxBatchSize && (
+          <div className="space-y-1.5 rounded-md border p-3">
+            <div className="flex items-center gap-1.5">
+              <Layers className="h-4 w-4 text-primary" />
+              <span className="text-xs font-semibold">Limite de Disparo (Lote)</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Máximo por disparo. Deixe vazio para ilimitado.
+            </p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                placeholder="Ilimitado"
+                value={batchLimitDraft}
+                onChange={(e) => setBatchLimitDraft(e.target.value)}
+                className="h-8 w-28 text-sm"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8"
+                onClick={() => {
+                  const trimmed = batchLimitDraft.trim();
+                  if (trimmed === "") {
+                    onSetMaxBatchSize({ userId: user.user_id, maxBatchSize: null });
+                  } else {
+                    const n = parseInt(trimmed, 10);
+                    if (!isFinite(n) || n < 1) return;
+                    onSetMaxBatchSize({ userId: user.user_id, maxBatchSize: n });
+                  }
+                }}
+              >
+                Salvar
+              </Button>
+            </div>
+          </div>
+        )}
 
          {/* Actions */}
          <div className="space-y-2 pt-2 border-t">
