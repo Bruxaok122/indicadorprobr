@@ -486,3 +486,107 @@ export function RealtimeMonitorPanel() {
     </div>
   );
 }
+
+function ChatMobileCard({ chat, onOpen, highlight }: { chat: ActiveChatRow; onOpen: () => void; highlight?: boolean }) {
+  return (
+    <button
+      onClick={onOpen}
+      className={`w-full text-left rounded-xl border p-3 transition-colors active:scale-[0.99] ${
+        highlight
+          ? "bg-amber-500/10 border-amber-500/40 hover:bg-amber-500/15"
+          : "bg-card hover:bg-muted/50"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div className={`h-10 w-10 shrink-0 rounded-full flex items-center justify-center text-sm font-bold ${
+          highlight ? "bg-amber-500/20 text-amber-600" : "bg-primary/15 text-primary"
+        }`}>
+          {chat.contact_name.charAt(0).toUpperCase()}
+        </div>
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-medium text-sm truncate">{chat.contact_name}</p>
+              <p className="text-[11px] text-muted-foreground">{chat.contact_phone}</p>
+            </div>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <MinutesBadge minutes={chat.minutes_since_last} />
+              {chat.unread_from_client > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-500 text-white text-[10px] font-semibold">
+                  {chat.unread_from_client}
+                </span>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground truncate">
+            {chat.last_message_preview || "—"}
+          </p>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Badge variant="outline" className="text-[10px] h-5">
+              {chat.operator_name}
+            </Badge>
+            {chat.ai_enabled && (
+              <Badge variant="outline" className="text-[10px] h-5 gap-1">
+                <Bot className="h-2.5 w-2.5" /> IA
+              </Badge>
+            )}
+            {chat.last_direction === "incoming" && (
+              <Badge variant="outline" className="text-[10px] h-5 border-amber-500/50 text-amber-600">
+                Cliente aguardando
+              </Badge>
+            )}
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function OperatorMobileCard({ op, onSeeChats }: { op: OperatorActivity; onSeeChats: () => void }) {
+  return (
+    <div className="rounded-xl border bg-card p-3 space-y-2">
+      <div className="flex items-start gap-3">
+        <div className="h-10 w-10 shrink-0 rounded-full bg-primary/15 flex items-center justify-center text-sm font-bold text-primary">
+          {op.full_name.charAt(0).toUpperCase()}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-sm truncate">{op.full_name}</p>
+          <p className="text-[11px] text-muted-foreground truncate">{op.email}</p>
+        </div>
+        {op.is_blocked ? (
+          <Badge variant="destructive" className="text-[10px] h-5">Bloqueado</Badge>
+        ) : op.is_live ? (
+          <Badge className="text-[10px] h-5 bg-emerald-500 hover:bg-emerald-500">
+            <Circle className="h-1.5 w-1.5 mr-1 fill-current" /> Ao vivo
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-[10px] h-5">Ocioso</Badge>
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="rounded-md bg-muted/40 p-2">
+          <p className="text-[10px] text-muted-foreground uppercase">Conversas</p>
+          <p className="text-base font-bold">{op.active_chats}</p>
+        </div>
+        <div className="rounded-md bg-muted/40 p-2">
+          <p className="text-[10px] text-muted-foreground uppercase">Enviadas</p>
+          <p className="text-base font-bold">{op.msgs_sent_today}</p>
+        </div>
+        <div className="rounded-md bg-muted/40 p-2">
+          <p className="text-[10px] text-muted-foreground uppercase">Recebidas</p>
+          <p className="text-base font-bold">{op.msgs_received_today}</p>
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          {relativeTime(op.last_activity_at)}
+        </span>
+        <Button size="sm" variant="outline" className="h-7 gap-1" onClick={onSeeChats}>
+          <Eye className="h-3.5 w-3.5" /> Conversas
+        </Button>
+      </div>
+    </div>
+  );
+}
+
