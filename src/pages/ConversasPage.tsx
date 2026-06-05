@@ -167,6 +167,7 @@ export default function ConversasPage() {
   // Reset incoming-tracking when switching contacts to avoid playing sound on chat switch
   useEffect(() => {
     lastSelectedIncomingMessageRef.current = null;
+    setReplyToId(null);
   }, [selectedContactId]);
 
   useEffect(() => {
