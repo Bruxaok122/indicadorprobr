@@ -3,12 +3,12 @@ import { Message } from "@/types/juriszap";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, Check, CheckCheck, X, FileText, ZoomIn, Mic, Ban, Trash2, SmilePlus, Plus } from "lucide-react";
+import { Clock, Check, CheckCheck, X, FileText, ZoomIn, Mic, Ban, Trash2, SmilePlus, Plus, Reply, Image as ImageIcon, Sticker } from "lucide-react";
 import { ImageLightbox } from "./ImageLightbox";
 import { DocumentLightbox } from "./DocumentLightbox";
 import { EmojiPicker } from "./EmojiPicker";
 import { motion } from "framer-motion";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 
@@ -17,6 +17,8 @@ interface ChatBubbleProps {
   reactions?: Message[];
   onDeleteMessage?: (messageId: string) => void;
   onReact?: (messageId: string, emoji: string) => void;
+  onReply?: (message: Message) => void;
+  findMessage?: (id: string) => Message | undefined;
 }
 
 const DEFAULT_QUICK_EMOJIS = ["👍", "🆗", "❤️", "😂", "😮", "😢", "🙏", "🔥"];
@@ -70,11 +72,18 @@ function getErrorLabel(errorCode?: string | null): string | null {
   }
 }
 
-export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: ChatBubbleProps) {
+export function ChatBubble({ message, reactions, onDeleteMessage, onReact, onReply, findMessage }: ChatBubbleProps) {
   const isOutgoing = message.direction === "outgoing";
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [docLightboxOpen, setDocLightboxOpen] = useState(false);
   const canDelete = isOutgoing && !message.is_deleted;
+  const canReply = !!onReply && !message.is_deleted && message.message_type !== "reaction";
+  const hasMenu = canDelete || canReply;
+
+  const parentMsg = message.reply_to_message_id && findMessage
+    ? findMessage(message.reply_to_message_id)
+    : undefined;
+
 
   const renderContent = () => {
     // Deleted message
