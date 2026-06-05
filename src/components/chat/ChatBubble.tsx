@@ -219,11 +219,11 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact, onRep
       <div className={cn("flex mb-0.5 px-3 md:px-4 group", isOutgoing ? "justify-end" : "justify-start")}>
         <div className="relative inline-block">
           <DropdownMenu>
-            <DropdownMenuTrigger asChild disabled={!canDelete}>
+            <DropdownMenuTrigger asChild disabled={!hasMenu}>
               <motion.div
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.15, ease: "easeOut" }}
-                className={cn(canDelete && "cursor-context-menu")}
+                className={cn(hasMenu && "cursor-context-menu")}
               >
                 <div className={cn(
                   "relative max-w-[85vw] md:max-w-[480px] px-2.5 py-1.5 shadow-sm chat-selectable overflow-hidden break-words",
@@ -232,6 +232,7 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact, onRep
                     : "bubble-incoming bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100",
                   reactionEmojis.length > 0 && "mb-3.5"
                 )}>
+                  {parentMsg && <ReplyQuote parent={parentMsg} isOutgoing={isOutgoing} />}
                   {renderContent()}
                   <div className="flex items-center justify-end gap-1 mt-0.5 -mb-0.5 text-[11px] text-gray-500 dark:text-gray-400">
                     <span>{format(new Date(message.created_at), "HH:mm", { locale: ptBR })}</span>
@@ -245,18 +246,28 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact, onRep
                 </div>
               </motion.div>
             </DropdownMenuTrigger>
-            {canDelete && (
-              <DropdownMenuContent side="left" align="start" className="min-w-[160px]">
-                <DropdownMenuItem
-                  onClick={() => onDeleteMessage?.(message.id)}
-                  className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Apagar para todos
-                </DropdownMenuItem>
+            {hasMenu && (
+              <DropdownMenuContent side={isOutgoing ? "left" : "right"} align="start" className="min-w-[160px]">
+                {canReply && (
+                  <DropdownMenuItem onClick={() => onReply?.(message)}>
+                    <Reply className="mr-2 h-4 w-4" />
+                    Responder
+                  </DropdownMenuItem>
+                )}
+                {canReply && canDelete && <DropdownMenuSeparator />}
+                {canDelete && (
+                  <DropdownMenuItem
+                    onClick={() => onDeleteMessage?.(message.id)}
+                    className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Apagar para todos
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             )}
           </DropdownMenu>
+
 
           {/* Emoji react button — only on incoming bubbles */}
           {!isOutgoing && onReact && !message.is_deleted && (
