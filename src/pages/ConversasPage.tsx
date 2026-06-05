@@ -56,6 +56,7 @@ export default function ConversasPage() {
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
   const [isTogglingAI, setIsTogglingAI] = useState(false);
+  const [replyToId, setReplyToId] = useState<string | null>(null);
   const lastReplyStatusByContactRef = useRef<Record<string, string | null | undefined>>({});
   const replyStatusInitializedRef = useRef(false);
   const lastSelectedIncomingMessageRef = useRef<string | null>(null);
@@ -65,6 +66,7 @@ export default function ConversasPage() {
   } = useMessages(selectedContactId);
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
+  const replyToMessage = replyToId ? messages.find((m) => m.id === replyToId) || null : null;
 
   // Unread message counts (per contact, per operator)
   const contactIds = useMemo(() => contacts.map((c) => c.id), [contacts]);
@@ -212,8 +214,14 @@ export default function ConversasPage() {
     if (!messageText.trim() || !selectedContactId) return;
     if (!canSendFreeText) { toast.error("Primeiro contato requer template"); return; }
     if (phones.length > 0 && !selectedPhoneNumberId) { toast.error("Selecione um número de disparo"); return; }
-    sendMessage({ contactId: selectedContactId, message: messageText.trim(), selectedPhoneNumberId: selectedPhoneNumberId || undefined });
+    sendMessage({
+      contactId: selectedContactId,
+      message: messageText.trim(),
+      selectedPhoneNumberId: selectedPhoneNumberId || undefined,
+      replyToMessageId: replyToId || undefined,
+    });
     setMessageText("");
+    setReplyToId(null);
   };
 
   const handleSendTemplate = () => {
