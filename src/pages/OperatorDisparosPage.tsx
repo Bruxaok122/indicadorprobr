@@ -185,6 +185,8 @@ export default function OperatorDisparosPage() {
     dispatchControlsRef,
   } = useDispatchContext();
 
+  const { isReady: cooldownReady, remainingMs: cooldownMs, markDispatched } = useDispatchCooldown(user?.id);
+
   const persisted = loadPersistedState();
 
   // Import state (NOT persisted)
