@@ -27,6 +27,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { useContacts } from "@/hooks/useContacts";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
+import { useDispatchCooldown, formatCooldown } from "@/hooks/useDispatchCooldown";
 import { useDispatchContext, ActiveDispatch, DispatchMode } from "@/contexts/DispatchContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -183,6 +184,8 @@ export default function OperatorDisparosPage() {
     handleCancel,
     dispatchControlsRef,
   } = useDispatchContext();
+
+  const { isReady: cooldownReady, remainingMs: cooldownMs, markDispatched } = useDispatchCooldown(user?.id);
 
   const persisted = loadPersistedState();
 
@@ -528,6 +531,10 @@ export default function OperatorDisparosPage() {
 
   // --- Dispatch ---
   const handleSend = async () => {
+    if (!cooldownReady) {
+      toast.error(`Aguarde ${formatCooldown(cooldownMs)} para o próximo disparo`);
+      return;
+    }
     if (!selectedTemplate || !selectedList || !user?.id) return;
     if (phones.length > 0 && !selectedPhoneNumberId) {
       toast.error("Selecione um número de disparo");
@@ -592,6 +599,7 @@ export default function OperatorDisparosPage() {
       errors: [],
     };
     addDispatch(newDispatch);
+    markDispatched();
 
     runDispatch({
       dispatchId,
@@ -624,6 +632,10 @@ export default function OperatorDisparosPage() {
 
   // --- Avulso: create a single contact and dispatch immediately ---
   const handleAvulsoSend = async () => {
+    if (!cooldownReady) {
+      toast.error(`Aguarde ${formatCooldown(cooldownMs)} para o próximo disparo`);
+      return;
+    }
     if (!user?.id || !selectedTemplate) return;
     const digits = avulsoPhone.replace(/\D/g, "");
     let normalized = digits;
@@ -700,6 +712,7 @@ export default function OperatorDisparosPage() {
         toast.error("Envio falhou", { description: errMsg });
       } else {
         toast.success("Mensagem enviada!");
+        markDispatched();
         setShowAvulsoDialog(false);
         setAvulsoName(""); setAvulsoPhone(""); setAvulsoCpf("");
         setAvulsoContra(""); setAvulsoProcesso("");
@@ -1249,15 +1262,20 @@ export default function OperatorDisparosPage() {
 
                             {dispatchType === "lista" ? (
                               <Button className="w-full gap-2" size="lg" onClick={handleSend}
-                                disabled={!selectedTemplate || !selectedList || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId)}>
+                                disabled={!cooldownReady || !selectedTemplate || !selectedList || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId)}>
                                 <Send className="h-4 w-4" />
-                                Disparar para {effectiveCount} contato{effectiveCount !== 1 ? "s" : ""}
+                                {cooldownReady ? `Disparar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}` : `Aguarde ${formatCooldown(cooldownMs)}`}
                               </Button>
                             ) : (
                               <Button className="w-full gap-2" size="lg" onClick={handleAvulsoSend}
-                                disabled={avulsoSending || !isAvulsoValid || !selectedTemplate || (phones.length > 0 && !selectedPhoneNumberId)}>
-                                {avulsoSending ? <LoadingSpinner size="sm" /> : <><Send className="h-4 w-4" /> Enviar para {avulsoName || "contato"}</>}
+                                disabled={!cooldownReady || avulsoSending || !isAvulsoValid || !selectedTemplate || (phones.length > 0 && !selectedPhoneNumberId)}>
+                                {avulsoSending ? <LoadingSpinner size="sm" /> : <><Send className="h-4 w-4" /> {cooldownReady ? `Enviar para ${avulsoName || "contato"}` : `Aguarde ${formatCooldown(cooldownMs)}`}</>}
                               </Button>
+                            )}
+                            {!cooldownReady && (
+                              <p className="text-[11px] text-center text-muted-foreground tabular-nums">
+                                ⏳ Próximo disparo disponível em <span className="font-mono font-semibold text-primary">{formatCooldown(cooldownMs)}</span>
+                              </p>
                             )}
 
                             <div className="flex justify-start pt-2">
