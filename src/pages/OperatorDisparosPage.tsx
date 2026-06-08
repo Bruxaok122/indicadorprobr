@@ -28,7 +28,6 @@ import { useContacts } from "@/hooks/useContacts";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
 import { useDispatchCooldown, formatCooldown } from "@/hooks/useDispatchCooldown";
-import { Timer } from "lucide-react";
 import { useDispatchContext, ActiveDispatch, DispatchMode } from "@/contexts/DispatchContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
