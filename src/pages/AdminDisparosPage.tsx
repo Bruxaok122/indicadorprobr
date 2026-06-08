@@ -504,6 +504,7 @@ export default function AdminDisparosPage() {
     };
 
     addDispatch(newDispatch);
+    markDispatched();
 
     // Capture values for the async closure
     const capturedTemplate = selectedTemplate;
