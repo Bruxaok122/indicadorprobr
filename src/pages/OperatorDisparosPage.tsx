@@ -531,6 +531,10 @@ export default function OperatorDisparosPage() {
 
   // --- Dispatch ---
   const handleSend = async () => {
+    if (!cooldownReady) {
+      toast.error(`Aguarde ${formatCooldown(cooldownMs)} para o próximo disparo`);
+      return;
+    }
     if (!selectedTemplate || !selectedList || !user?.id) return;
     if (phones.length > 0 && !selectedPhoneNumberId) {
       toast.error("Selecione um número de disparo");
@@ -595,6 +599,7 @@ export default function OperatorDisparosPage() {
       errors: [],
     };
     addDispatch(newDispatch);
+    markDispatched();
 
     runDispatch({
       dispatchId,
