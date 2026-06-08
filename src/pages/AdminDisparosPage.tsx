@@ -1413,10 +1413,19 @@ export default function AdminDisparosPage() {
                   </div>
 
                   <Button className="w-full gap-2" size="lg" onClick={handleSend}
-                    disabled={!selectedTemplate || !selectedList || (!sharedDispatch && !selectedUserId) || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId) || (isScheduled && !scheduledDate)}>
+                    disabled={(!isScheduled && !cooldownReady) || !selectedTemplate || !selectedList || (!sharedDispatch && !selectedUserId) || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId) || (isScheduled && !scheduledDate)}>
                     {isScheduled ? <CalendarClock className="h-4 w-4" /> : <Send className="h-4 w-4" />}
-                    {isScheduled ? `Agendar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}` : `Disparar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}`}
+                    {isScheduled
+                      ? `Agendar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}`
+                      : cooldownReady
+                        ? `Disparar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}`
+                        : `Aguarde ${formatCooldown(cooldownMs)}`}
                   </Button>
+                  {!isScheduled && !cooldownReady && (
+                    <p className="text-[11px] text-center text-muted-foreground tabular-nums mt-2">
+                      ⏳ Próximo disparo disponível em <span className="font-mono font-semibold text-primary">{formatCooldown(cooldownMs)}</span>
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             )}
