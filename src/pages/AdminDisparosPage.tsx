@@ -209,6 +209,8 @@ export default function AdminDisparosPage() {
     dispatchControlsRef,
   } = useDispatchContext();
 
+  const { isReady: cooldownReady, remainingMs: cooldownMs, markDispatched } = useDispatchCooldown(user?.id);
+
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(0);
 
@@ -381,6 +383,10 @@ export default function AdminDisparosPage() {
   };
 
   const handleSend = async () => {
+    if (!cooldownReady) {
+      toast.error(`Aguarde ${formatCooldown(cooldownMs)} para o próximo disparo`);
+      return;
+    }
     if (!selectedTemplate || !selectedList) return;
     if (!sharedDispatch && !selectedUserId) return;
     if (!user?.id) {
