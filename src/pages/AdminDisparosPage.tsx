@@ -198,7 +198,7 @@ async function waitForDispatchWindow(
 
 export default function AdminDisparosPage() {
   const { users } = useAdmin();
-  const { configs: apiConfigs, activeConfig, setActive: setActiveApi } = useApiConfigs();
+  const { configs: apiConfigs, activeConfig } = useApiConfigs();
   const { allTemplates } = useMetaTemplates();
   const { phones: allPhones } = useWabaPhones();
   const { user } = useAuthContext();
