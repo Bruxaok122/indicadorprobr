@@ -259,6 +259,19 @@ export default function AdminDisparosPage() {
   const [customAdvogadoName, setCustomAdvogadoName] = useState<string>("");
   const phoneVerifiedName = customAdvogadoName || defaultPhoneName;
 
+  // Default the selected API to the currently active one, on first load
+  useEffect(() => {
+    if (!selectedApiConfigId && activeConfig?.id) {
+      setSelectedApiConfigId(activeConfig.id);
+    }
+  }, [activeConfig?.id, selectedApiConfigId]);
+
+  // Reset phone when API changes
+  useEffect(() => {
+    setSelectedPhoneNumberId("");
+    setCustomAdvogadoName("");
+  }, [selectedApiConfigId]);
+
   // Auto-select phone & reset custom name on phone change
   useEffect(() => {
     if (phones.length === 1 && !selectedPhoneNumberId) {
@@ -267,11 +280,11 @@ export default function AdminDisparosPage() {
     setCustomAdvogadoName(""); // Reset override when phone changes
   }, [phones, selectedPhoneNumberId]);
 
-  // Load available lists — always refresh on step 3, and once on mount
+  // Load available lists — always refresh on step 4, and once on mount
   useEffect(() => {
     refreshLists();
 
-    if (currentStep === 3) {
+    if (currentStep === 4) {
       const interval = setInterval(refreshLists, 5000);
       return () => clearInterval(interval);
     }
@@ -300,15 +313,17 @@ export default function AdminDisparosPage() {
   const templateVars = extractVariables(templateBody);
   const effectiveCount = dispatchMode === "turbo" ? turboLimit : batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
 
-  const isStep1Valid = phones.length === 0 || !!selectedPhoneNumberId;
-  const isStep2Valid = !!selectedTemplate;
-  const isStep3Valid = !!selectedList && listContactCount > 0;
+  const isStepApiValid = !!selectedApiConfigId;
+  const isStepPhoneValid = phones.length === 0 || !!selectedPhoneNumberId;
+  const isStepTemplateValid = !!selectedTemplate;
+  const isStepListValid = !!selectedList && listContactCount > 0;
 
   const canProceed = (step: number) => {
     switch (step) {
-      case 1: return isStep1Valid;
-      case 2: return isStep2Valid;
-      case 3: return isStep3Valid;
+      case 1: return isStepApiValid;
+      case 2: return isStepPhoneValid;
+      case 3: return isStepTemplateValid;
+      case 4: return isStepListValid;
       default: return true;
     }
   };
@@ -317,7 +332,7 @@ export default function AdminDisparosPage() {
     setDirection(step > currentStep ? 1 : -1);
     setCurrentStep(step);
   };
-  const handleNext = () => { if (currentStep < 4 && canProceed(currentStep)) goToStep(currentStep + 1); };
+  const handleNext = () => { if (currentStep < 5 && canProceed(currentStep)) goToStep(currentStep + 1); };
   const handleBack = () => { if (currentStep > 1) goToStep(currentStep - 1); };
 
   async function refreshLists() {
