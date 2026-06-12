@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { resilientDelay } from "@/lib/resilientDelay";
 import { useAdmin } from "@/hooks/useAdmin";
+import { useApiConfigs } from "@/hooks/useApiConfigs";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
 import { useDispatchCooldown, formatCooldown } from "@/hooks/useDispatchCooldown";
@@ -17,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock, Zap } from "lucide-react";
+import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock, Zap, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -56,10 +57,11 @@ interface ContactList {
 }
 
 const STEPS = [
-  { id: 1, label: "Número", icon: Phone },
-  { id: 2, label: "Template", icon: FileText },
-  { id: 3, label: "Lista", icon: List },
-  { id: 4, label: "Enviar", icon: Send },
+  { id: 1, label: "API", icon: KeyRound },
+  { id: 2, label: "Número", icon: Phone },
+  { id: 3, label: "Template", icon: FileText },
+  { id: 4, label: "Lista", icon: List },
+  { id: 5, label: "Enviar", icon: Send },
 ];
 
 const slideVariants = {
