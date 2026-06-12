@@ -1183,7 +1183,7 @@ export default function AdminDisparosPage() {
               </Card>
             )}
 
-            {currentStep === 2 && (
+            {currentStep === 3 && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -1234,7 +1234,7 @@ export default function AdminDisparosPage() {
               </Card>
             )}
 
-            {currentStep === 3 && (
+            {currentStep === 4 && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -1358,7 +1358,7 @@ export default function AdminDisparosPage() {
               </Card>
             )}
 
-            {currentStep === 4 && (
+            {currentStep === 5 && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
