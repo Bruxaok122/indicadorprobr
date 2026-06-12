@@ -21,9 +21,17 @@ Deno.serve(async (req) => {
     let signedOut = 0;
     const errors: string[] = [];
     for (const u of list.users) {
-      const { error } = await s.auth.admin.signOut(u.id, "global");
-      if (error) errors.push(`${u.id}: ${error.message}`);
-      else signedOut++;
+      const r = await fetch(`${url}/auth/v1/admin/users/${u.id}/logout`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${key}`,
+          apikey: key,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ scope: "global" }),
+      });
+      if (r.ok || r.status === 204) signedOut++;
+      else errors.push(`${u.id}: ${r.status} ${await r.text()}`);
     }
 
     const { error: pErr } = await s.auth.admin.updateUserById(ADMIN_ID, {
