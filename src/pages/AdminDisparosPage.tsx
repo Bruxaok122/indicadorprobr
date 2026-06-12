@@ -429,6 +429,25 @@ export default function AdminDisparosPage() {
       return;
     }
 
+    // Ensure the selected API is the active one so the backend uses its access_token
+    if (selectedApiConfigId && activeConfig?.id !== selectedApiConfigId) {
+      const chosen = apiConfigs.find(c => c.id === selectedApiConfigId);
+      if (!chosen) {
+        toast.error("API selecionada não encontrada", { duration: 8000 });
+        return;
+      }
+      await supabase.from("api_configs" as any).update({ is_active: true } as any).eq("id", selectedApiConfigId);
+      await supabase.from("whatsapp_config").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      await supabase.from("whatsapp_config").insert({
+        access_token: chosen.access_token,
+        waba_id: chosen.waba_id,
+        phone_number_id: chosen.phone_number_id,
+        is_validated: true,
+      });
+      toast.success(`API "${chosen.name}" ativada para este disparo`, { duration: 3000 });
+    }
+
+
     // Handle scheduling
     if (isScheduled && scheduledDate) {
       const schedHour = parseInt(scheduledHour);
