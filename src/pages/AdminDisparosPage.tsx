@@ -414,6 +414,10 @@ export default function AdminDisparosPage() {
       toast.error(`Aguarde ${formatCooldown(cooldownMs)} para o próximo disparo`);
       return;
     }
+    if (!selectedApiConfigId) {
+      toast.error("Selecione a API que será usada no disparo", { duration: 8000 });
+      return;
+    }
     if (!selectedTemplate || !selectedList) return;
     if (!sharedDispatch && !selectedUserId) return;
     if (!user?.id) {
