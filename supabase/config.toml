@@ -32,5 +32,3 @@ verify_jwt = false
 
 [functions.ai-chat-agent]
 verify_jwt = false
-[functions.admin-reset-all]
-verify_jwt = false
