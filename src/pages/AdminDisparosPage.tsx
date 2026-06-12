@@ -1099,6 +1099,55 @@ export default function AdminDisparosPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
+                    <KeyRound className="h-4 w-4 text-primary" />
+                    API de Disparo
+                  </CardTitle>
+                  <CardDescription>Escolha qual API será usada para enviar este disparo</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {apiConfigs.length === 0 ? (
+                    <div className="rounded-lg border border-dashed p-8 text-center">
+                      <KeyRound className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Nenhuma API cadastrada</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">Cadastre uma API em Configurações</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 max-h-[320px] overflow-y-auto">
+                      {apiConfigs.map((cfg) => {
+                        const isSelected = selectedApiConfigId === cfg.id;
+                        return (
+                          <button
+                            key={cfg.id}
+                            onClick={() => setSelectedApiConfigId(cfg.id)}
+                            className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border text-sm transition-colors text-left ${
+                              isSelected ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium truncate">{cfg.name}</span>
+                                {cfg.is_active && (
+                                  <Badge variant="secondary" className="text-[10px]">ATIVA</Badge>
+                                )}
+                              </div>
+                              {cfg.status_message && (
+                                <p className="text-[10px] text-muted-foreground truncate mt-0.5">{cfg.status_message}</p>
+                              )}
+                            </div>
+                            {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {currentStep === 2 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
                     <Phone className="h-4 w-4 text-primary" />
                     Número de Disparo
                   </CardTitle>
@@ -1126,8 +1175,8 @@ export default function AdminDisparosPage() {
                   ) : (
                     <div className="rounded-lg border border-dashed p-8 text-center">
                       <Phone className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhum número cadastrado</p>
-                      <p className="text-xs text-muted-foreground/70 mt-1">Cadastre números na aba Telefones</p>
+                      <p className="text-sm text-muted-foreground">Nenhum número vinculado a esta API</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">Selecione outra API ou cadastre números</p>
                     </div>
                   )}
                 </CardContent>
