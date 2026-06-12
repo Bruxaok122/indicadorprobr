@@ -247,6 +247,13 @@ export default function AdminDisparosPage() {
   const [highIncomeOnly, setHighIncomeOnly] = useState(false);
 
   // Phone data for advogado variable (editable override)
+  // Filter phones to those belonging to the selected API
+  const phones = useMemo(
+    () => (selectedApiConfigId ? allPhones.filter(p => p.api_config_id === selectedApiConfigId) : []),
+    [allPhones, selectedApiConfigId]
+  );
+
+  // Phone data for advogado variable (editable override)
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
   const defaultPhoneName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
   const [customAdvogadoName, setCustomAdvogadoName] = useState<string>("");
