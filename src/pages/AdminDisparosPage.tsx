@@ -1537,7 +1537,7 @@ export default function AdminDisparosPage() {
             <ChevronLeft className="h-4 w-4" /> Voltar
           </Button>
           <span className="text-xs text-muted-foreground">Etapa {currentStep} de {STEPS.length}</span>
-          {currentStep < 4 ? (
+          {currentStep < 5 ? (
             <Button onClick={handleNext} disabled={!canProceed(currentStep)} className="gap-1.5">
               Próximo <ChevronRight className="h-4 w-4" />
             </Button>
