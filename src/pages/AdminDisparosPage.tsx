@@ -198,8 +198,9 @@ async function waitForDispatchWindow(
 
 export default function AdminDisparosPage() {
   const { users } = useAdmin();
+  const { configs: apiConfigs, activeConfig, setActive: setActiveApi } = useApiConfigs();
   const { allTemplates } = useMetaTemplates();
-  const { phones } = useWabaPhones();
+  const { phones: allPhones } = useWabaPhones();
   const { user } = useAuthContext();
   const {
     activeDispatches,
@@ -216,7 +217,9 @@ export default function AdminDisparosPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(0);
 
-  // Step 1: Phone
+  // Step 1: API selection
+  const [selectedApiConfigId, setSelectedApiConfigId] = useState<string>("");
+  // Step 2: Phone
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
   // Step 2: Template
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
