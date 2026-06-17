@@ -637,7 +637,7 @@ export default function AdminDisparosPage() {
                   failed: results.failed,
                   errors: [...results.errors],
                 });
-                toast.error(`🛑 Turbo: Erro detectado, parando imediatamente.`, { duration: 15000 });
+                toast.error(`🛑 Turbo: Erro detectado, parando imediatamente.`, { description: (result.results.errors || []).slice(-3).join(" • ") || undefined, duration: 20000 });
                 break;
               }
               results.sent += result.results.sent || 0;
