@@ -50,8 +50,10 @@ export default function WebhookPage() {
         description: totalApps > 0 ? `Apps inscritos detectados: ${totalApps}` : "Inscrição confirmada.",
       });
     } catch (err: any) {
+      const responseBody = await err?.context?.json?.().catch(() => null);
+      const description = responseBody?.error || err?.message || "Tente novamente em alguns segundos.";
       toast.error("Não foi possível inscrever automaticamente", {
-        description: err?.message || "Tente novamente em alguns segundos.",
+        description,
       });
     } finally {
       setIsSubscribingApp(false);
