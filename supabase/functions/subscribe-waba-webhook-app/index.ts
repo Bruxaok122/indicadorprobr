@@ -80,12 +80,39 @@ serve(async (req) => {
       );
     }
 
-    const subscribeResponse = await fetch(`https://graph.facebook.com/v21.0/${wabaId}/subscribed_apps`, {
+    // The stored "waba_id" may actually be a phone_number_id. Try to subscribe; if Meta complains
+    // that phone_numbers/subscribed_apps doesn't exist on that object, resolve the real WABA id.
+    async function resolveWabaId(id: string, token: string): Promise<string | null> {
+      const r = await fetch(
+        `https://graph.facebook.com/v21.0/${id}?fields=whatsapp_business_account`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const j = await r.json();
+      return j?.whatsapp_business_account?.id ?? null;
+    }
+
+    let subscribeResponse = await fetch(`https://graph.facebook.com/v21.0/${wabaId}/subscribed_apps`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
+
+    if (!subscribeResponse.ok) {
+      const cloned = subscribeResponse.clone();
+      const errBody = await cloned.json().catch(() => null);
+      const code = errBody?.error?.code;
+      const msg = String(errBody?.error?.message || "");
+      if (code === 100 && (msg.includes("subscribed_apps") || msg.includes("nonexisting field"))) {
+        const realWaba = await resolveWabaId(wabaId, accessToken);
+        if (realWaba) {
+          console.log(`Resolved real WABA id ${realWaba} from ${wabaId}`);
+          wabaId = realWaba;
+          subscribeResponse = await fetch(`https://graph.facebook.com/v21.0/${wabaId}/subscribed_apps`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+        }
+      }
+    }
 
     const subscribeResult = await subscribeResponse.json();
     console.log("Subscribe app result:", JSON.stringify(subscribeResult, null, 2));
