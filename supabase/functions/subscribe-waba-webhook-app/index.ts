@@ -165,6 +165,11 @@ serve(async (req) => {
         }
       );
     }
+
+    return new Response(JSON.stringify({ success: false, error: "Nenhuma configuração válida para inscrição do app." }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error: unknown) {
     console.error("subscribe-waba-webhook-app error:", error);
     return new Response(
