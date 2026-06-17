@@ -1,7 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { resilientDelay } from "@/lib/resilientDelay";
 import { useAdmin } from "@/hooks/useAdmin";
-import { useApiConfigs } from "@/hooks/useApiConfigs";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
 import { useDispatchCooldown, formatCooldown } from "@/hooks/useDispatchCooldown";
@@ -18,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock, Zap, KeyRound } from "lucide-react";
+import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -57,11 +56,10 @@ interface ContactList {
 }
 
 const STEPS = [
-  { id: 1, label: "API", icon: KeyRound },
-  { id: 2, label: "Número", icon: Phone },
-  { id: 3, label: "Template", icon: FileText },
-  { id: 4, label: "Lista", icon: List },
-  { id: 5, label: "Enviar", icon: Send },
+  { id: 1, label: "Número", icon: Phone },
+  { id: 2, label: "Template", icon: FileText },
+  { id: 3, label: "Lista", icon: List },
+  { id: 4, label: "Enviar", icon: Send },
 ];
 
 const slideVariants = {
@@ -198,9 +196,8 @@ async function waitForDispatchWindow(
 
 export default function AdminDisparosPage() {
   const { users } = useAdmin();
-  const { configs: apiConfigs, activeConfig } = useApiConfigs();
   const { allTemplates } = useMetaTemplates();
-  const { phones: allPhones } = useWabaPhones();
+  const { phones } = useWabaPhones();
   const { user } = useAuthContext();
   const {
     activeDispatches,
@@ -217,9 +214,7 @@ export default function AdminDisparosPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(0);
 
-  // Step 1: API selection
-  const [selectedApiConfigId, setSelectedApiConfigId] = useState<string>("");
-  // Step 2: Phone
+  // Step 1: Phone
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
   // Step 2: Template
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
@@ -247,30 +242,10 @@ export default function AdminDisparosPage() {
   const [highIncomeOnly, setHighIncomeOnly] = useState(false);
 
   // Phone data for advogado variable (editable override)
-  // Filter phones to those belonging to the selected API
-  const phones = useMemo(
-    () => (selectedApiConfigId ? allPhones.filter(p => p.api_config_id === selectedApiConfigId) : []),
-    [allPhones, selectedApiConfigId]
-  );
-
-  // Phone data for advogado variable (editable override)
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
   const defaultPhoneName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
   const [customAdvogadoName, setCustomAdvogadoName] = useState<string>("");
   const phoneVerifiedName = customAdvogadoName || defaultPhoneName;
-
-  // Default the selected API to the currently active one, on first load
-  useEffect(() => {
-    if (!selectedApiConfigId && activeConfig?.id) {
-      setSelectedApiConfigId(activeConfig.id);
-    }
-  }, [activeConfig?.id, selectedApiConfigId]);
-
-  // Reset phone when API changes
-  useEffect(() => {
-    setSelectedPhoneNumberId("");
-    setCustomAdvogadoName("");
-  }, [selectedApiConfigId]);
 
   // Auto-select phone & reset custom name on phone change
   useEffect(() => {
@@ -280,11 +255,11 @@ export default function AdminDisparosPage() {
     setCustomAdvogadoName(""); // Reset override when phone changes
   }, [phones, selectedPhoneNumberId]);
 
-  // Load available lists — always refresh on step 4, and once on mount
+  // Load available lists — always refresh on step 3, and once on mount
   useEffect(() => {
     refreshLists();
 
-    if (currentStep === 4) {
+    if (currentStep === 3) {
       const interval = setInterval(refreshLists, 5000);
       return () => clearInterval(interval);
     }
@@ -313,17 +288,15 @@ export default function AdminDisparosPage() {
   const templateVars = extractVariables(templateBody);
   const effectiveCount = dispatchMode === "turbo" ? turboLimit : batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
 
-  const isStepApiValid = !!selectedApiConfigId;
-  const isStepPhoneValid = phones.length === 0 || !!selectedPhoneNumberId;
-  const isStepTemplateValid = !!selectedTemplate;
-  const isStepListValid = !!selectedList && listContactCount > 0;
+  const isStep1Valid = phones.length === 0 || !!selectedPhoneNumberId;
+  const isStep2Valid = !!selectedTemplate;
+  const isStep3Valid = !!selectedList && listContactCount > 0;
 
   const canProceed = (step: number) => {
     switch (step) {
-      case 1: return isStepApiValid;
-      case 2: return isStepPhoneValid;
-      case 3: return isStepTemplateValid;
-      case 4: return isStepListValid;
+      case 1: return isStep1Valid;
+      case 2: return isStep2Valid;
+      case 3: return isStep3Valid;
       default: return true;
     }
   };
@@ -332,7 +305,7 @@ export default function AdminDisparosPage() {
     setDirection(step > currentStep ? 1 : -1);
     setCurrentStep(step);
   };
-  const handleNext = () => { if (currentStep < 5 && canProceed(currentStep)) goToStep(currentStep + 1); };
+  const handleNext = () => { if (currentStep < 4 && canProceed(currentStep)) goToStep(currentStep + 1); };
   const handleBack = () => { if (currentStep > 1) goToStep(currentStep - 1); };
 
   async function refreshLists() {
@@ -414,10 +387,6 @@ export default function AdminDisparosPage() {
       toast.error(`Aguarde ${formatCooldown(cooldownMs)} para o próximo disparo`);
       return;
     }
-    if (!selectedApiConfigId) {
-      toast.error("Selecione a API que será usada no disparo", { duration: 8000 });
-      return;
-    }
     if (!selectedTemplate || !selectedList) return;
     if (!sharedDispatch && !selectedUserId) return;
     if (!user?.id) {
@@ -428,25 +397,6 @@ export default function AdminDisparosPage() {
       toast.error("Selecione um número de disparo", { duration: 8000 });
       return;
     }
-
-    // Ensure the selected API is the active one so the backend uses its access_token
-    if (selectedApiConfigId && activeConfig?.id !== selectedApiConfigId) {
-      const chosen = apiConfigs.find(c => c.id === selectedApiConfigId);
-      if (!chosen) {
-        toast.error("API selecionada não encontrada", { duration: 8000 });
-        return;
-      }
-      await supabase.from("api_configs" as any).update({ is_active: true } as any).eq("id", selectedApiConfigId);
-      await supabase.from("whatsapp_config").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-      await supabase.from("whatsapp_config").insert({
-        access_token: chosen.access_token,
-        waba_id: chosen.waba_id,
-        phone_number_id: chosen.phone_number_id,
-        is_validated: true,
-      });
-      toast.success(`API "${chosen.name}" ativada para este disparo`, { duration: 3000 });
-    }
-
 
     // Handle scheduling
     if (isScheduled && scheduledDate) {
@@ -637,7 +587,7 @@ export default function AdminDisparosPage() {
                   failed: results.failed,
                   errors: [...results.errors],
                 });
-                toast.error(`🛑 Turbo: Erro detectado, parando imediatamente.`, { description: (result.results.errors || []).slice(-3).join(" • ") || undefined, duration: 20000 });
+                toast.error(`🛑 Turbo: Erro detectado, parando imediatamente.`, { duration: 15000 });
                 break;
               }
               results.sent += result.results.sent || 0;
@@ -651,7 +601,7 @@ export default function AdminDisparosPage() {
                 failed: results.failed,
                 errors: [...results.errors],
               });
-              toast.error(`🛑 Turbo: Erro na API, parando imediatamente.`, { description: results.errors.slice(-1)[0] || undefined, duration: 20000 });
+              toast.error(`🛑 Turbo: Erro na API, parando imediatamente.`, { duration: 15000 });
               break;
             }
 
@@ -925,7 +875,7 @@ export default function AdminDisparosPage() {
         if (ctrl?.isCancelled) {
           toast.warning(`${operatorProfile?.full_name}: Cancelado — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}`, duration: 10000 });
         } else if (results.failed > 0) {
-          toast.error(`${operatorProfile?.full_name}: Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}`, description: results.errors.slice(-3).join(" • ") || undefined, duration: 20000 });
+          toast.error(`${operatorProfile?.full_name}: Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}`, duration: 15000 });
         } else {
           toast.success(`${operatorProfile?.full_name}: Concluído — ${results.sent} enviados`, { id: `dispatch-${dispatchId}`, duration: 8000 });
         }
@@ -1099,55 +1049,6 @@ export default function AdminDisparosPage() {
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <KeyRound className="h-4 w-4 text-primary" />
-                    API de Disparo
-                  </CardTitle>
-                  <CardDescription>Escolha qual API será usada para enviar este disparo</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {apiConfigs.length === 0 ? (
-                    <div className="rounded-lg border border-dashed p-8 text-center">
-                      <KeyRound className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhuma API cadastrada</p>
-                      <p className="text-xs text-muted-foreground/70 mt-1">Cadastre uma API em Configurações</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5 max-h-[320px] overflow-y-auto">
-                      {apiConfigs.map((cfg) => {
-                        const isSelected = selectedApiConfigId === cfg.id;
-                        return (
-                          <button
-                            key={cfg.id}
-                            onClick={() => setSelectedApiConfigId(cfg.id)}
-                            className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border text-sm transition-colors text-left ${
-                              isSelected ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
-                            }`}
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium truncate">{cfg.name}</span>
-                                {cfg.is_active && (
-                                  <Badge variant="secondary" className="text-[10px]">ATIVA</Badge>
-                                )}
-                              </div>
-                              {cfg.status_message && (
-                                <p className="text-[10px] text-muted-foreground truncate mt-0.5">{cfg.status_message}</p>
-                              )}
-                            </div>
-                            {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {currentStep === 2 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
                     <Phone className="h-4 w-4 text-primary" />
                     Número de Disparo
                   </CardTitle>
@@ -1175,15 +1076,15 @@ export default function AdminDisparosPage() {
                   ) : (
                     <div className="rounded-lg border border-dashed p-8 text-center">
                       <Phone className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">Nenhum número vinculado a esta API</p>
-                      <p className="text-xs text-muted-foreground/70 mt-1">Selecione outra API ou cadastre números</p>
+                      <p className="text-sm text-muted-foreground">Nenhum número cadastrado</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">Cadastre números na aba Telefones</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
             )}
 
-            {currentStep === 3 && (
+            {currentStep === 2 && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -1234,7 +1135,7 @@ export default function AdminDisparosPage() {
               </Card>
             )}
 
-            {currentStep === 4 && (
+            {currentStep === 3 && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -1358,7 +1259,7 @@ export default function AdminDisparosPage() {
               </Card>
             )}
 
-            {currentStep === 5 && (
+            {currentStep === 4 && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -1537,7 +1438,7 @@ export default function AdminDisparosPage() {
             <ChevronLeft className="h-4 w-4" /> Voltar
           </Button>
           <span className="text-xs text-muted-foreground">Etapa {currentStep} de {STEPS.length}</span>
-          {currentStep < 5 ? (
+          {currentStep < 4 ? (
             <Button onClick={handleNext} disabled={!canProceed(currentStep)} className="gap-1.5">
               Próximo <ChevronRight className="h-4 w-4" />
             </Button>

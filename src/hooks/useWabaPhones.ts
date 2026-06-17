@@ -13,7 +13,6 @@ export interface WabaPhoneNumber {
   lawyer_name?: string | null;
   messaging_tier?: string | null;
   tier_updated_at?: string | null;
-  api_config_id?: string | null;
 }
 
 export function useWabaPhones() {
