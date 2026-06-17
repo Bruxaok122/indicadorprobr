@@ -62,19 +62,19 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const candidates: Array<{ id: string; token: string; label: string }> = [];
-    const addCandidate = (id?: string | null, token?: string | null, label?: string) => {
+    const candidates: Array<{ id: string; token: string; label: string; source: "waba" | "phone" }> = [];
+    const addCandidate = (id?: string | null, token?: string | null, label?: string, source: "waba" | "phone" = "waba") => {
       const cleanId = id?.trim();
       const cleanToken = token?.trim();
       if (!cleanId || !cleanToken) return;
       if (candidates.some((candidate) => candidate.id === cleanId && candidate.token === cleanToken)) return;
-      candidates.push({ id: cleanId, token: cleanToken, label: label || cleanId });
+      candidates.push({ id: cleanId, token: cleanToken, label: label || cleanId, source });
     };
 
-    addCandidate(activeApiConfig?.waba_id, activeApiConfig?.access_token, `api_configs:${activeApiConfig?.name || "ativa"}:waba_id`);
-    addCandidate(activeApiConfig?.phone_number_id, activeApiConfig?.access_token, `api_configs:${activeApiConfig?.name || "ativa"}:phone_number_id`);
-    addCandidate(sharedConfig?.waba_id, sharedConfig?.access_token, "whatsapp_config:waba_id");
-    addCandidate(sharedConfig?.phone_number_id, sharedConfig?.access_token, "whatsapp_config:phone_number_id");
+    addCandidate(activeApiConfig?.waba_id, activeApiConfig?.access_token, `api_configs:${activeApiConfig?.name || "ativa"}:waba_id`, "waba");
+    addCandidate(activeApiConfig?.phone_number_id, activeApiConfig?.access_token, `api_configs:${activeApiConfig?.name || "ativa"}:phone_number_id`, "phone");
+    addCandidate(sharedConfig?.waba_id, sharedConfig?.access_token, "whatsapp_config:waba_id", "waba");
+    addCandidate(sharedConfig?.phone_number_id, sharedConfig?.access_token, "whatsapp_config:phone_number_id", "phone");
 
     if (candidates.length === 0) {
       return new Response(
@@ -89,6 +89,27 @@ serve(async (req) => {
     // Stored configs can be inconsistent after rollbacks: some rows have a phone_number_id in waba_id.
     // Try the active config first, then legacy config, resolving phone_number_id -> WABA when Meta allows it.
     async function resolveWabaId(id: string, token: string): Promise<string | null> {
+      const debugUrl = new URL("https://graph.facebook.com/v21.0/debug_token");
+      debugUrl.searchParams.set("input_token", token);
+      const debugResponse = await fetch(debugUrl.toString(), { headers: { Authorization: `Bearer ${token}` } });
+      const debugResult = await debugResponse.json().catch(() => null);
+      const granularScopes = Array.isArray(debugResult?.data?.granular_scopes) ? debugResult.data.granular_scopes : [];
+      const scopedWabaIds = granularScopes
+        .filter((scope: any) => String(scope?.scope || "").startsWith("whatsapp_business_"))
+        .flatMap((scope: any) => Array.isArray(scope?.target_ids) ? scope.target_ids : [])
+        .filter((targetId: unknown): targetId is string => typeof targetId === "string" && targetId.trim().length > 0);
+
+      const uniqueScopedWabaIds = Array.from(new Set(scopedWabaIds));
+      for (const scopedWabaId of uniqueScopedWabaIds) {
+        const phonesResponse = await fetch(
+          `https://graph.facebook.com/v21.0/${scopedWabaId}/phone_numbers?fields=id&limit=100`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const phonesResult = await phonesResponse.json().catch(() => null);
+        const hasPhone = Array.isArray(phonesResult?.data) && phonesResult.data.some((phone: any) => phone?.id === id);
+        if (hasPhone) return scopedWabaId;
+      }
+
       const r = await fetch(
         `https://graph.facebook.com/v21.0/${id}?fields=whatsapp_business_account{id}`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -102,6 +123,14 @@ serve(async (req) => {
 
     for (const candidate of candidates) {
       let currentId = candidate.id;
+      if (candidate.source === "phone") {
+        const realWaba = await resolveWabaId(currentId, candidate.token);
+        if (realWaba) {
+          console.log(`Resolved real WABA id ${realWaba} from phone ${currentId}`);
+          currentId = realWaba;
+        }
+      }
+
       let subscribeResponse = await fetch(`https://graph.facebook.com/v21.0/${currentId}/subscribed_apps`, {
         method: "POST",
         headers: { Authorization: `Bearer ${candidate.token}` },
