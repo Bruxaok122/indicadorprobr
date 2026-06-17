@@ -94,12 +94,12 @@ serve(async (req) => {
       const debugResponse = await fetch(debugUrl.toString(), { headers: { Authorization: `Bearer ${token}` } });
       const debugResult = await debugResponse.json().catch(() => null);
       const granularScopes = Array.isArray(debugResult?.data?.granular_scopes) ? debugResult.data.granular_scopes : [];
-      const scopedWabaIds = granularScopes
+      const scopedWabaIds: string[] = granularScopes
         .filter((scope: any) => String(scope?.scope || "").startsWith("whatsapp_business_"))
         .flatMap((scope: any) => Array.isArray(scope?.target_ids) ? scope.target_ids : [])
         .filter((targetId: unknown): targetId is string => typeof targetId === "string" && targetId.trim().length > 0);
 
-      const uniqueScopedWabaIds = Array.from(new Set(scopedWabaIds));
+      const uniqueScopedWabaIds: string[] = Array.from(new Set(scopedWabaIds));
       for (const scopedWabaId of uniqueScopedWabaIds) {
         const phonesResponse = await fetch(
           `https://graph.facebook.com/v21.0/${scopedWabaId}/phone_numbers?fields=id&limit=100`,
