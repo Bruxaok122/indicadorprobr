@@ -75,19 +75,38 @@ serve(async (req) => {
 
     const config = { waba_id, access_token };
 
-    // Fetch phone numbers from Meta WABA API (include messaging tier)
-    const phonesUrl = `https://graph.facebook.com/v21.0/${config.waba_id}/phone_numbers?fields=id,display_phone_number,verified_name,quality_rating,messaging_limit_tier,throughput`;
+    // The stored "waba_id" may actually be a phone_number_id (multi-WABA configs store it that way).
+    // Try as WABA first; on (#100) "nonexisting field (phone_numbers)" fallback to treating the id as a phone_number_id.
+    const fields = "id,display_phone_number,verified_name,quality_rating,messaging_limit_tier,throughput";
+    let result: any;
+    let response = await fetch(
+      `https://graph.facebook.com/v21.0/${config.waba_id}/phone_numbers?fields=${fields}`,
+      { headers: { "Authorization": `Bearer ${config.access_token}` } }
+    );
+    result = await response.json();
+    console.log("Meta API response (WABA list):", JSON.stringify(result, null, 2));
 
-    console.log("Fetching WABA phone numbers from Meta API...");
+    const isPhoneIdFallback =
+      !response.ok &&
+      result?.error?.code === 100 &&
+      String(result?.error?.message || "").includes("phone_numbers");
 
-    const response = await fetch(phonesUrl, {
-      headers: { "Authorization": `Bearer ${config.access_token}` },
-    });
-
-    const result = await response.json();
-    console.log("Meta API response:", JSON.stringify(result, null, 2));
-
-    if (!response.ok) {
+    if (isPhoneIdFallback) {
+      console.log("Falling back: treating id as phone_number_id");
+      response = await fetch(
+        `https://graph.facebook.com/v21.0/${config.waba_id}?fields=${fields}`,
+        { headers: { "Authorization": `Bearer ${config.access_token}` } }
+      );
+      const single = await response.json();
+      console.log("Meta API response (single phone):", JSON.stringify(single, null, 2));
+      if (!response.ok) {
+        return new Response(
+          JSON.stringify({ error: single.error?.message || "Erro ao buscar número" }),
+          { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      result = { data: [single] };
+    } else if (!response.ok) {
       return new Response(
         JSON.stringify({ error: result.error?.message || "Erro ao buscar números" }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
