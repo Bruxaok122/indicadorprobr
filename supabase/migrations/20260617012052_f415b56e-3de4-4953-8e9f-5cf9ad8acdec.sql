@@ -1,0 +1,2 @@
+ALTER TABLE public.waba_phone_numbers DROP CONSTRAINT waba_phone_numbers_api_config_id_fkey;
+ALTER TABLE public.waba_phone_numbers ADD CONSTRAINT waba_phone_numbers_api_config_id_fkey FOREIGN KEY (api_config_id) REFERENCES public.api_configs(id) ON DELETE SET NULL;
