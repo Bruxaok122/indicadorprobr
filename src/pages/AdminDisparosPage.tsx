@@ -925,7 +925,7 @@ export default function AdminDisparosPage() {
         if (ctrl?.isCancelled) {
           toast.warning(`${operatorProfile?.full_name}: Cancelado — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}`, duration: 10000 });
         } else if (results.failed > 0) {
-          toast.error(`${operatorProfile?.full_name}: Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}`, duration: 15000 });
+          toast.error(`${operatorProfile?.full_name}: Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}`, description: results.errors.slice(-3).join(" • ") || undefined, duration: 20000 });
         } else {
           toast.success(`${operatorProfile?.full_name}: Concluído — ${results.sent} enviados`, { id: `dispatch-${dispatchId}`, duration: 8000 });
         }
