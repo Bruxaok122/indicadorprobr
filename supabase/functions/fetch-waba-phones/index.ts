@@ -131,9 +131,9 @@ serve(async (req) => {
         .upsert(phone, { onConflict: "phone_number_id" });
     }
 
-    // Deactivate numbers no longer in the API response
+    // Deactivate numbers no longer in the API response — only when we did a full WABA listing
     const activeMetaIds = phones.map((p: any) => p.phone_number_id);
-    if (activeMetaIds.length > 0) {
+    if (!isPhoneIdFallback && activeMetaIds.length > 0) {
       const { data: allDbPhones } = await supabase
         .from("waba_phone_numbers")
         .select("id, phone_number_id");
