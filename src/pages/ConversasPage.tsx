@@ -56,7 +56,6 @@ export default function ConversasPage() {
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
   const [isTogglingAI, setIsTogglingAI] = useState(false);
-  const [replyToId, setReplyToId] = useState<string | null>(null);
   const lastReplyStatusByContactRef = useRef<Record<string, string | null | undefined>>({});
   const replyStatusInitializedRef = useRef(false);
   const lastSelectedIncomingMessageRef = useRef<string | null>(null);
@@ -66,7 +65,6 @@ export default function ConversasPage() {
   } = useMessages(selectedContactId);
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
-  const replyToMessage = replyToId ? messages.find((m) => m.id === replyToId) || null : null;
 
   // Unread message counts (per contact, per operator)
   const contactIds = useMemo(() => contacts.map((c) => c.id), [contacts]);
@@ -167,7 +165,6 @@ export default function ConversasPage() {
   // Reset incoming-tracking when switching contacts to avoid playing sound on chat switch
   useEffect(() => {
     lastSelectedIncomingMessageRef.current = null;
-    setReplyToId(null);
   }, [selectedContactId]);
 
   useEffect(() => {
@@ -215,14 +212,8 @@ export default function ConversasPage() {
     if (!messageText.trim() || !selectedContactId) return;
     if (!canSendFreeText) { toast.error("Primeiro contato requer template"); return; }
     if (phones.length > 0 && !selectedPhoneNumberId) { toast.error("Selecione um número de disparo"); return; }
-    sendMessage({
-      contactId: selectedContactId,
-      message: messageText.trim(),
-      selectedPhoneNumberId: selectedPhoneNumberId || undefined,
-      replyToMessageId: replyToId || undefined,
-    });
+    sendMessage({ contactId: selectedContactId, message: messageText.trim(), selectedPhoneNumberId: selectedPhoneNumberId || undefined });
     setMessageText("");
-    setReplyToId(null);
   };
 
   const handleSendTemplate = () => {
@@ -352,7 +343,6 @@ export default function ConversasPage() {
                   templatesAvailable={templates.length > 0} onOpenTemplateDialog={() => setShowTemplateDialog(true)}
                   onDeleteMessage={deleteMessage}
                   onReact={(messageId, emoji) => sendReaction({ messageId, emoji })}
-                  onReply={(msg) => setReplyToId(msg.id)}
                 />
                 <ChatInput
                   messageText={messageText} setMessageText={setMessageText} canSendFreeText={canSendFreeText}
@@ -369,10 +359,7 @@ export default function ConversasPage() {
                     if (!selectedContactId) return;
                     sendAudio({ contactId: selectedContactId, audioBlob: blob, selectedPhoneNumberId: selectedPhoneNumberId || undefined });
                   }}
-                  replyTo={replyToMessage}
-                  onCancelReply={() => setReplyToId(null)}
                 />
-
               </>
             ) : (
               <div className={cn("flex flex-1 flex-col items-center justify-center chat-wallpaper", isMobile && "hidden")}>

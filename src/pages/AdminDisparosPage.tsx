@@ -3,7 +3,6 @@ import { resilientDelay } from "@/lib/resilientDelay";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
-import { useDispatchCooldown, formatCooldown } from "@/hooks/useDispatchCooldown";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useDispatchContext, ActiveDispatch, DispatchMode } from "@/contexts/DispatchContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -209,8 +208,6 @@ export default function AdminDisparosPage() {
     dispatchControlsRef,
   } = useDispatchContext();
 
-  const { isReady: cooldownReady, remainingMs: cooldownMs, markDispatched } = useDispatchCooldown(user?.id);
-
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(0);
 
@@ -383,10 +380,6 @@ export default function AdminDisparosPage() {
   };
 
   const handleSend = async () => {
-    if (!cooldownReady) {
-      toast.error(`Aguarde ${formatCooldown(cooldownMs)} para o próximo disparo`);
-      return;
-    }
     if (!selectedTemplate || !selectedList) return;
     if (!sharedDispatch && !selectedUserId) return;
     if (!user?.id) {
@@ -504,7 +497,6 @@ export default function AdminDisparosPage() {
     };
 
     addDispatch(newDispatch);
-    markDispatched();
 
     // Capture values for the async closure
     const capturedTemplate = selectedTemplate;
@@ -1413,19 +1405,10 @@ export default function AdminDisparosPage() {
                   </div>
 
                   <Button className="w-full gap-2" size="lg" onClick={handleSend}
-                    disabled={(!isScheduled && !cooldownReady) || !selectedTemplate || !selectedList || (!sharedDispatch && !selectedUserId) || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId) || (isScheduled && !scheduledDate)}>
+                    disabled={!selectedTemplate || !selectedList || (!sharedDispatch && !selectedUserId) || listContactCount === 0 || (phones.length > 0 && !selectedPhoneNumberId) || (isScheduled && !scheduledDate)}>
                     {isScheduled ? <CalendarClock className="h-4 w-4" /> : <Send className="h-4 w-4" />}
-                    {isScheduled
-                      ? `Agendar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}`
-                      : cooldownReady
-                        ? `Disparar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}`
-                        : `Aguarde ${formatCooldown(cooldownMs)}`}
+                    {isScheduled ? `Agendar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}` : `Disparar para ${effectiveCount} contato${effectiveCount !== 1 ? "s" : ""}`}
                   </Button>
-                  {!isScheduled && !cooldownReady && (
-                    <p className="text-[11px] text-center text-muted-foreground tabular-nums mt-2">
-                      ⏳ Próximo disparo disponível em <span className="font-mono font-semibold text-primary">{formatCooldown(cooldownMs)}</span>
-                    </p>
-                  )}
                 </CardContent>
               </Card>
             )}

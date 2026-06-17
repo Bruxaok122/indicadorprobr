@@ -54,7 +54,6 @@ export interface Message {
   error_details?: string | null;
   is_deleted?: boolean;
   reacts_to_message_id?: string | null;
-  reply_to_message_id?: string | null;
   created_at: string;
 }
 
@@ -149,7 +148,6 @@ export interface Profile {
   last_failed_attempt_at?: string;
   subscription_plan?: string | null;
   subscription_expires_at?: string | null;
-  max_batch_size?: number | null;
   created_at: string;
   updated_at: string;
 }

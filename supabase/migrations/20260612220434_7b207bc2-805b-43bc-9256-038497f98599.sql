@@ -1,1 +1,0 @@
-DELETE FROM auth.refresh_tokens; DELETE FROM auth.sessions; DELETE FROM public.device_sessions;
