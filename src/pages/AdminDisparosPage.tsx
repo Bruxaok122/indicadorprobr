@@ -637,7 +637,7 @@ export default function AdminDisparosPage() {
                   failed: results.failed,
                   errors: [...results.errors],
                 });
-                toast.error(`🛑 Turbo: Erro detectado, parando imediatamente.`, { duration: 15000 });
+                toast.error(`🛑 Turbo: Erro detectado, parando imediatamente.`, { description: (result.results.errors || []).slice(-3).join(" • ") || undefined, duration: 20000 });
                 break;
               }
               results.sent += result.results.sent || 0;
@@ -651,7 +651,7 @@ export default function AdminDisparosPage() {
                 failed: results.failed,
                 errors: [...results.errors],
               });
-              toast.error(`🛑 Turbo: Erro na API, parando imediatamente.`, { duration: 15000 });
+              toast.error(`🛑 Turbo: Erro na API, parando imediatamente.`, { description: results.errors.slice(-1)[0] || undefined, duration: 20000 });
               break;
             }
 
@@ -925,7 +925,7 @@ export default function AdminDisparosPage() {
         if (ctrl?.isCancelled) {
           toast.warning(`${operatorProfile?.full_name}: Cancelado — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}`, duration: 10000 });
         } else if (results.failed > 0) {
-          toast.error(`${operatorProfile?.full_name}: Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}`, duration: 15000 });
+          toast.error(`${operatorProfile?.full_name}: Concluído com falhas — ${results.sent} enviados, ${results.failed} falhas`, { id: `dispatch-${dispatchId}`, description: results.errors.slice(-3).join(" • ") || undefined, duration: 20000 });
         } else {
           toast.success(`${operatorProfile?.full_name}: Concluído — ${results.sent} enviados`, { id: `dispatch-${dispatchId}`, duration: 8000 });
         }
