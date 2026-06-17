@@ -651,7 +651,7 @@ export default function AdminDisparosPage() {
                 failed: results.failed,
                 errors: [...results.errors],
               });
-              toast.error(`🛑 Turbo: Erro na API, parando imediatamente.`, { duration: 15000 });
+              toast.error(`🛑 Turbo: Erro na API, parando imediatamente.`, { description: results.errors.slice(-1)[0] || undefined, duration: 20000 });
               break;
             }
 
