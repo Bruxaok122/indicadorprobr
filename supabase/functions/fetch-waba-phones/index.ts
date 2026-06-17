@@ -43,19 +43,37 @@ serve(async (req) => {
       );
     }
 
-    // Get WhatsApp config
-    const { data: config } = await supabase
-      .from("whatsapp_config")
-      .select("*")
-      .limit(1)
-      .single();
+    // Prefer the currently active API config (multi-WABA), fall back to legacy whatsapp_config
+    let waba_id: string | null = null;
+    let access_token: string | null = null;
 
-    if (!config || !config.waba_id || !config.access_token) {
+    const { data: activeApi } = await supabase
+      .from("api_configs")
+      .select("waba_id, access_token")
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (activeApi?.waba_id && activeApi?.access_token) {
+      waba_id = activeApi.waba_id;
+      access_token = activeApi.access_token;
+    } else {
+      const { data: legacy } = await supabase
+        .from("whatsapp_config")
+        .select("waba_id, access_token")
+        .limit(1)
+        .maybeSingle();
+      waba_id = legacy?.waba_id ?? null;
+      access_token = legacy?.access_token ?? null;
+    }
+
+    if (!waba_id || !access_token) {
       return new Response(
         JSON.stringify({ error: "WhatsApp não configurado. Configure o Access Token e WABA ID primeiro." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const config = { waba_id, access_token };
 
     // Fetch phone numbers from Meta WABA API (include messaging tier)
     const phonesUrl = `https://graph.facebook.com/v21.0/${config.waba_id}/phone_numbers?fields=id,display_phone_number,verified_name,quality_rating,messaging_limit_tier,throughput`;
