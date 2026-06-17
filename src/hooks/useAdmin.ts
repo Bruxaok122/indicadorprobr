@@ -198,6 +198,28 @@ export function useAdmin() {
     },
   });
 
+  // Set max batch size mutation (null = unlimited)
+  const setMaxBatchSizeMutation = useMutation({
+    mutationFn: async ({ userId, maxBatchSize }: { userId: string; maxBatchSize: number | null }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ max_batch_size: maxBatchSize } as any)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: (_, { maxBatchSize }) => {
+      toast.success(
+        maxBatchSize === null
+          ? "Limite removido (ilimitado)"
+          : `Limite atualizado: ${maxBatchSize} por disparo`
+      );
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao atualizar limite", { description: error.message });
+    },
+  });
+
   const clearTempBanMutation = useMutation({
     mutationFn: async (userId: string) => {
       const { error } = await supabase
@@ -369,6 +391,8 @@ export function useAdmin() {
     isTogglingManageNumbers: toggleManageNumbersMutation.isPending,
     toggleDispatch: toggleDispatchMutation.mutate,
     isTogglingDispatch: toggleDispatchMutation.isPending,
+    setMaxBatchSize: setMaxBatchSizeMutation.mutate,
+    isSettingMaxBatchSize: setMaxBatchSizeMutation.isPending,
     deleteUser: deleteUserMutation.mutate,
     isDeletingUser: deleteUserMutation.isPending,
     clearTempBan: clearTempBanMutation.mutate,

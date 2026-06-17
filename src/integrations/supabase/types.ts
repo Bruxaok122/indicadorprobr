@@ -589,6 +589,7 @@ export type Database = {
           is_deleted: boolean
           message_type: string
           reacts_to_message_id: string | null
+          reply_to_message_id: string | null
           status: string | null
           template_name: string | null
           user_id: string | null
@@ -609,6 +610,7 @@ export type Database = {
           is_deleted?: boolean
           message_type?: string
           reacts_to_message_id?: string | null
+          reply_to_message_id?: string | null
           status?: string | null
           template_name?: string | null
           user_id?: string | null
@@ -629,6 +631,7 @@ export type Database = {
           is_deleted?: boolean
           message_type?: string
           reacts_to_message_id?: string | null
+          reply_to_message_id?: string | null
           status?: string | null
           template_name?: string | null
           user_id?: string | null
@@ -647,6 +650,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
         ]
@@ -670,6 +680,7 @@ export type Database = {
           last_device_info: Json | null
           last_failed_attempt_at: string | null
           last_login_at: string | null
+          max_batch_size: number | null
           messages_sent: number | null
           subscription_expires_at: string | null
           subscription_plan: string | null
@@ -696,6 +707,7 @@ export type Database = {
           last_device_info?: Json | null
           last_failed_attempt_at?: string | null
           last_login_at?: string | null
+          max_batch_size?: number | null
           messages_sent?: number | null
           subscription_expires_at?: string | null
           subscription_plan?: string | null
@@ -722,6 +734,7 @@ export type Database = {
           last_device_info?: Json | null
           last_failed_attempt_at?: string | null
           last_login_at?: string | null
+          max_batch_size?: number | null
           messages_sent?: number | null
           subscription_expires_at?: string | null
           subscription_plan?: string | null

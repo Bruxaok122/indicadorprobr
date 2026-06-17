@@ -3,10 +3,12 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Send, Paperclip, FileText, Lock } from "lucide-react";
+import { Send, Paperclip, FileText, Lock, X as XIcon, Reply, Image as ImageIcon, Mic, Sticker } from "lucide-react";
 import { toast } from "sonner";
 import { AudioRecorder } from "./AudioRecorder";
 import { motion, AnimatePresence } from "framer-motion";
+import { Message } from "@/types/juriszap";
+import { getReplyPreview } from "./ChatBubble";
 
 interface ChatInputProps {
   messageText: string;
@@ -22,11 +24,14 @@ interface ChatInputProps {
   onOpenTemplateDialog: () => void;
   onFileSelected: (file: File) => void;
   onSendAudio?: (blob: Blob) => void;
+  replyTo?: Message | null;
+  onCancelReply?: () => void;
 }
 
 export function ChatInput({
   messageText, setMessageText, canSendFreeText, hasMessages, isSending, isMobile,
   templatesAvailable, isContactBlocked, isReadOnly, onSendMessage, onOpenTemplateDialog, onFileSelected, onSendAudio,
+  replyTo, onCancelReply,
 }: ChatInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -92,6 +97,42 @@ export function ChatInput({
                 <Send className="mr-1 h-3 w-3" /> Template
               </Button>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {replyTo && (
+          <motion.div
+            key="reply-preview"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            {(() => {
+              const { label, icon } = getReplyPreview(replyTo);
+              const Icon =
+                icon === "image" ? ImageIcon :
+                icon === "audio" ? Mic :
+                icon === "document" ? FileText :
+                icon === "sticker" ? Sticker : Reply;
+              const author = replyTo.direction === "outgoing" ? "Você" : "Cliente";
+              return (
+                <div className="mb-2 flex items-start gap-2 rounded-lg border-l-4 border-violet bg-violet/10 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold text-violet">Respondendo a {author}</p>
+                    <p className="flex items-center gap-1 text-xs text-foreground/80 truncate">
+                      <Icon className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{label}</span>
+                    </p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={onCancelReply}>
+                    <XIcon className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              );
+            })()}
           </motion.div>
         )}
       </AnimatePresence>

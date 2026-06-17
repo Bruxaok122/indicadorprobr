@@ -16,7 +16,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { contactId, message, templateName, isTemplate, userId, selectedPhoneNumberId } = await req.json();
+    const { contactId, message, templateName, isTemplate, userId, selectedPhoneNumberId, replyToMessageId } = await req.json();
 
     if (!contactId || (!message && !templateName)) {
       return new Response(
@@ -256,6 +256,20 @@ serve(async (req) => {
       };
     }
 
+    // Inject WhatsApp reply context if replying to a previous message
+    let resolvedReplyParentId: string | null = null;
+    if (replyToMessageId) {
+      const { data: parent } = await supabase
+        .from("messages")
+        .select("id, whatsapp_message_id")
+        .eq("id", replyToMessageId)
+        .maybeSingle();
+      if (parent?.whatsapp_message_id) {
+        resolvedReplyParentId = parent.id;
+        requestBody.context = { message_id: parent.whatsapp_message_id };
+      }
+    }
+
     console.log("Sending message to WhatsApp:", JSON.stringify(requestBody, null, 2));
 
 
@@ -363,6 +377,7 @@ serve(async (req) => {
       template_name: templateName || null,
       whatsapp_message_id: result.messages?.[0]?.id,
       status: "sent",
+      reply_to_message_id: resolvedReplyParentId,
     });
 
     if (messageError) {

@@ -56,6 +56,7 @@ export default function ConversasPage() {
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState("");
   const [showProfileDrawer, setShowProfileDrawer] = useState(false);
   const [isTogglingAI, setIsTogglingAI] = useState(false);
+  const [replyToId, setReplyToId] = useState<string | null>(null);
   const lastReplyStatusByContactRef = useRef<Record<string, string | null | undefined>>({});
   const replyStatusInitializedRef = useRef(false);
   const lastSelectedIncomingMessageRef = useRef<string | null>(null);
@@ -65,6 +66,7 @@ export default function ConversasPage() {
   } = useMessages(selectedContactId);
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
+  const replyToMessage = replyToId ? messages.find((m) => m.id === replyToId) || null : null;
 
   // Unread message counts (per contact, per operator)
   const contactIds = useMemo(() => contacts.map((c) => c.id), [contacts]);
@@ -122,6 +124,21 @@ export default function ConversasPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedContactId]);
 
+  // Close open chat on ESC (WhatsApp Web style), unless user is typing in an input
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (!selectedContactId) return;
+      const tag = (document.activeElement?.tagName || "").toLowerCase();
+      const editable = (document.activeElement as HTMLElement | null)?.isContentEditable;
+      if (tag === "input" || tag === "textarea" || editable) return;
+      setSelectedContactId(null);
+      if (isMobile) setMobileShowChat(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedContactId, isMobile]);
+
   // Play notification only when another contact transitions to "respondido"
   // (first customer reply after staying in pending/shared pending)
   useEffect(() => {
@@ -150,6 +167,7 @@ export default function ConversasPage() {
   // Reset incoming-tracking when switching contacts to avoid playing sound on chat switch
   useEffect(() => {
     lastSelectedIncomingMessageRef.current = null;
+    setReplyToId(null);
   }, [selectedContactId]);
 
   useEffect(() => {
@@ -197,8 +215,14 @@ export default function ConversasPage() {
     if (!messageText.trim() || !selectedContactId) return;
     if (!canSendFreeText) { toast.error("Primeiro contato requer template"); return; }
     if (phones.length > 0 && !selectedPhoneNumberId) { toast.error("Selecione um número de disparo"); return; }
-    sendMessage({ contactId: selectedContactId, message: messageText.trim(), selectedPhoneNumberId: selectedPhoneNumberId || undefined });
+    sendMessage({
+      contactId: selectedContactId,
+      message: messageText.trim(),
+      selectedPhoneNumberId: selectedPhoneNumberId || undefined,
+      replyToMessageId: replyToId || undefined,
+    });
     setMessageText("");
+    setReplyToId(null);
   };
 
   const handleSendTemplate = () => {
@@ -328,6 +352,7 @@ export default function ConversasPage() {
                   templatesAvailable={templates.length > 0} onOpenTemplateDialog={() => setShowTemplateDialog(true)}
                   onDeleteMessage={deleteMessage}
                   onReact={(messageId, emoji) => sendReaction({ messageId, emoji })}
+                  onReply={(msg) => setReplyToId(msg.id)}
                 />
                 <ChatInput
                   messageText={messageText} setMessageText={setMessageText} canSendFreeText={canSendFreeText}
@@ -344,7 +369,10 @@ export default function ConversasPage() {
                     if (!selectedContactId) return;
                     sendAudio({ contactId: selectedContactId, audioBlob: blob, selectedPhoneNumberId: selectedPhoneNumberId || undefined });
                   }}
+                  replyTo={replyToMessage}
+                  onCancelReply={() => setReplyToId(null)}
                 />
+
               </>
             ) : (
               <div className={cn("flex flex-1 flex-col items-center justify-center chat-wallpaper", isMobile && "hidden")}>
