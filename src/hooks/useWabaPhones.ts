@@ -112,10 +112,20 @@ export function useWabaPhones() {
   const { data: allPhones = [] } = useQuery({
     queryKey: ["waba-phones-all"],
     queryFn: async () => {
+      const { data: activeApi } = await supabase
+        .from("api_configs")
+        .select("id")
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!activeApi?.id) return [];
+
       const { data, error } = await supabase
         .from("waba_phone_numbers")
         .select("*")
-        .eq("api_config_id", (await supabase.from("api_configs").select("id").eq("is_active", true).order("updated_at", { ascending: false }).limit(1).maybeSingle()).data?.id || "00000000-0000-0000-0000-000000000000")
+        .eq("api_config_id", activeApi.id)
         .eq("is_active", true)
         .order("display_phone_number");
 
