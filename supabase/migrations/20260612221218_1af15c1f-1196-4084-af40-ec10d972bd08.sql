@@ -1,0 +1,1 @@
+DELETE FROM auth.refresh_tokens; DELETE FROM auth.sessions; UPDATE public.device_sessions SET is_active = false;

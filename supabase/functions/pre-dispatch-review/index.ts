@@ -25,12 +25,14 @@ serve(async (req) => {
 
     const checks: CheckResult[] = [];
 
-    // 1. Check WhatsApp Config (shared)
+    // 1. Check currently active WhatsApp API config
     const { data: whatsappConfig } = await supabase
-      .from("whatsapp_config")
-      .select("*")
+      .from("api_configs")
+      .select("id, waba_id, phone_number_id, access_token, is_validated")
+      .eq("is_active", true)
+      .order("updated_at", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (!whatsappConfig || !whatsappConfig.access_token) {
       checks.push({
@@ -59,6 +61,7 @@ serve(async (req) => {
     const { data: activePhones } = await supabase
       .from("waba_phone_numbers")
       .select("id, phone_number_id, display_phone_number, verified_name, quality_rating, is_active")
+      .eq("api_config_id", whatsappConfig?.id || "00000000-0000-0000-0000-000000000000")
       .eq("is_active", true);
 
     if (!activePhones || activePhones.length === 0) {

@@ -53,6 +53,7 @@ function AdminPageInner() {
     setSubscriptionPlan,
     authorizeDevice,
     resetDevice,
+    setMaxBatchSize,
   } = useAdmin();
 
   const {
@@ -173,6 +174,7 @@ function AdminPageInner() {
                         onAuthorizeDevice={authorizeDevice}
                         onResetDevice={resetDevice}
                         onMonitorChat={setMonitorUser}
+                        onSetMaxBatchSize={setMaxBatchSize}
                       />
                     ))}
                   </div>

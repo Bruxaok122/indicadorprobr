@@ -43,42 +43,105 @@ serve(async (req) => {
       );
     }
 
-    // Get WhatsApp config
-    const { data: config } = await supabase
-      .from("whatsapp_config")
-      .select("*")
+    // Synchronization is intentionally scoped to the single API marked active.
+    // Do not merge numbers from legacy/shared configs or inactive API rows.
+    const { data: activeApi } = await supabase
+      .from("api_configs")
+      .select("id, name, waba_id, phone_number_id, access_token")
+      .eq("is_active", true)
+      .order("updated_at", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (!config || !config.waba_id || !config.access_token) {
+    if (!activeApi?.id || !activeApi?.access_token) {
       return new Response(
-        JSON.stringify({ error: "WhatsApp não configurado. Configure o Access Token e WABA ID primeiro." }),
+        JSON.stringify({ error: "Nenhuma API ativa configurada. Ative uma API antes de sincronizar." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Fetch phone numbers from Meta WABA API (include messaging tier)
-    const phonesUrl = `https://graph.facebook.com/v21.0/${config.waba_id}/phone_numbers?fields=id,display_phone_number,verified_name,quality_rating,messaging_limit_tier,throughput`;
+    const fields = "id,display_phone_number,verified_name,quality_rating,messaging_limit_tier,throughput";
 
-    console.log("Fetching WABA phone numbers from Meta API...");
+    // Resolve the real WABA id behind a token via debug_token (handles cases where waba_id is stored as a phone_number_id)
+    async function resolveRealWabaIds(token: string): Promise<string[]> {
+      try {
+        const r = await fetch(
+          `https://graph.facebook.com/v21.0/debug_token?input_token=${encodeURIComponent(token)}&access_token=${encodeURIComponent(token)}`
+        );
+        const j = await r.json();
+        const scopes = j?.data?.granular_scopes || [];
+        const ids = new Set<string>();
+        for (const s of scopes) {
+          if (s?.scope === "whatsapp_business_messaging" || s?.scope === "whatsapp_business_management") {
+            for (const t of s?.target_ids || []) ids.add(String(t));
+          }
+        }
+        return Array.from(ids);
+      } catch {
+        return [];
+      }
+    }
 
-    const response = await fetch(phonesUrl, {
-      headers: { "Authorization": `Bearer ${config.access_token}` },
-    });
+    async function resolveWabaFromPhoneId(id: string | null | undefined, token: string): Promise<string | null> {
+      const cleanId = String(id || "").trim();
+      if (!cleanId) return null;
+      try {
+        const r = await fetch(
+          `https://graph.facebook.com/v21.0/${cleanId}?fields=whatsapp_business_account{id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const j = await r.json();
+        return j?.whatsapp_business_account?.id ?? null;
+      } catch {
+        return null;
+      }
+    }
 
-    const result = await response.json();
-    console.log("Meta API response:", JSON.stringify(result, null, 2));
+    const collected: any[] = [];
+    let resolvedWabaId: string | null = null;
+    const seenIds = new Set<string>();
 
-    if (!response.ok) {
+    const tryWaba = async (wabaId: string) => {
+      const r = await fetch(
+        `https://graph.facebook.com/v21.0/${wabaId}/phone_numbers?fields=${fields}`,
+        { headers: { Authorization: `Bearer ${activeApi.access_token}` } }
+      );
+      const j = await r.json();
+      console.log(`Meta phones for active API ${activeApi.name || activeApi.id} (${wabaId}):`, JSON.stringify(j));
+      return { ok: r.ok, json: j, wabaId };
+    };
+
+    const candidateWabaIds = Array.from(new Set([
+      activeApi.waba_id,
+      await resolveWabaFromPhoneId(activeApi.waba_id, activeApi.access_token),
+      await resolveWabaFromPhoneId(activeApi.phone_number_id, activeApi.access_token),
+      ...(await resolveRealWabaIds(activeApi.access_token)),
+    ].filter(Boolean).map(String)));
+
+    for (const wabaId of candidateWabaIds) {
+      const listed = await tryWaba(wabaId);
+      if (listed.ok && Array.isArray(listed.json?.data)) {
+        resolvedWabaId = wabaId;
+        for (const p of listed.json.data) {
+          if (p?.id && p?.display_phone_number && !seenIds.has(p.id)) {
+            seenIds.add(p.id);
+            collected.push(p);
+          }
+        }
+        break;
+      }
+    }
+
+    if (collected.length === 0) {
       return new Response(
-        JSON.stringify({ error: result.error?.message || "Erro ao buscar números" }),
-        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Nenhum número válido encontrado nas APIs configuradas." }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Map and upsert phone numbers
     const nowIso = new Date().toISOString();
-    const phones = (result.data || []).map((phone: any) => ({
+    const phones = (collected || []).map((phone: any) => ({
       phone_number_id: phone.id,
       display_phone_number: phone.display_phone_number,
       verified_name: phone.verified_name || null,
@@ -86,6 +149,7 @@ serve(async (req) => {
       messaging_tier: phone.messaging_limit_tier || phone.throughput?.level || null,
       tier_updated_at: (phone.messaging_limit_tier || phone.throughput?.level) ? nowIso : null,
       is_active: true,
+      api_config_id: activeApi.id,
     }));
 
     for (const phone of phones) {
@@ -94,7 +158,7 @@ serve(async (req) => {
         .upsert(phone, { onConflict: "phone_number_id" });
     }
 
-    // Deactivate numbers no longer in the API response
+    // Deactivate every number not returned by the currently active API.
     const activeMetaIds = phones.map((p: any) => p.phone_number_id);
     if (activeMetaIds.length > 0) {
       const { data: allDbPhones } = await supabase
@@ -112,6 +176,20 @@ serve(async (req) => {
           .in("id", toDeactivate);
       }
     }
+
+    const primaryPhoneId = activeApi.phone_number_id && activeMetaIds.includes(activeApi.phone_number_id)
+      ? activeApi.phone_number_id
+      : activeMetaIds[0];
+
+    await supabase
+      .from("api_configs")
+      .update({
+        waba_id: resolvedWabaId || activeApi.waba_id,
+        phone_number_id: primaryPhoneId,
+        is_validated: true,
+        status_message: `${phones.length} número(s) sincronizado(s) da API ativa`,
+      })
+      .eq("id", activeApi.id);
 
     return new Response(
       JSON.stringify({ success: true, phones, total: phones.length }),
