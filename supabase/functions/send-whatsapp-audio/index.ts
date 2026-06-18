@@ -39,7 +39,9 @@ serve(async (req) => {
         .eq("user_id", userId)
         .single();
 
-      if (userProfile?.can_use_shared_api) {
+      const { data: requesterIsAdmin } = await supabase.rpc("is_admin", { _user_id: userId });
+
+      if (requesterIsAdmin || userProfile?.can_use_shared_api) {
         const { data: sharedConfig } = await supabase
           .from("api_configs")
           .select("*")
