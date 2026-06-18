@@ -23,16 +23,9 @@ export function DispatchCountdown() {
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-dismiss finished OR fully-counted dispatches after a short grace period.
-  // The count-based check is a safety net for cases where the runner ran on
-  // another tab/client (e.g. admin dispatching for a specific operator) and
-  // the isFinished flag arrived late or not at all.
+  // Auto-dismiss finished dispatches owned by this user after a short grace period
   useEffect(() => {
-    const mine = activeDispatches.filter(
-      (d) =>
-        d.operatorId === user?.id &&
-        (d.isFinished || (d.total > 0 && d.current >= d.total))
-    );
+    const mine = activeDispatches.filter((d) => d.operatorId === user?.id && d.isFinished);
     for (const d of mine) {
       if (dismissedRef.current.has(d.id)) continue;
       dismissedRef.current.add(d.id);
@@ -42,10 +35,7 @@ export function DispatchCountdown() {
 
   // Get operator's active (non-finished) dispatches
   const myDispatches = activeDispatches.filter(
-    (d) =>
-      d.operatorId === user?.id &&
-      !d.isFinished &&
-      !(d.total > 0 && d.current >= d.total)
+    (d) => d.operatorId === user?.id && !d.isFinished
   );
 
   if (myDispatches.length === 0) return null;

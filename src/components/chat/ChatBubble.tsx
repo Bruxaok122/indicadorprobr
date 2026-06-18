@@ -3,12 +3,12 @@ import { Message } from "@/types/juriszap";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, Check, CheckCheck, X, FileText, ZoomIn, Mic, Ban, Trash2, SmilePlus, Plus, Reply, Image as ImageIcon, Sticker } from "lucide-react";
+import { Clock, Check, CheckCheck, X, FileText, ZoomIn, Mic, Ban, Trash2, SmilePlus, Plus } from "lucide-react";
 import { ImageLightbox } from "./ImageLightbox";
 import { DocumentLightbox } from "./DocumentLightbox";
 import { EmojiPicker } from "./EmojiPicker";
 import { motion } from "framer-motion";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 
@@ -17,8 +17,6 @@ interface ChatBubbleProps {
   reactions?: Message[];
   onDeleteMessage?: (messageId: string) => void;
   onReact?: (messageId: string, emoji: string) => void;
-  onReply?: (message: Message) => void;
-  findMessage?: (id: string) => Message | undefined;
 }
 
 const DEFAULT_QUICK_EMOJIS = ["👍", "🆗", "❤️", "😂", "😮", "😢", "🙏", "🔥"];
@@ -72,18 +70,11 @@ function getErrorLabel(errorCode?: string | null): string | null {
   }
 }
 
-export function ChatBubble({ message, reactions, onDeleteMessage, onReact, onReply, findMessage }: ChatBubbleProps) {
+export function ChatBubble({ message, reactions, onDeleteMessage, onReact }: ChatBubbleProps) {
   const isOutgoing = message.direction === "outgoing";
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [docLightboxOpen, setDocLightboxOpen] = useState(false);
   const canDelete = isOutgoing && !message.is_deleted;
-  const canReply = !!onReply && !message.is_deleted && message.message_type !== "reaction";
-  const hasMenu = canDelete || canReply;
-
-  const parentMsg = message.reply_to_message_id && findMessage
-    ? findMessage(message.reply_to_message_id)
-    : undefined;
-
 
   const renderContent = () => {
     // Deleted message
@@ -219,11 +210,11 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact, onRep
       <div className={cn("flex mb-0.5 px-3 md:px-4 group", isOutgoing ? "justify-end" : "justify-start")}>
         <div className="relative inline-block">
           <DropdownMenu>
-            <DropdownMenuTrigger asChild disabled={!hasMenu}>
+            <DropdownMenuTrigger asChild disabled={!canDelete}>
               <motion.div
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.15, ease: "easeOut" }}
-                className={cn(hasMenu && "cursor-context-menu")}
+                className={cn(canDelete && "cursor-context-menu")}
               >
                 <div className={cn(
                   "relative max-w-[85vw] md:max-w-[480px] px-2.5 py-1.5 shadow-sm chat-selectable overflow-hidden break-words",
@@ -232,7 +223,6 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact, onRep
                     : "bubble-incoming bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100",
                   reactionEmojis.length > 0 && "mb-3.5"
                 )}>
-                  {parentMsg && <ReplyQuote parent={parentMsg} isOutgoing={isOutgoing} />}
                   {renderContent()}
                   <div className="flex items-center justify-end gap-1 mt-0.5 -mb-0.5 text-[11px] text-gray-500 dark:text-gray-400">
                     <span>{format(new Date(message.created_at), "HH:mm", { locale: ptBR })}</span>
@@ -246,28 +236,18 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact, onRep
                 </div>
               </motion.div>
             </DropdownMenuTrigger>
-            {hasMenu && (
-              <DropdownMenuContent side={isOutgoing ? "left" : "right"} align="start" className="min-w-[160px]">
-                {canReply && (
-                  <DropdownMenuItem onClick={() => onReply?.(message)}>
-                    <Reply className="mr-2 h-4 w-4" />
-                    Responder
-                  </DropdownMenuItem>
-                )}
-                {canReply && canDelete && <DropdownMenuSeparator />}
-                {canDelete && (
-                  <DropdownMenuItem
-                    onClick={() => onDeleteMessage?.(message.id)}
-                    className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Apagar para todos
-                  </DropdownMenuItem>
-                )}
+            {canDelete && (
+              <DropdownMenuContent side="left" align="start" className="min-w-[160px]">
+                <DropdownMenuItem
+                  onClick={() => onDeleteMessage?.(message.id)}
+                  className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/20"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Apagar para todos
+                </DropdownMenuItem>
               </DropdownMenuContent>
             )}
           </DropdownMenu>
-
 
           {/* Emoji react button — only on incoming bubbles */}
           {!isOutgoing && onReact && !message.is_deleted && (
@@ -358,60 +338,3 @@ function QuickReactRow({ messageId, onReact }: { messageId: string; onReact: (id
     </div>
   );
 }
-
-export function getReplyPreview(msg: Message): { label: string; icon: "text" | "image" | "audio" | "document" | "sticker" } {
-  if (msg.is_deleted) return { label: "Mensagem apagada", icon: "text" };
-  switch (msg.message_type) {
-    case "image":
-      return { label: msg.content && msg.content !== "[Imagem recebida]" ? msg.content : "Imagem", icon: "image" };
-    case "audio":
-      return { label: "Mensagem de voz", icon: "audio" };
-    case "document":
-      return { label: msg.document_name || "Documento", icon: "document" };
-    case "sticker":
-      return { label: "Figurinha", icon: "sticker" };
-    case "template":
-      return { label: msg.content || msg.template_name || "Template", icon: "text" };
-    default: {
-      const txt = (msg.content || "").replace(/##\S+?:\S*?##\s*/g, "").trim();
-      return { label: txt || "Mensagem", icon: "text" };
-    }
-  }
-}
-
-function ReplyQuote({ parent, isOutgoing }: { parent: Message; isOutgoing: boolean }) {
-  const { label, icon } = getReplyPreview(parent);
-  const authorLabel = parent.direction === "outgoing" ? "Você" : "Cliente";
-  const Icon =
-    icon === "image" ? ImageIcon :
-    icon === "audio" ? Mic :
-    icon === "document" ? FileText :
-    icon === "sticker" ? Sticker : null;
-  return (
-    <div
-      className={cn(
-        "mb-1 flex gap-2 rounded-md border-l-4 py-1 pl-2 pr-2 text-xs",
-        isOutgoing
-          ? "border-emerald-700/60 bg-black/5 dark:bg-white/5"
-          : "border-violet-500/70 bg-black/5 dark:bg-white/5",
-      )}
-    >
-      <div className="min-w-0 flex-1">
-        <p className={cn(
-          "font-semibold leading-tight",
-          parent.direction === "outgoing" ? "text-emerald-700 dark:text-emerald-400" : "text-violet-600 dark:text-violet-300",
-        )}>
-          {authorLabel}
-        </p>
-        <p className="flex items-center gap-1 truncate opacity-80">
-          {Icon && <Icon className="h-3 w-3 shrink-0" />}
-          <span className="truncate">{label}</span>
-        </p>
-      </div>
-      {parent.message_type === "image" && parent.image_url && (
-        <img src={parent.image_url} alt="" className="h-10 w-10 rounded object-cover shrink-0" />
-      )}
-    </div>
-  );
-}
-

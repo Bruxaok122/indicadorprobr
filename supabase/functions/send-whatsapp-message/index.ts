@@ -16,7 +16,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { contactId, message, templateName, isTemplate, userId, selectedPhoneNumberId, replyToMessageId } = await req.json();
+    const { contactId, message, templateName, isTemplate, userId, selectedPhoneNumberId } = await req.json();
 
     if (!contactId || (!message && !templateName)) {
       return new Response(
@@ -35,18 +35,14 @@ serve(async (req) => {
         .select("can_use_shared_api")
         .eq("user_id", userId)
         .single();
-
-      const { data: requesterIsAdmin } = await supabase.rpc("is_admin", { _user_id: userId });
       
-      if (requesterIsAdmin || userProfile?.can_use_shared_api) {
+      if (userProfile?.can_use_shared_api) {
         // User has permission, use shared config
         const { data: sharedConfig } = await supabase
-          .from("api_configs")
+          .from("whatsapp_config")
           .select("*")
-          .eq("is_active", true)
-          .order("updated_at", { ascending: false })
           .limit(1)
-          .maybeSingle();
+          .single();
         config = sharedConfig;
       } else {
         // User doesn't have permission, check for personal config
@@ -64,12 +60,10 @@ serve(async (req) => {
     } else {
       // No userId provided, try shared config (for admin or legacy calls)
       const { data: sharedConfig } = await supabase
-        .from("api_configs")
+        .from("whatsapp_config")
         .select("*")
-        .eq("is_active", true)
-        .order("updated_at", { ascending: false })
         .limit(1)
-        .maybeSingle();
+        .single();
       config = sharedConfig;
     }
 
@@ -173,23 +167,17 @@ serve(async (req) => {
           .from("api_configs")
           .select("access_token")
           .eq("id", phoneWithApi.api_config_id)
-          .eq("is_active", true)
           .single();
 
         if (apiConfig?.access_token) {
           config = { ...config, access_token: apiConfig.access_token };
-        } else {
-          return new Response(
-            JSON.stringify({ error: "A API vinculada ao número original deste atendimento não está ativa." }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
         }
       }
     } else if (selectedPhoneNumberId) {
       // Sem vínculo prévio, permite seleção manual no primeiro envio
       const { data: phoneRecord } = await supabase
         .from("waba_phone_numbers")
-        .select("id, api_config_id")
+        .select("id")
         .eq("phone_number_id", selectedPhoneNumberId)
         .eq("is_active", true)
         .single();
@@ -222,19 +210,6 @@ serve(async (req) => {
       }
 
       finalPhoneNumberId = selectedPhoneNumberId;
-
-      if (phoneRecord.api_config_id) {
-        const { data: apiConfig } = await supabase
-          .from("api_configs")
-          .select("access_token, waba_id")
-          .eq("id", phoneRecord.api_config_id)
-          .eq("is_active", true)
-          .single();
-
-        if (apiConfig?.access_token) {
-          config = { ...config, access_token: apiConfig.access_token, waba_id: apiConfig.waba_id || (config as any).waba_id };
-        }
-      }
     }
 
     // Build WhatsApp API request
@@ -279,20 +254,6 @@ serve(async (req) => {
         type: "text",
         text: { body: message },
       };
-    }
-
-    // Inject WhatsApp reply context if replying to a previous message
-    let resolvedReplyParentId: string | null = null;
-    if (replyToMessageId) {
-      const { data: parent } = await supabase
-        .from("messages")
-        .select("id, whatsapp_message_id")
-        .eq("id", replyToMessageId)
-        .maybeSingle();
-      if (parent?.whatsapp_message_id) {
-        resolvedReplyParentId = parent.id;
-        requestBody.context = { message_id: parent.whatsapp_message_id };
-      }
     }
 
     console.log("Sending message to WhatsApp:", JSON.stringify(requestBody, null, 2));
@@ -402,7 +363,6 @@ serve(async (req) => {
       template_name: templateName || null,
       whatsapp_message_id: result.messages?.[0]?.id,
       status: "sent",
-      reply_to_message_id: resolvedReplyParentId,
     });
 
     if (messageError) {

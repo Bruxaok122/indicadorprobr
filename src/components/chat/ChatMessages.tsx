@@ -17,10 +17,9 @@ interface ChatMessagesProps {
   onOpenTemplateDialog: () => void;
   onDeleteMessage?: (messageId: string) => void;
   onReact?: (messageId: string, emoji: string) => void;
-  onReply?: (message: Message) => void;
 }
 
-export function ChatMessages({ messages, isLoading, isSending, templatesAvailable, onOpenTemplateDialog, onDeleteMessage, onReact, onReply }: ChatMessagesProps) {
+export function ChatMessages({ messages, isLoading, isSending, templatesAvailable, onOpenTemplateDialog, onDeleteMessage, onReact }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessageCount = useRef(0);
 
@@ -69,9 +68,7 @@ export function ChatMessages({ messages, isLoading, isSending, templatesAvailabl
     // Separate reactions from regular messages and group them by parent
     const reactionsByParent = new Map<string, Message[]>();
     const visibleMessages: Message[] = [];
-    const byId = new Map<string, Message>();
     for (const m of messages) {
-      byId.set(m.id, m);
       if (m.message_type === "reaction" && m.reacts_to_message_id) {
         const arr = reactionsByParent.get(m.reacts_to_message_id) || [];
         arr.push(m);
@@ -80,7 +77,6 @@ export function ChatMessages({ messages, isLoading, isSending, templatesAvailabl
         visibleMessages.push(m);
       }
     }
-    const findMessage = (id: string) => byId.get(id);
 
     const elements: React.ReactNode[] = [];
     let lastDate: Date | null = null;
@@ -97,8 +93,6 @@ export function ChatMessages({ messages, isLoading, isSending, templatesAvailabl
           reactions={reactionsByParent.get(message.id)}
           onDeleteMessage={onDeleteMessage}
           onReact={onReact}
-          onReply={onReply}
-          findMessage={findMessage}
         />
       );
     });

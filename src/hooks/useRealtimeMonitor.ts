@@ -35,7 +35,6 @@ export interface ActiveChatRow {
   ai_enabled: boolean;
   unread_from_client: number;      // incoming messages in last 24h
   minutes_since_last: number | null;
-  last_direction: "incoming" | "outgoing" | null;
 }
 
 export interface RealtimeStats {
@@ -187,7 +186,6 @@ export function useRealtimeMonitor() {
           ai_enabled: !!c.ai_enabled,
           unread_from_client: incomingByContact.get(c.id) || 0,
           minutes_since_last: minutesSince,
-          last_direction: lastDirByContact.get(c.id) ?? null,
         };
       });
 

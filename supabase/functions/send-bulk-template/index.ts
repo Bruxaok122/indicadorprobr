@@ -95,16 +95,12 @@ serve(async (req) => {
         .eq("user_id", requesterUserId)
         .single();
 
-      const { data: requesterIsAdmin } = await supabase.rpc("is_admin", { _user_id: requesterUserId });
-
-      if (requesterIsAdmin || userProfile?.can_use_shared_api) {
+      if (userProfile?.can_use_shared_api) {
         const { data: sharedConfig } = await supabase
-          .from("api_configs")
+          .from("whatsapp_config")
           .select("*")
-          .eq("is_active", true)
-          .order("updated_at", { ascending: false })
           .limit(1)
-          .maybeSingle();
+          .single();
         config = sharedConfig;
       } else {
         const { data: userConfig } = await supabase
@@ -117,12 +113,10 @@ serve(async (req) => {
       }
     } else {
       const { data: sharedConfig } = await supabase
-        .from("api_configs")
+        .from("whatsapp_config")
         .select("*")
-        .eq("is_active", true)
-        .order("updated_at", { ascending: false })
         .limit(1)
-        .maybeSingle();
+        .single();
       config = sharedConfig;
     }
 
@@ -162,7 +156,7 @@ serve(async (req) => {
     if (selectedPhoneNumberId) {
       const { data: phoneRecord } = await supabase
         .from("waba_phone_numbers")
-        .select("id, api_config_id")
+        .select("id")
         .eq("phone_number_id", selectedPhoneNumberId)
         .eq("is_active", true)
         .single();
@@ -202,19 +196,6 @@ serve(async (req) => {
       }
 
       finalPhoneNumberId = selectedPhoneNumberId;
-
-      if (phoneRecord.api_config_id) {
-        const { data: apiConfig } = await supabase
-          .from("api_configs")
-          .select("access_token, waba_id")
-          .eq("id", phoneRecord.api_config_id)
-          .eq("is_active", true)
-          .single();
-
-        if (apiConfig?.access_token) {
-          config = { ...config, access_token: apiConfig.access_token, waba_id: apiConfig.waba_id || (config as any).waba_id };
-        }
-      }
     }
 
     const whatsappUrl = `https://graph.facebook.com/v18.0/${finalPhoneNumberId}/messages`;

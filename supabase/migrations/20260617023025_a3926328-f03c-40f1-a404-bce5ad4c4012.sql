@@ -1,1 +1,0 @@
-UPDATE public.waba_phone_numbers SET is_active = false WHERE phone_number_id = '1065975819942611';
