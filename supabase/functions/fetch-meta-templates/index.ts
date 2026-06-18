@@ -16,16 +16,18 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get WhatsApp config
+    // Templates must follow the API currently marked active.
     const { data: config, error: configError } = await supabase
-      .from("whatsapp_config")
-      .select("*")
+      .from("api_configs")
+      .select("waba_id, access_token")
+      .eq("is_active", true)
+      .order("updated_at", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (configError || !config) {
       return new Response(
-        JSON.stringify({ error: "WhatsApp não configurado. Configure o Access Token primeiro." }),
+        JSON.stringify({ error: "Nenhuma API ativa configurada. Ative uma API antes de buscar templates." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -37,8 +39,45 @@ serve(async (req) => {
       );
     }
 
+    async function resolveUsableWabaId(storedId: string, token: string): Promise<string> {
+      const directResponse = await fetch(
+        `https://graph.facebook.com/v21.0/${storedId}/phone_numbers?fields=id&limit=1`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await directResponse.text();
+      if (directResponse.ok) return storedId;
+
+      const phoneResponse = await fetch(
+        `https://graph.facebook.com/v21.0/${storedId}?fields=whatsapp_business_account{id}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const phoneResult = await phoneResponse.json().catch(() => null);
+      if (phoneResult?.whatsapp_business_account?.id) return phoneResult.whatsapp_business_account.id;
+
+      const debugResponse = await fetch(
+        `https://graph.facebook.com/v21.0/debug_token?input_token=${encodeURIComponent(token)}&access_token=${encodeURIComponent(token)}`
+      );
+      const debugResult = await debugResponse.json().catch(() => null);
+      const scopes = Array.isArray(debugResult?.data?.granular_scopes) ? debugResult.data.granular_scopes : [];
+      for (const scope of scopes) {
+        if (!String(scope?.scope || "").startsWith("whatsapp_business_")) continue;
+        for (const targetId of scope?.target_ids || []) {
+          const targetResponse = await fetch(
+            `https://graph.facebook.com/v21.0/${targetId}/phone_numbers?fields=id&limit=1`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          await targetResponse.text();
+          if (targetResponse.ok) return String(targetId);
+        }
+      }
+
+      return storedId;
+    }
+
+    const wabaId = await resolveUsableWabaId(config.waba_id, config.access_token);
+
     // Fetch templates from Meta API
-    const templatesUrl = `https://graph.facebook.com/v18.0/${config.waba_id}/message_templates?limit=250`;
+    const templatesUrl = `https://graph.facebook.com/v21.0/${wabaId}/message_templates?limit=250`;
 
     console.log("Fetching templates from Meta API...");
 

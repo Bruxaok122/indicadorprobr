@@ -56,12 +56,6 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    const { data: sharedConfig } = await serviceClient
-      .from("whatsapp_config")
-      .select("waba_id, phone_number_id, access_token")
-      .limit(1)
-      .maybeSingle();
-
     const candidates: Array<{ id: string; token: string; label: string; source: "waba" | "phone" }> = [];
     const addCandidate = (id?: string | null, token?: string | null, label?: string, source: "waba" | "phone" = "waba") => {
       const cleanId = id?.trim();
@@ -73,8 +67,6 @@ serve(async (req) => {
 
     addCandidate(activeApiConfig?.waba_id, activeApiConfig?.access_token, `api_configs:${activeApiConfig?.name || "ativa"}:waba_id`, "waba");
     addCandidate(activeApiConfig?.phone_number_id, activeApiConfig?.access_token, `api_configs:${activeApiConfig?.name || "ativa"}:phone_number_id`, "phone");
-    addCandidate(sharedConfig?.waba_id, sharedConfig?.access_token, "whatsapp_config:waba_id", "waba");
-    addCandidate(sharedConfig?.phone_number_id, sharedConfig?.access_token, "whatsapp_config:phone_number_id", "phone");
 
     if (candidates.length === 0) {
       return new Response(
