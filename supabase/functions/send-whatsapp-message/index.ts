@@ -35,14 +35,18 @@ serve(async (req) => {
         .select("can_use_shared_api")
         .eq("user_id", userId)
         .single();
+
+      const { data: requesterIsAdmin } = await supabase.rpc("is_admin", { _user_id: userId });
       
-      if (userProfile?.can_use_shared_api) {
+      if (requesterIsAdmin || userProfile?.can_use_shared_api) {
         // User has permission, use shared config
         const { data: sharedConfig } = await supabase
-          .from("whatsapp_config")
+          .from("api_configs")
           .select("*")
+          .eq("is_active", true)
+          .order("updated_at", { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
         config = sharedConfig;
       } else {
         // User doesn't have permission, check for personal config
@@ -60,10 +64,12 @@ serve(async (req) => {
     } else {
       // No userId provided, try shared config (for admin or legacy calls)
       const { data: sharedConfig } = await supabase
-        .from("whatsapp_config")
+        .from("api_configs")
         .select("*")
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
       config = sharedConfig;
     }
 
@@ -167,17 +173,23 @@ serve(async (req) => {
           .from("api_configs")
           .select("access_token")
           .eq("id", phoneWithApi.api_config_id)
+          .eq("is_active", true)
           .single();
 
         if (apiConfig?.access_token) {
           config = { ...config, access_token: apiConfig.access_token };
+        } else {
+          return new Response(
+            JSON.stringify({ error: "A API vinculada ao número original deste atendimento não está ativa." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
         }
       }
     } else if (selectedPhoneNumberId) {
       // Sem vínculo prévio, permite seleção manual no primeiro envio
       const { data: phoneRecord } = await supabase
         .from("waba_phone_numbers")
-        .select("id")
+        .select("id, api_config_id")
         .eq("phone_number_id", selectedPhoneNumberId)
         .eq("is_active", true)
         .single();
@@ -210,6 +222,19 @@ serve(async (req) => {
       }
 
       finalPhoneNumberId = selectedPhoneNumberId;
+
+      if (phoneRecord.api_config_id) {
+        const { data: apiConfig } = await supabase
+          .from("api_configs")
+          .select("access_token, waba_id")
+          .eq("id", phoneRecord.api_config_id)
+          .eq("is_active", true)
+          .single();
+
+        if (apiConfig?.access_token) {
+          config = { ...config, access_token: apiConfig.access_token, waba_id: apiConfig.waba_id || (config as any).waba_id };
+        }
+      }
     }
 
     // Build WhatsApp API request

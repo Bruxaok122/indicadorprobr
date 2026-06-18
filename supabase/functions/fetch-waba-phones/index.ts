@@ -43,32 +43,19 @@ serve(async (req) => {
       );
     }
 
-    // Aggregate candidate (waba_id, access_token) sources to discover real phones across all configs.
-    type Candidate = { label: string; waba_id: string; access_token: string };
-    const candidates: Candidate[] = [];
-
-    const { data: activeApis } = await supabase
+    // Synchronization is intentionally scoped to the single API marked active.
+    // Do not merge numbers from legacy/shared configs or inactive API rows.
+    const { data: activeApi } = await supabase
       .from("api_configs")
-      .select("name, waba_id, access_token")
-      .eq("is_active", true);
-    for (const a of activeApis || []) {
-      if (a?.waba_id && a?.access_token) {
-        candidates.push({ label: `api_configs:${a.name || "active"}`, waba_id: a.waba_id, access_token: a.access_token });
-      }
-    }
-
-    const { data: legacy } = await supabase
-      .from("whatsapp_config")
-      .select("waba_id, access_token")
+      .select("id, name, waba_id, phone_number_id, access_token")
+      .eq("is_active", true)
+      .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (legacy?.waba_id && legacy?.access_token) {
-      candidates.push({ label: "whatsapp_config", waba_id: legacy.waba_id, access_token: legacy.access_token });
-    }
 
-    if (candidates.length === 0) {
+    if (!activeApi?.id || !activeApi?.access_token) {
       return new Response(
-        JSON.stringify({ error: "WhatsApp não configurado. Configure o Access Token e WABA ID primeiro." }),
+        JSON.stringify({ error: "Nenhuma API ativa configurada. Ative uma API antes de sincronizar." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -95,44 +82,53 @@ serve(async (req) => {
       }
     }
 
-    const collected: any[] = [];
-    let didFullListing = false;
-    const seenIds = new Set<string>();
-
-    for (const cand of candidates) {
-      const tryWaba = async (wabaId: string) => {
+    async function resolveWabaFromPhoneId(id: string | null | undefined, token: string): Promise<string | null> {
+      const cleanId = String(id || "").trim();
+      if (!cleanId) return null;
+      try {
         const r = await fetch(
-          `https://graph.facebook.com/v21.0/${wabaId}/phone_numbers?fields=${fields}`,
-          { headers: { Authorization: `Bearer ${cand.access_token}` } }
+          `https://graph.facebook.com/v21.0/${cleanId}?fields=whatsapp_business_account{id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
         const j = await r.json();
-        console.log(`Meta phones for ${cand.label} (${wabaId}):`, JSON.stringify(j));
-        return { ok: r.ok, json: j };
-      };
-
-      let listed = await tryWaba(cand.waba_id);
-
-      // If the stored waba_id isn't a WABA, resolve the real one(s) via debug_token
-      if (!listed.ok && listed.json?.error?.code === 100) {
-        const real = await resolveRealWabaIds(cand.access_token);
-        for (const realWaba of real) {
-          if (realWaba === cand.waba_id) continue;
-          const r2 = await tryWaba(realWaba);
-          if (r2.ok) {
-            listed = r2;
-            break;
-          }
-        }
+        return j?.whatsapp_business_account?.id ?? null;
+      } catch {
+        return null;
       }
+    }
 
+    const collected: any[] = [];
+    let resolvedWabaId: string | null = null;
+    const seenIds = new Set<string>();
+
+    const tryWaba = async (wabaId: string) => {
+      const r = await fetch(
+        `https://graph.facebook.com/v21.0/${wabaId}/phone_numbers?fields=${fields}`,
+        { headers: { Authorization: `Bearer ${activeApi.access_token}` } }
+      );
+      const j = await r.json();
+      console.log(`Meta phones for active API ${activeApi.name || activeApi.id} (${wabaId}):`, JSON.stringify(j));
+      return { ok: r.ok, json: j, wabaId };
+    };
+
+    const candidateWabaIds = Array.from(new Set([
+      activeApi.waba_id,
+      await resolveWabaFromPhoneId(activeApi.waba_id, activeApi.access_token),
+      await resolveWabaFromPhoneId(activeApi.phone_number_id, activeApi.access_token),
+      ...(await resolveRealWabaIds(activeApi.access_token)),
+    ].filter(Boolean).map(String)));
+
+    for (const wabaId of candidateWabaIds) {
+      const listed = await tryWaba(wabaId);
       if (listed.ok && Array.isArray(listed.json?.data)) {
-        didFullListing = true;
+        resolvedWabaId = wabaId;
         for (const p of listed.json.data) {
           if (p?.id && p?.display_phone_number && !seenIds.has(p.id)) {
             seenIds.add(p.id);
             collected.push(p);
           }
         }
+        break;
       }
     }
 
@@ -143,12 +139,9 @@ serve(async (req) => {
       );
     }
 
-    const result = { data: collected };
-    const isPhoneIdFallback = !didFullListing;
-
     // Map and upsert phone numbers
     const nowIso = new Date().toISOString();
-    const phones = (result.data || []).map((phone: any) => ({
+    const phones = (collected || []).map((phone: any) => ({
       phone_number_id: phone.id,
       display_phone_number: phone.display_phone_number,
       verified_name: phone.verified_name || null,
@@ -156,6 +149,7 @@ serve(async (req) => {
       messaging_tier: phone.messaging_limit_tier || phone.throughput?.level || null,
       tier_updated_at: (phone.messaging_limit_tier || phone.throughput?.level) ? nowIso : null,
       is_active: true,
+      api_config_id: activeApi.id,
     }));
 
     for (const phone of phones) {
@@ -164,9 +158,9 @@ serve(async (req) => {
         .upsert(phone, { onConflict: "phone_number_id" });
     }
 
-    // Deactivate numbers no longer in the API response — only when we did a full WABA listing
+    // Deactivate every number not returned by the currently active API.
     const activeMetaIds = phones.map((p: any) => p.phone_number_id);
-    if (!isPhoneIdFallback && activeMetaIds.length > 0) {
+    if (activeMetaIds.length > 0) {
       const { data: allDbPhones } = await supabase
         .from("waba_phone_numbers")
         .select("id, phone_number_id");
@@ -182,6 +176,20 @@ serve(async (req) => {
           .in("id", toDeactivate);
       }
     }
+
+    const primaryPhoneId = activeApi.phone_number_id && activeMetaIds.includes(activeApi.phone_number_id)
+      ? activeApi.phone_number_id
+      : activeMetaIds[0];
+
+    await supabase
+      .from("api_configs")
+      .update({
+        waba_id: resolvedWabaId || activeApi.waba_id,
+        phone_number_id: primaryPhoneId,
+        is_validated: true,
+        status_message: `${phones.length} número(s) sincronizado(s) da API ativa`,
+      })
+      .eq("id", activeApi.id);
 
     return new Response(
       JSON.stringify({ success: true, phones, total: phones.length }),
