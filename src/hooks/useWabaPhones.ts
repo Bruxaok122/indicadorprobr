@@ -25,11 +25,22 @@ export function useWabaPhones() {
     queryFn: async () => {
       if (!user?.id) return [];
 
+      const { data: activeApi } = await supabase
+        .from("api_configs")
+        .select("id")
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!activeApi?.id) return [];
+
       if (isAdmin) {
-        // Admin sees all active phones
+        // Admin sees only active phones from the currently active API
         const { data, error } = await supabase
           .from("waba_phone_numbers")
           .select("*")
+          .eq("api_config_id", activeApi.id)
           .eq("is_active", true)
           .order("display_phone_number");
 
@@ -52,6 +63,7 @@ export function useWabaPhones() {
         .from("waba_phone_numbers")
         .select("*")
         .eq("created_by", user.id)
+        .eq("api_config_id", activeApi.id)
         .eq("is_active", true);
 
       if (ownError) throw ownError;
@@ -63,6 +75,7 @@ export function useWabaPhones() {
           .from("waba_phone_numbers")
           .select("*")
           .in("id", permittedIds)
+          .eq("api_config_id", activeApi.id)
           .eq("is_active", true);
 
         if (phonesError) throw phonesError;
@@ -104,6 +117,7 @@ export function useWabaPhones() {
       const { data, error } = await supabase
         .from("waba_phone_numbers")
         .select("*")
+        .eq("api_config_id", (await supabase.from("api_configs").select("id").eq("is_active", true).order("updated_at", { ascending: false }).limit(1).maybeSingle()).data?.id || "00000000-0000-0000-0000-000000000000")
         .eq("is_active", true)
         .order("display_phone_number");
 
