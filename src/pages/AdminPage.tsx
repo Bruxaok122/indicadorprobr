@@ -229,11 +229,6 @@ function AdminPageInner() {
 
         </Tabs>
 
-        <div className="text-center py-4">
-          <p className="text-sm text-muted-foreground">
-            Desenvolvido por <span className="font-semibold text-accent">LB013</span>
-          </p>
-        </div>
       </main>
 
       <CreateUserDialog

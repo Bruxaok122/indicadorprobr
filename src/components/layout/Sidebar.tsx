@@ -164,13 +164,6 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className={cn("border-t border-sidebar-border p-3", !inSheet && isCollapsed && "hidden")}>
-        <div className="flex items-center justify-center gap-1.5">
-          <span className="text-xs text-primary-foreground/70">Desenvolvido por</span>
-          <span className="text-sm font-bold text-accent tracking-wide">LB013</span>
-        </div>
-      </div>
     </div>
   );
 

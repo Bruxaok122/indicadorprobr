@@ -235,13 +235,7 @@ export function LoginGlassCard() {
         transition={{ delay: 0.9, duration: 0.5 }}
         className="mt-5 text-center text-[11px] text-white/25"
       >
-        © 2025 JurisZap · Desenvolvido por{" "}
-        <span
-          className="font-semibold"
-          style={{ color: "hsl(43 84% 55%)" }}
-        >
-          LB013
-        </span>
+        © 2025 JurisZap
       </motion.p>
     </motion.div>
   );
