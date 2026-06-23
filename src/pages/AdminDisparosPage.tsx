@@ -1078,7 +1078,7 @@ export default function AdminDisparosPage() {
                       <Progress value={progress} className="h-2.5" />
                       <div className="flex flex-wrap gap-3 text-xs pt-0.5">
                         <span className="text-muted-foreground">{dispatch.current}/{dispatch.total} processados</span>
-                        <span className="text-muted-foreground">({dispatch.mode === "turbo" ? "⚡ Turbo" : dispatch.mode === "individual" ? "Individual" : "Lote"})</span>
+                        <span className="text-muted-foreground">({dispatch.mode === "turbo" ? "⚡ Turbo" : dispatch.mode === "individual" ? "Individual" : dispatch.mode === "scheduled" ? "📅 Programado" : "Lote"})</span>
                         {dispatch.sent > 0 && <span className="text-success font-medium">✓ {dispatch.sent} enviados</span>}
                         {dispatch.failed > 0 && <span className="text-destructive font-medium">✗ {dispatch.failed} falhas</span>}
                       </div>
