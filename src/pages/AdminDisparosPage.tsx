@@ -1498,7 +1498,7 @@ export default function AdminDisparosPage() {
                       { label: "Template", value: selectedTemplate?.name || "—" },
                       { label: "Lista", value: selectedList || "—" },
                       { label: "Contatos", value: batchMode ? `${Math.min(batchSize, listContactCount)} de ${listContactCount}` : String(listContactCount) },
-                      { label: "Modo", value: dispatchMode === "turbo" ? `Turbo (limite: ${turboLimit})` : dispatchMode === "individual" ? "Individual (progressivo)" : "Lote (blocos variáveis ~20)" },
+                      { label: "Modo", value: dispatchMode === "turbo" ? `Turbo (limite: ${turboLimit})` : dispatchMode === "individual" ? "Individual (progressivo)" : dispatchMode === "scheduled" ? `Programado (${progChunkSize}/${progIntervalMinutes}min até 18h)` : "Lote (blocos variáveis ~20)" },
                       { label: "Responsável", value: sharedDispatch ? "Compartilhado 👥" : (users.find(u => u.user_id === selectedUserId)?.full_name || "—") },
                       ...(isScheduled && scheduledDate ? [{ label: "📅 Agendado", value: `${format(scheduledDate, "dd/MM/yyyy")} às ${scheduledHour}:${scheduledMinute} BRT` }] : []),
                     ].map((row) => (
