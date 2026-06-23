@@ -230,6 +230,9 @@ export default function AdminDisparosPage() {
   const [intervalSeconds, setIntervalSeconds] = useState(5);
   const [randomJitter412, setRandomJitter412] = useState(false); // 4-12s random per send (anti-pattern)
   const [turboLimit, setTurboLimit] = useState(100);
+  // 📅 Programado (sends in cycles through the day, stops at 18h BRT)
+  const [progChunkSize, setProgChunkSize] = useState(3);
+  const [progIntervalMinutes, setProgIntervalMinutes] = useState(25);
   // Step 4: Responsible
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [sharedDispatch, setSharedDispatch] = useState(false);
