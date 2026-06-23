@@ -443,7 +443,7 @@ export default function AdminDisparosPage() {
     }
 
     // Anti-ban: Check dispatch hours (10:00-17:00 BRT, no weekends) — skip for turbo mode
-    if (dispatchMode !== "turbo" && !isWithinDispatchHours()) {
+    if (dispatchMode !== "turbo" && dispatchMode !== "scheduled" && !isWithinDispatchHours()) {
       const brtHour = getBrtHour();
       const now = new Date();
       const brtDay = new Date(now.getTime() - 3 * 60 * 60 * 1000).getUTCDay();
