@@ -466,10 +466,23 @@ export default function AdminDisparosPage() {
 
     // Fetch remaining contacts from the list (real-time, only pool contacts)
     const isTurbo = dispatchMode === "turbo";
+    const isProgramado = dispatchMode === "scheduled";
+
+    if (isProgramado) {
+      if (!Number.isFinite(progChunkSize) || progChunkSize < 1) {
+        toast.error("Informe a quantidade de envios por ciclo (mínimo 1).");
+        return;
+      }
+      if (!Number.isFinite(progIntervalMinutes) || progIntervalMinutes < 25) {
+        toast.error("O intervalo mínimo entre disparos é de 25 minutos.");
+        return;
+      }
+    }
+
     const minIncomeFilter = highIncomeOnly ? 10000 : undefined;
     const contactIds = await fetchRemainingContactIds(
       selectedList,
-      isTurbo ? turboLimit : batchMode ? batchSize : undefined,
+      isProgramado ? undefined : (isTurbo ? turboLimit : batchMode ? batchSize : undefined),
       minIncomeFilter
     );
 
@@ -478,8 +491,8 @@ export default function AdminDisparosPage() {
       return;
     }
 
-    // 🛡️ Anti-ban: Daily limit check (skip for turbo mode — user controls limit)
-    if (!isTurbo && contactIds.length > ANTI_BAN_DAILY_LIMIT) {
+    // 🛡️ Anti-ban: Daily limit check (skip for turbo / programado — they self-throttle)
+    if (!isTurbo && !isProgramado && contactIds.length > ANTI_BAN_DAILY_LIMIT) {
       toast.warning(`⚠️ Limite diário: máximo ${ANTI_BAN_DAILY_LIMIT} mensagens por sessão. Limitando automaticamente.`, { duration: 10000 });
       contactIds.splice(ANTI_BAN_DAILY_LIMIT);
     }
