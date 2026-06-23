@@ -551,8 +551,20 @@ export default function OperatorDisparosPage() {
     const isTurbo = dispatchMode === "turbo";
     const minIncomeFilter = highIncomeOnly ? 10000 : (minRenda !== "all" ? parseInt(minRenda) : undefined);
 
-    // Admin-defined batch limit enforcement
-    if (adminMaxBatchSize != null) {
+    // 📅 Scheduled mode validation
+    if (scheduledMode) {
+      if (!Number.isFinite(scheduledChunkSize) || scheduledChunkSize < 1) {
+        toast.error("Informe a quantidade de envios por ciclo (mínimo 1).");
+        return;
+      }
+      if (!Number.isFinite(scheduledIntervalMinutes) || scheduledIntervalMinutes < 25) {
+        toast.error("O intervalo mínimo entre disparos é de 25 minutos.");
+        return;
+      }
+    }
+
+    // Admin-defined batch limit enforcement (skip when scheduled — paced by chunk size)
+    if (!scheduledMode && adminMaxBatchSize != null) {
       if (batchMode) {
         if (batchSize > adminMaxBatchSize) {
           toast.error(
@@ -573,7 +585,7 @@ export default function OperatorDisparosPage() {
       }
     }
 
-    const limit = isTurbo ? turboLimit : (batchMode ? batchSize : undefined);
+    const limit = scheduledMode ? undefined : (isTurbo ? turboLimit : (batchMode ? batchSize : undefined));
     let contactIds = await fetchRemainingForOperator(selectedList, limit, minIncomeFilter);
 
     if (contactIds.length === 0) {
@@ -581,7 +593,7 @@ export default function OperatorDisparosPage() {
       return;
     }
 
-    if (!isTurbo && contactIds.length > ANTI_BAN_DAILY_LIMIT) {
+    if (!isTurbo && !scheduledMode && contactIds.length > ANTI_BAN_DAILY_LIMIT) {
       toast.warning(`⚠️ Limite diário: máximo ${ANTI_BAN_DAILY_LIMIT} mensagens por sessão. Limitando.`, { duration: 10000 });
       contactIds = contactIds.slice(0, ANTI_BAN_DAILY_LIMIT);
     }
