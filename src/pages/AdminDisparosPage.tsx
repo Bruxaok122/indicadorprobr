@@ -552,7 +552,92 @@ export default function AdminDisparosPage() {
       let consecutiveErrors = 0; // Track consecutive errors for rate limit detection
 
       try {
-        if (capturedIsTurbo) {
+        if (capturedIsProgramado) {
+          // 📅 PROGRAMADO MODE — sends `capturedProgChunkSize` per cycle every
+          // `capturedProgIntervalMs`, stops at `capturedProgStopHour` BRT.
+          toast.info(`📅 Programado: ${capturedProgChunkSize} a cada ${Math.round(capturedProgIntervalMs / 60000)} min até ${capturedProgStopHour}h BRT.`, { duration: 8000 });
+          let i = 0;
+          let cycle = 0;
+          while (i < remainingIds.length) {
+            const ctrl = dispatchControlsRef.current[dispatchId];
+            if (ctrl?.isCancelled) break;
+            if (ctrl?.isPaused) {
+              while (ctrl?.isPaused && !ctrl?.isCancelled) await new Promise((r) => setTimeout(r, 500));
+              if (ctrl?.isCancelled) break;
+            }
+
+            if (getBrtHour() >= capturedProgStopHour) {
+              toast.info(`🌙 Programado encerrado às ${capturedProgStopHour}h BRT.`, { duration: 10000 });
+              break;
+            }
+
+            const chunk = remainingIds.slice(i, i + capturedProgChunkSize);
+            const available: string[] = [];
+            for (const id of chunk) {
+              const { data: c } = await supabase.from("contacts").select("id, user_id").eq("id", id).maybeSingle();
+              if (c && c.user_id === null) available.push(id);
+              else results.skipped++;
+            }
+
+            if (available.length > 0) {
+              const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
+                body: {
+                  contactIds: available,
+                  templateName: capturedTemplate.name,
+                  templateLanguage: capturedTemplate.language,
+                  userId: user?.id,
+                  assignedUserId: capturedShared ? undefined : capturedUserId,
+                  selectedPhoneNumberId: capturedPhoneId || undefined,
+                  variableMappings: capturedMappings,
+                  phoneVerifiedName: capturedPhoneVerifiedName,
+                  dispatchMode: capturedShared ? "shared" : "private",
+                },
+              });
+              if (!sendError && result?.results) {
+                results.sent += result.results.sent || 0;
+                results.failed += result.results.failed || 0;
+                if (result.results.errors) results.errors.push(...result.results.errors);
+                if (result.results.errors?.some((e: string) => e.includes("Conta Business bloqueada"))) {
+                  toast.error("🛑 Conta Business bloqueada! Parando disparo imediatamente.", { duration: 30000 });
+                  break;
+                }
+              } else {
+                results.failed += available.length;
+                if (sendError) results.errors.push(await getInvokeErrorMessage(sendError));
+                const statusCode = (sendError as any)?.context?.status;
+                if (statusCode === 401 || statusCode === 403) break;
+              }
+            }
+
+            cycle++;
+            i += capturedProgChunkSize;
+            updateDispatch(dispatchId, {
+              current: results.sent + results.failed + results.skipped,
+              sent: results.sent,
+              failed: results.failed,
+              errors: [...results.errors],
+              blocksSent: cycle,
+            });
+
+            if (i >= remainingIds.length) break;
+
+            const nextAt = new Date(Date.now() + capturedProgIntervalMs).toISOString();
+            updateDispatch(dispatchId, { nextSendAt: nextAt });
+            const endTime = Date.now() + capturedProgIntervalMs;
+            let stoppedByHour = false;
+            while (Date.now() < endTime) {
+              const c = dispatchControlsRef.current[dispatchId];
+              if (c?.isCancelled) break;
+              if (getBrtHour() >= capturedProgStopHour) { stoppedByHour = true; break; }
+              await new Promise((r) => setTimeout(r, 5000));
+            }
+            updateDispatch(dispatchId, { nextSendAt: undefined });
+            if (stoppedByHour) {
+              toast.info(`🌙 Programado encerrado às ${capturedProgStopHour}h BRT.`, { duration: 10000 });
+              break;
+            }
+          }
+        } else if (capturedIsTurbo) {
           // ⚡ TURBO MODE: No anti-ban, stop immediately on any error
           let i = 0;
           while (i < remainingIds.length) {
