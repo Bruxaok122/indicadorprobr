@@ -1280,6 +1280,50 @@ export default function OperatorDisparosPage() {
                               </div>
                             )}
 
+                            {/* 📅 Modo Programado — dispara durante o dia e para às 18h BRT */}
+                            {dispatchType === "lista" && (
+                              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <Label htmlFor="scheduled-mode" className="text-xs font-medium cursor-pointer">📅 Modo Programado (até 18h)</Label>
+                                    <p className="text-[10px] text-muted-foreground">Envia em ciclos durante o dia, para automaticamente às 18h BRT.</p>
+                                  </div>
+                                  <Switch id="scheduled-mode" checked={scheduledMode} onCheckedChange={setScheduledMode} />
+                                </div>
+                                {scheduledMode && (
+                                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                      <Label htmlFor="sched-chunk" className="text-xs text-muted-foreground whitespace-nowrap w-40">Envios por ciclo:</Label>
+                                      <Input
+                                        id="sched-chunk"
+                                        type="number"
+                                        min={1}
+                                        value={scheduledChunkSize}
+                                        onChange={(e) => setScheduledChunkSize(Math.max(1, parseInt(e.target.value) || 1))}
+                                        className="h-8 w-24 text-sm"
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Label htmlFor="sched-interval" className="text-xs text-muted-foreground whitespace-nowrap w-40">Intervalo (min, mín. 25):</Label>
+                                      <Input
+                                        id="sched-interval"
+                                        type="number"
+                                        min={25}
+                                        value={scheduledIntervalMinutes}
+                                        onChange={(e) => setScheduledIntervalMinutes(Math.max(25, parseInt(e.target.value) || 25))}
+                                        className="h-8 w-24 text-sm"
+                                      />
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground">
+                                      Exemplo: {scheduledChunkSize} contato{scheduledChunkSize !== 1 ? "s" : ""} a cada {scheduledIntervalMinutes} min, até atingir 18h BRT.
+                                    </p>
+                                  </motion.div>
+                                )}
+                              </div>
+                            )}
+
+
+
 
                             {dispatchType === "lista" ? (
                               <Button className="w-full gap-2" size="lg" onClick={handleSend}
