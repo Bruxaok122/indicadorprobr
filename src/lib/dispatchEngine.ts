@@ -190,6 +190,9 @@ export function runDispatch(opts: RunDispatchOptions): void {
     batchMode,
     batchSize,
     turboLimit,
+    scheduledChunkSize,
+    scheduledIntervalMinutes,
+    scheduledStopHourBrt,
     listName,
     minIncome,
     fetchRemaining,
@@ -201,6 +204,7 @@ export function runDispatch(opts: RunDispatchOptions): void {
   } = opts;
 
   const isTurbo = mode === "turbo";
+  const isScheduled = mode === "scheduled";
 
   const invokeBody = (contactIdsArg: string[]) => ({
     contactIds: contactIdsArg,
