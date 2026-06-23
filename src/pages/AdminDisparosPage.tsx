@@ -230,6 +230,9 @@ export default function AdminDisparosPage() {
   const [intervalSeconds, setIntervalSeconds] = useState(5);
   const [randomJitter412, setRandomJitter412] = useState(false); // 4-12s random per send (anti-pattern)
   const [turboLimit, setTurboLimit] = useState(100);
+  // 📅 Programado (sends in cycles through the day, stops at 18h BRT)
+  const [progChunkSize, setProgChunkSize] = useState(3);
+  const [progIntervalMinutes, setProgIntervalMinutes] = useState(25);
   // Step 4: Responsible
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [sharedDispatch, setSharedDispatch] = useState(false);
@@ -286,7 +289,7 @@ export default function AdminDisparosPage() {
   const approvedTemplates = allTemplates.filter((t) => t.status === "APPROVED");
   const templateBody = selectedTemplate ? getTemplateBody(selectedTemplate) : "";
   const templateVars = extractVariables(templateBody);
-  const effectiveCount = dispatchMode === "turbo" ? turboLimit : batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
+  const effectiveCount = dispatchMode === "turbo" ? turboLimit : dispatchMode === "scheduled" ? listContactCount : batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
 
   const isStep1Valid = phones.length === 0 || !!selectedPhoneNumberId;
   const isStep2Valid = !!selectedTemplate;
@@ -440,7 +443,7 @@ export default function AdminDisparosPage() {
     }
 
     // Anti-ban: Check dispatch hours (10:00-17:00 BRT, no weekends) — skip for turbo mode
-    if (dispatchMode !== "turbo" && !isWithinDispatchHours()) {
+    if (dispatchMode !== "turbo" && dispatchMode !== "scheduled" && !isWithinDispatchHours()) {
       const brtHour = getBrtHour();
       const now = new Date();
       const brtDay = new Date(now.getTime() - 3 * 60 * 60 * 1000).getUTCDay();
@@ -463,10 +466,23 @@ export default function AdminDisparosPage() {
 
     // Fetch remaining contacts from the list (real-time, only pool contacts)
     const isTurbo = dispatchMode === "turbo";
+    const isProgramado = dispatchMode === "scheduled";
+
+    if (isProgramado) {
+      if (!Number.isFinite(progChunkSize) || progChunkSize < 1) {
+        toast.error("Informe a quantidade de envios por ciclo (mínimo 1).");
+        return;
+      }
+      if (!Number.isFinite(progIntervalMinutes) || progIntervalMinutes < 25) {
+        toast.error("O intervalo mínimo entre disparos é de 25 minutos.");
+        return;
+      }
+    }
+
     const minIncomeFilter = highIncomeOnly ? 10000 : undefined;
     const contactIds = await fetchRemainingContactIds(
       selectedList,
-      isTurbo ? turboLimit : batchMode ? batchSize : undefined,
+      isProgramado ? undefined : (isTurbo ? turboLimit : batchMode ? batchSize : undefined),
       minIncomeFilter
     );
 
@@ -475,8 +491,8 @@ export default function AdminDisparosPage() {
       return;
     }
 
-    // 🛡️ Anti-ban: Daily limit check (skip for turbo mode — user controls limit)
-    if (!isTurbo && contactIds.length > ANTI_BAN_DAILY_LIMIT) {
+    // 🛡️ Anti-ban: Daily limit check (skip for turbo / programado — they self-throttle)
+    if (!isTurbo && !isProgramado && contactIds.length > ANTI_BAN_DAILY_LIMIT) {
       toast.warning(`⚠️ Limite diário: máximo ${ANTI_BAN_DAILY_LIMIT} mensagens por sessão. Limitando automaticamente.`, { duration: 10000 });
       contactIds.splice(ANTI_BAN_DAILY_LIMIT);
     }
@@ -521,6 +537,10 @@ export default function AdminDisparosPage() {
     const capturedBatchSize = batchSize;
     const capturedTurboLimit = turboLimit;
     const capturedIsTurbo = isTurbo;
+    const capturedIsProgramado = isProgramado;
+    const capturedProgChunkSize = Math.max(1, progChunkSize);
+    const capturedProgIntervalMs = Math.max(25, progIntervalMinutes) * 60 * 1000;
+    const capturedProgStopHour = 18;
     const capturedMinIncome = minIncomeFilter;
     // Run dispatch in background with anti-ban protections
     (async () => {
@@ -532,7 +552,92 @@ export default function AdminDisparosPage() {
       let consecutiveErrors = 0; // Track consecutive errors for rate limit detection
 
       try {
-        if (capturedIsTurbo) {
+        if (capturedIsProgramado) {
+          // 📅 PROGRAMADO MODE — sends `capturedProgChunkSize` per cycle every
+          // `capturedProgIntervalMs`, stops at `capturedProgStopHour` BRT.
+          toast.info(`📅 Programado: ${capturedProgChunkSize} a cada ${Math.round(capturedProgIntervalMs / 60000)} min até ${capturedProgStopHour}h BRT.`, { duration: 8000 });
+          let i = 0;
+          let cycle = 0;
+          while (i < remainingIds.length) {
+            const ctrl = dispatchControlsRef.current[dispatchId];
+            if (ctrl?.isCancelled) break;
+            if (ctrl?.isPaused) {
+              while (ctrl?.isPaused && !ctrl?.isCancelled) await new Promise((r) => setTimeout(r, 500));
+              if (ctrl?.isCancelled) break;
+            }
+
+            if (getBrtHour() >= capturedProgStopHour) {
+              toast.info(`🌙 Programado encerrado às ${capturedProgStopHour}h BRT.`, { duration: 10000 });
+              break;
+            }
+
+            const chunk = remainingIds.slice(i, i + capturedProgChunkSize);
+            const available: string[] = [];
+            for (const id of chunk) {
+              const { data: c } = await supabase.from("contacts").select("id, user_id").eq("id", id).maybeSingle();
+              if (c && c.user_id === null) available.push(id);
+              else results.skipped++;
+            }
+
+            if (available.length > 0) {
+              const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
+                body: {
+                  contactIds: available,
+                  templateName: capturedTemplate.name,
+                  templateLanguage: capturedTemplate.language,
+                  userId: user?.id,
+                  assignedUserId: capturedShared ? undefined : capturedUserId,
+                  selectedPhoneNumberId: capturedPhoneId || undefined,
+                  variableMappings: capturedMappings,
+                  phoneVerifiedName: capturedPhoneVerifiedName,
+                  dispatchMode: capturedShared ? "shared" : "private",
+                },
+              });
+              if (!sendError && result?.results) {
+                results.sent += result.results.sent || 0;
+                results.failed += result.results.failed || 0;
+                if (result.results.errors) results.errors.push(...result.results.errors);
+                if (result.results.errors?.some((e: string) => e.includes("Conta Business bloqueada"))) {
+                  toast.error("🛑 Conta Business bloqueada! Parando disparo imediatamente.", { duration: 30000 });
+                  break;
+                }
+              } else {
+                results.failed += available.length;
+                if (sendError) results.errors.push(await getInvokeErrorMessage(sendError));
+                const statusCode = (sendError as any)?.context?.status;
+                if (statusCode === 401 || statusCode === 403) break;
+              }
+            }
+
+            cycle++;
+            i += capturedProgChunkSize;
+            updateDispatch(dispatchId, {
+              current: results.sent + results.failed + results.skipped,
+              sent: results.sent,
+              failed: results.failed,
+              errors: [...results.errors],
+              blocksSent: cycle,
+            });
+
+            if (i >= remainingIds.length) break;
+
+            const nextAt = new Date(Date.now() + capturedProgIntervalMs).toISOString();
+            updateDispatch(dispatchId, { nextSendAt: nextAt });
+            const endTime = Date.now() + capturedProgIntervalMs;
+            let stoppedByHour = false;
+            while (Date.now() < endTime) {
+              const c = dispatchControlsRef.current[dispatchId];
+              if (c?.isCancelled) break;
+              if (getBrtHour() >= capturedProgStopHour) { stoppedByHour = true; break; }
+              await new Promise((r) => setTimeout(r, 5000));
+            }
+            updateDispatch(dispatchId, { nextSendAt: undefined });
+            if (stoppedByHour) {
+              toast.info(`🌙 Programado encerrado às ${capturedProgStopHour}h BRT.`, { duration: 10000 });
+              break;
+            }
+          }
+        } else if (capturedIsTurbo) {
           // ⚡ TURBO MODE: No anti-ban, stop immediately on any error
           let i = 0;
           while (i < remainingIds.length) {
@@ -973,7 +1078,7 @@ export default function AdminDisparosPage() {
                       <Progress value={progress} className="h-2.5" />
                       <div className="flex flex-wrap gap-3 text-xs pt-0.5">
                         <span className="text-muted-foreground">{dispatch.current}/{dispatch.total} processados</span>
-                        <span className="text-muted-foreground">({dispatch.mode === "turbo" ? "⚡ Turbo" : dispatch.mode === "individual" ? "Individual" : "Lote"})</span>
+                        <span className="text-muted-foreground">({dispatch.mode === "turbo" ? "⚡ Turbo" : dispatch.mode === "individual" ? "Individual" : dispatch.mode === "scheduled" ? "📅 Programado" : "Lote"})</span>
                         {dispatch.sent > 0 && <span className="text-success font-medium">✓ {dispatch.sent} enviados</span>}
                         {dispatch.failed > 0 && <span className="text-destructive font-medium">✗ {dispatch.failed} falhas</span>}
                       </div>
@@ -1183,6 +1288,10 @@ export default function AdminDisparosPage() {
                         className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "turbo" ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400" : "border-border hover:bg-muted"}`}>
                         <Zap className="h-4 w-4 mx-auto mb-1" /> Turbo
                       </button>
+                      <button onClick={() => setDispatchMode("scheduled")}
+                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "scheduled" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
+                        <span className="block text-base leading-none mb-1">📅</span> Programado
+                      </button>
                     </div>
 
                     {dispatchMode === "individual" && (
@@ -1251,6 +1360,27 @@ export default function AdminDisparosPage() {
                           <p>• Para IMEDIATAMENTE em qualquer erro da API</p>
                           <p>• Delay mínimo de 2s entre mensagens</p>
                           <p>• Use com responsabilidade</p>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {dispatchMode === "scheduled" && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="prog-chunk" className="text-xs text-muted-foreground whitespace-nowrap w-40">Envios por ciclo:</Label>
+                          <Input id="prog-chunk" type="number" min={1} value={progChunkSize}
+                            onChange={(e) => setProgChunkSize(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-24 text-sm" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="prog-interval" className="text-xs text-muted-foreground whitespace-nowrap w-40">Intervalo (min, mín. 25):</Label>
+                          <Input id="prog-interval" type="number" min={25} value={progIntervalMinutes}
+                            onChange={(e) => setProgIntervalMinutes(Math.max(25, parseInt(e.target.value) || 25))} className="h-8 w-24 text-sm" />
+                        </div>
+                        <div className="rounded border border-primary/30 bg-primary/5 p-2 text-[10px] text-primary space-y-0.5">
+                          <p className="font-semibold">📅 Modo Programado</p>
+                          <p>• Envia {progChunkSize} contato(s) a cada {progIntervalMinutes} min</p>
+                          <p>• Encerra automaticamente às 18h BRT</p>
+                          <p>• Início manual — roda em background até concluir ou bater 18h</p>
                         </div>
                       </motion.div>
                     )}
@@ -1368,7 +1498,7 @@ export default function AdminDisparosPage() {
                       { label: "Template", value: selectedTemplate?.name || "—" },
                       { label: "Lista", value: selectedList || "—" },
                       { label: "Contatos", value: batchMode ? `${Math.min(batchSize, listContactCount)} de ${listContactCount}` : String(listContactCount) },
-                      { label: "Modo", value: dispatchMode === "turbo" ? `Turbo (limite: ${turboLimit})` : dispatchMode === "individual" ? "Individual (progressivo)" : "Lote (blocos variáveis ~20)" },
+                      { label: "Modo", value: dispatchMode === "turbo" ? `Turbo (limite: ${turboLimit})` : dispatchMode === "individual" ? "Individual (progressivo)" : dispatchMode === "scheduled" ? `Programado (${progChunkSize}/${progIntervalMinutes}min até 18h)` : "Lote (blocos variáveis ~20)" },
                       { label: "Responsável", value: sharedDispatch ? "Compartilhado 👥" : (users.find(u => u.user_id === selectedUserId)?.full_name || "—") },
                       ...(isScheduled && scheduledDate ? [{ label: "📅 Agendado", value: `${format(scheduledDate, "dd/MM/yyyy")} às ${scheduledHour}:${scheduledMinute} BRT` }] : []),
                     ].map((row) => (
