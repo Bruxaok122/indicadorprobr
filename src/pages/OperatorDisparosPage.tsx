@@ -216,6 +216,10 @@ export default function OperatorDisparosPage() {
   const [batchSize, setBatchSize] = useState(persisted.batchSize ?? 50);
   const turboLimit = persisted.turboLimit ?? 100;
   const highIncomeOnly = false;
+  // 📅 Scheduled (programado) mode — sends N contacts every X minutes until 18h BRT.
+  const [scheduledMode, setScheduledMode] = useState<boolean>((persisted as any).scheduledMode ?? false);
+  const [scheduledChunkSize, setScheduledChunkSize] = useState<number>((persisted as any).scheduledChunkSize ?? 3);
+  const [scheduledIntervalMinutes, setScheduledIntervalMinutes] = useState<number>((persisted as any).scheduledIntervalMinutes ?? 25);
   const [wizardStep, setWizardStep] = useState(persisted.wizardStep ?? 0);
 
   // Admin-defined max batch size (null = unlimited)
