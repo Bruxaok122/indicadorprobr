@@ -1288,6 +1288,10 @@ export default function AdminDisparosPage() {
                         className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "turbo" ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400" : "border-border hover:bg-muted"}`}>
                         <Zap className="h-4 w-4 mx-auto mb-1" /> Turbo
                       </button>
+                      <button onClick={() => setDispatchMode("scheduled")}
+                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "scheduled" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
+                        <span className="block text-base leading-none mb-1">📅</span> Programado
+                      </button>
                     </div>
 
                     {dispatchMode === "individual" && (
