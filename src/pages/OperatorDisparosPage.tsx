@@ -216,6 +216,10 @@ export default function OperatorDisparosPage() {
   const [batchSize, setBatchSize] = useState(persisted.batchSize ?? 50);
   const turboLimit = persisted.turboLimit ?? 100;
   const highIncomeOnly = false;
+  // 📅 Scheduled (programado) mode — sends N contacts every X minutes until 18h BRT.
+  const [scheduledMode, setScheduledMode] = useState<boolean>((persisted as any).scheduledMode ?? false);
+  const [scheduledChunkSize, setScheduledChunkSize] = useState<number>((persisted as any).scheduledChunkSize ?? 3);
+  const [scheduledIntervalMinutes, setScheduledIntervalMinutes] = useState<number>((persisted as any).scheduledIntervalMinutes ?? 25);
   const [wizardStep, setWizardStep] = useState(persisted.wizardStep ?? 0);
 
   // Admin-defined max batch size (null = unlimited)
@@ -268,12 +272,15 @@ export default function OperatorDisparosPage() {
       turboLimit,
       highIncomeOnly,
       wizardStep,
-    });
+      scheduledMode,
+      scheduledChunkSize,
+      scheduledIntervalMinutes,
+    } as any);
   }, [
     selectedPhoneNumberId, customAdvogadoName, selectedTemplate, variableMappings,
     selectedList, dispatchType, minRenda, onlyVerifiedNames, sharedDispatch, dispatchMode,
     intervalSeconds, randomJitter412, batchMode, batchSize, turboLimit,
-    highIncomeOnly, wizardStep,
+    highIncomeOnly, wizardStep, scheduledMode, scheduledChunkSize, scheduledIntervalMinutes,
   ]);
 
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
@@ -544,8 +551,20 @@ export default function OperatorDisparosPage() {
     const isTurbo = dispatchMode === "turbo";
     const minIncomeFilter = highIncomeOnly ? 10000 : (minRenda !== "all" ? parseInt(minRenda) : undefined);
 
-    // Admin-defined batch limit enforcement
-    if (adminMaxBatchSize != null) {
+    // 📅 Scheduled mode validation
+    if (scheduledMode) {
+      if (!Number.isFinite(scheduledChunkSize) || scheduledChunkSize < 1) {
+        toast.error("Informe a quantidade de envios por ciclo (mínimo 1).");
+        return;
+      }
+      if (!Number.isFinite(scheduledIntervalMinutes) || scheduledIntervalMinutes < 25) {
+        toast.error("O intervalo mínimo entre disparos é de 25 minutos.");
+        return;
+      }
+    }
+
+    // Admin-defined batch limit enforcement (skip when scheduled — paced by chunk size)
+    if (!scheduledMode && adminMaxBatchSize != null) {
       if (batchMode) {
         if (batchSize > adminMaxBatchSize) {
           toast.error(
@@ -566,7 +585,7 @@ export default function OperatorDisparosPage() {
       }
     }
 
-    const limit = isTurbo ? turboLimit : (batchMode ? batchSize : undefined);
+    const limit = scheduledMode ? undefined : (isTurbo ? turboLimit : (batchMode ? batchSize : undefined));
     let contactIds = await fetchRemainingForOperator(selectedList, limit, minIncomeFilter);
 
     if (contactIds.length === 0) {
@@ -574,7 +593,7 @@ export default function OperatorDisparosPage() {
       return;
     }
 
-    if (!isTurbo && contactIds.length > ANTI_BAN_DAILY_LIMIT) {
+    if (!isTurbo && !scheduledMode && contactIds.length > ANTI_BAN_DAILY_LIMIT) {
       toast.warning(`⚠️ Limite diário: máximo ${ANTI_BAN_DAILY_LIMIT} mensagens por sessão. Limitando.`, { duration: 10000 });
       contactIds = contactIds.slice(0, ANTI_BAN_DAILY_LIMIT);
     }
@@ -588,7 +607,7 @@ export default function OperatorDisparosPage() {
       operatorId: user.id,
       templateName: selectedTemplate.name,
       listName: selectedList,
-      mode: dispatchMode,
+      mode: scheduledMode ? ("scheduled" as DispatchMode) : dispatchMode,
       total: contactIds.length,
       sent: 0,
       failed: 0,
@@ -600,7 +619,6 @@ export default function OperatorDisparosPage() {
     };
     addDispatch(newDispatch);
     markDispatched();
-
     runDispatch({
       dispatchId,
       contactIds,
@@ -611,12 +629,15 @@ export default function OperatorDisparosPage() {
       selectedPhoneNumberId: selectedPhoneNumberId || undefined,
       variableMappings,
       phoneVerifiedName,
-      mode: dispatchMode,
+      mode: scheduledMode ? ("scheduled" as DispatchMode) : dispatchMode,
       intervalSeconds,
       randomJitter412,
       batchMode,
       batchSize,
       turboLimit,
+      scheduledChunkSize: scheduledMode ? scheduledChunkSize : undefined,
+      scheduledIntervalMinutes: scheduledMode ? scheduledIntervalMinutes : undefined,
+      scheduledStopHourBrt: scheduledMode ? 18 : undefined,
       listName: selectedList,
       minIncome: minIncomeFilter,
       fetchRemaining: fetchRemainingForOperator,
@@ -831,7 +852,7 @@ export default function OperatorDisparosPage() {
                               <Badge variant="outline" className="text-[10px]">{dispatch.templateName}</Badge>
                               <Badge variant="secondary" className="text-[10px]">{dispatch.listName}</Badge>
                               <Badge variant="outline" className="text-[10px]">
-                                {dispatch.mode === "turbo" ? "⚡ Turbo" : dispatch.mode === "individual" ? "Individual" : "Lote"}
+                                {dispatch.mode === "turbo" ? "⚡ Turbo" : dispatch.mode === "individual" ? "Individual" : dispatch.mode === "scheduled" ? "📅 Programado" : "Lote"}
                               </Badge>
                             </div>
                             {!dispatch.isFinished ? (
@@ -1258,6 +1279,50 @@ export default function OperatorDisparosPage() {
                                 )}
                               </div>
                             )}
+
+                            {/* 📅 Modo Programado — dispara durante o dia e para às 18h BRT */}
+                            {dispatchType === "lista" && (
+                              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <Label htmlFor="scheduled-mode" className="text-xs font-medium cursor-pointer">📅 Modo Programado (até 18h)</Label>
+                                    <p className="text-[10px] text-muted-foreground">Envia em ciclos durante o dia, para automaticamente às 18h BRT.</p>
+                                  </div>
+                                  <Switch id="scheduled-mode" checked={scheduledMode} onCheckedChange={setScheduledMode} />
+                                </div>
+                                {scheduledMode && (
+                                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                      <Label htmlFor="sched-chunk" className="text-xs text-muted-foreground whitespace-nowrap w-40">Envios por ciclo:</Label>
+                                      <Input
+                                        id="sched-chunk"
+                                        type="number"
+                                        min={1}
+                                        value={scheduledChunkSize}
+                                        onChange={(e) => setScheduledChunkSize(Math.max(1, parseInt(e.target.value) || 1))}
+                                        className="h-8 w-24 text-sm"
+                                      />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Label htmlFor="sched-interval" className="text-xs text-muted-foreground whitespace-nowrap w-40">Intervalo (min, mín. 25):</Label>
+                                      <Input
+                                        id="sched-interval"
+                                        type="number"
+                                        min={25}
+                                        value={scheduledIntervalMinutes}
+                                        onChange={(e) => setScheduledIntervalMinutes(Math.max(25, parseInt(e.target.value) || 25))}
+                                        className="h-8 w-24 text-sm"
+                                      />
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground">
+                                      Exemplo: {scheduledChunkSize} contato{scheduledChunkSize !== 1 ? "s" : ""} a cada {scheduledIntervalMinutes} min, até atingir 18h BRT.
+                                    </p>
+                                  </motion.div>
+                                )}
+                              </div>
+                            )}
+
+
 
 
                             {dispatchType === "lista" ? (
