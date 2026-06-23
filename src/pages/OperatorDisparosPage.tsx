@@ -619,14 +619,6 @@ export default function OperatorDisparosPage() {
     };
     addDispatch(newDispatch);
     markDispatched();
-      isPaused: false,
-      isCancelled: false,
-      isFinished: false,
-      errors: [],
-    };
-    addDispatch(newDispatch);
-    markDispatched();
-
     runDispatch({
       dispatchId,
       contactIds,
@@ -637,12 +629,15 @@ export default function OperatorDisparosPage() {
       selectedPhoneNumberId: selectedPhoneNumberId || undefined,
       variableMappings,
       phoneVerifiedName,
-      mode: dispatchMode,
+      mode: scheduledMode ? ("scheduled" as DispatchMode) : dispatchMode,
       intervalSeconds,
       randomJitter412,
       batchMode,
       batchSize,
       turboLimit,
+      scheduledChunkSize: scheduledMode ? scheduledChunkSize : undefined,
+      scheduledIntervalMinutes: scheduledMode ? scheduledIntervalMinutes : undefined,
+      scheduledStopHourBrt: scheduledMode ? 18 : undefined,
       listName: selectedList,
       minIncome: minIncomeFilter,
       fetchRemaining: fetchRemainingForOperator,
