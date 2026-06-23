@@ -151,6 +151,12 @@ export interface RunDispatchOptions {
   batchMode: boolean;
   batchSize: number;
   turboLimit: number;
+  /** Scheduled-mode chunk size (contacts sent per cycle). */
+  scheduledChunkSize?: number;
+  /** Scheduled-mode interval between cycles, in minutes (min 25). */
+  scheduledIntervalMinutes?: number;
+  /** Scheduled-mode hard stop hour in BRT (default 18 = 6pm). */
+  scheduledStopHourBrt?: number;
   listName: string;
   minIncome?: number;
   /** Re-fetches remaining contacts on pause-resume. Receives optional limit + minIncome. */
