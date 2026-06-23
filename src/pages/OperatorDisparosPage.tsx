@@ -272,12 +272,15 @@ export default function OperatorDisparosPage() {
       turboLimit,
       highIncomeOnly,
       wizardStep,
-    });
+      scheduledMode,
+      scheduledChunkSize,
+      scheduledIntervalMinutes,
+    } as any);
   }, [
     selectedPhoneNumberId, customAdvogadoName, selectedTemplate, variableMappings,
     selectedList, dispatchType, minRenda, onlyVerifiedNames, sharedDispatch, dispatchMode,
     intervalSeconds, randomJitter412, batchMode, batchSize, turboLimit,
-    highIncomeOnly, wizardStep,
+    highIncomeOnly, wizardStep, scheduledMode, scheduledChunkSize, scheduledIntervalMinutes,
   ]);
 
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
