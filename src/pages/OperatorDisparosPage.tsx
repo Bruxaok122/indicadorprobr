@@ -607,11 +607,18 @@ export default function OperatorDisparosPage() {
       operatorId: user.id,
       templateName: selectedTemplate.name,
       listName: selectedList,
-      mode: dispatchMode,
+      mode: scheduledMode ? ("scheduled" as DispatchMode) : dispatchMode,
       total: contactIds.length,
       sent: 0,
       failed: 0,
       current: 0,
+      isPaused: false,
+      isCancelled: false,
+      isFinished: false,
+      errors: [],
+    };
+    addDispatch(newDispatch);
+    markDispatched();
       isPaused: false,
       isCancelled: false,
       isFinished: false,
