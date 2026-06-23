@@ -1363,6 +1363,27 @@ export default function AdminDisparosPage() {
                         </div>
                       </motion.div>
                     )}
+
+                    {dispatchMode === "scheduled" && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="prog-chunk" className="text-xs text-muted-foreground whitespace-nowrap w-40">Envios por ciclo:</Label>
+                          <Input id="prog-chunk" type="number" min={1} value={progChunkSize}
+                            onChange={(e) => setProgChunkSize(Math.max(1, parseInt(e.target.value) || 1))} className="h-8 w-24 text-sm" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="prog-interval" className="text-xs text-muted-foreground whitespace-nowrap w-40">Intervalo (min, mín. 25):</Label>
+                          <Input id="prog-interval" type="number" min={25} value={progIntervalMinutes}
+                            onChange={(e) => setProgIntervalMinutes(Math.max(25, parseInt(e.target.value) || 25))} className="h-8 w-24 text-sm" />
+                        </div>
+                        <div className="rounded border border-primary/30 bg-primary/5 p-2 text-[10px] text-primary space-y-0.5">
+                          <p className="font-semibold">📅 Modo Programado</p>
+                          <p>• Envia {progChunkSize} contato(s) a cada {progIntervalMinutes} min</p>
+                          <p>• Encerra automaticamente às 18h BRT</p>
+                          <p>• Início manual — roda em background até concluir ou bater 18h</p>
+                        </div>
+                      </motion.div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
