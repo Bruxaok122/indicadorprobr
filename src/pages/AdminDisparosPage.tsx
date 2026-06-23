@@ -537,6 +537,10 @@ export default function AdminDisparosPage() {
     const capturedBatchSize = batchSize;
     const capturedTurboLimit = turboLimit;
     const capturedIsTurbo = isTurbo;
+    const capturedIsProgramado = isProgramado;
+    const capturedProgChunkSize = Math.max(1, progChunkSize);
+    const capturedProgIntervalMs = Math.max(25, progIntervalMinutes) * 60 * 1000;
+    const capturedProgStopHour = 18;
     const capturedMinIncome = minIncomeFilter;
     // Run dispatch in background with anti-ban protections
     (async () => {
