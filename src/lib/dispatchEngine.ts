@@ -227,7 +227,87 @@ export function runDispatch(opts: RunDispatchOptions): void {
     let consecutiveErrors = 0;
 
     try {
-      if (isTurbo) {
+      if (isScheduled) {
+        // 📅 SCHEDULED MODE — sends `scheduledChunkSize` contacts every
+        // `scheduledIntervalMinutes` minutes, stops at `scheduledStopHourBrt` BRT.
+        const chunkSize = Math.max(1, scheduledChunkSize ?? 3);
+        const intervalMin = Math.max(25, scheduledIntervalMinutes ?? 25);
+        const stopHour = Math.min(23, Math.max(0, scheduledStopHourBrt ?? 18));
+        const intervalMs = intervalMin * 60 * 1000;
+        let i = 0;
+        let cycle = 0;
+        toast.info(`📅 Programado: ${chunkSize} a cada ${intervalMin} min até ${stopHour}h BRT.`, { duration: 8000 });
+
+        while (i < remainingIds.length) {
+          const ctrl = controlsRef.current[dispatchId];
+          if (ctrl?.isCancelled) break;
+          if (ctrl?.isPaused) {
+            while (ctrl?.isPaused && !ctrl?.isCancelled) await new Promise((r) => setTimeout(r, 500));
+            if (ctrl?.isCancelled) break;
+          }
+
+          if (getBrtHour() >= stopHour) {
+            toast.info(`🌙 Programado encerrado às ${stopHour}h BRT.`, { duration: 10000 });
+            break;
+          }
+
+          const chunk = remainingIds.slice(i, i + chunkSize);
+          const available: string[] = [];
+          for (const id of chunk) {
+            if (await contactStillAvailable(id)) available.push(id);
+            else results.skipped++;
+          }
+
+          if (available.length > 0) {
+            const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
+              body: invokeBody(available),
+            });
+            if (!sendError && result?.results) {
+              results.sent += result.results.sent || 0;
+              results.failed += result.results.failed || 0;
+              if (result.results.errors) results.errors.push(...result.results.errors);
+              if (result.results.errors?.some((e: string) => e.includes("Conta Business bloqueada"))) {
+                toast.error("🛑 Conta Business bloqueada! Parando disparo imediatamente.", { duration: 30000 });
+                break;
+              }
+            } else {
+              results.failed += available.length;
+              if (sendError) results.errors.push(await getInvokeErrorMessage(sendError));
+              const statusCode = (sendError as any)?.context?.status;
+              if (statusCode === 401 || statusCode === 403) break;
+            }
+          }
+
+          cycle++;
+          i += chunkSize;
+          updateDispatch(dispatchId, {
+            current: results.sent + results.failed + results.skipped,
+            sent: results.sent,
+            failed: results.failed,
+            errors: [...results.errors],
+            blocksSent: cycle,
+          });
+
+          if (i >= remainingIds.length) break;
+
+          // Wait the user-defined interval, polling every 5s for cancel / stop-hour.
+          const nextAt = new Date(Date.now() + intervalMs).toISOString();
+          updateDispatch(dispatchId, { nextSendAt: nextAt });
+          const endTime = Date.now() + intervalMs;
+          let stoppedByHour = false;
+          while (Date.now() < endTime) {
+            const c = controlsRef.current[dispatchId];
+            if (c?.isCancelled) break;
+            if (getBrtHour() >= stopHour) { stoppedByHour = true; break; }
+            await new Promise((r) => setTimeout(r, 5000));
+          }
+          updateDispatch(dispatchId, { nextSendAt: undefined });
+          if (stoppedByHour) {
+            toast.info(`🌙 Programado encerrado às ${stopHour}h BRT.`, { duration: 10000 });
+            break;
+          }
+        }
+      } else if (isTurbo) {
         // ⚡ TURBO MODE
         let i = 0;
         while (i < remainingIds.length) {
