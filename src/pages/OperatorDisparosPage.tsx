@@ -852,7 +852,7 @@ export default function OperatorDisparosPage() {
                               <Badge variant="outline" className="text-[10px]">{dispatch.templateName}</Badge>
                               <Badge variant="secondary" className="text-[10px]">{dispatch.listName}</Badge>
                               <Badge variant="outline" className="text-[10px]">
-                                {dispatch.mode === "turbo" ? "⚡ Turbo" : dispatch.mode === "individual" ? "Individual" : "Lote"}
+                                {dispatch.mode === "turbo" ? "⚡ Turbo" : dispatch.mode === "individual" ? "Individual" : dispatch.mode === "scheduled" ? "📅 Programado" : "Lote"}
                               </Badge>
                             </div>
                             {!dispatch.isFinished ? (
