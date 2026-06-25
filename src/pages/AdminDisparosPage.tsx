@@ -407,6 +407,31 @@ export default function AdminDisparosPage() {
       return;
     }
 
+    // 🖐️ Manual mode: open the manual dialog and do not run the autonomous loop
+    if (dispatchMode === "manual") {
+      setLoadingManual(true);
+      try {
+        const minIncomeFilter = highIncomeOnly ? 10000 : undefined;
+        const query = supabase
+          .from("contacts")
+          .select("id, name, phone, process_number, cpf, valor_da_causa, lawyer_name")
+          .eq("contact_list", selectedList)
+          .is("user_id", null);
+        if (typeof minIncomeFilter === "number") query.gte("valor_da_causa", minIncomeFilter);
+        const { data, error } = await query;
+        if (error || !data || data.length === 0) {
+          toast.error("Nenhum contato disponível na lista selecionada", { duration: 8000 });
+          return;
+        }
+        setManualContacts(data as ManualContact[]);
+        setManualOpen(true);
+        markDispatched();
+      } finally {
+        setLoadingManual(false);
+      }
+      return;
+    }
+
     // Handle scheduling
     if (isScheduled && scheduledDate) {
       const schedHour = parseInt(scheduledHour);
