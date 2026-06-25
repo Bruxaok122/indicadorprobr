@@ -295,7 +295,7 @@ export default function AdminDisparosPage() {
   const approvedTemplates = allTemplates.filter((t) => t.status === "APPROVED");
   const templateBody = selectedTemplate ? getTemplateBody(selectedTemplate) : "";
   const templateVars = extractVariables(templateBody);
-  const effectiveCount = dispatchMode === "turbo" ? turboLimit : dispatchMode === "scheduled" ? listContactCount : batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
+  const effectiveCount = dispatchMode === "turbo" ? turboLimit : dispatchMode === "scheduled" || dispatchMode === "manual" ? listContactCount : batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
 
   const isStep1Valid = phones.length === 0 || !!selectedPhoneNumberId;
   const isStep2Valid = !!selectedTemplate;
