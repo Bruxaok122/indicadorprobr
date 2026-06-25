@@ -245,6 +245,11 @@ export default function AdminDisparosPage() {
   // Filter: only dispatch to contacts with valor_da_causa >= 10000
   const [highIncomeOnly, setHighIncomeOnly] = useState(false);
 
+  // Manual dispatch dialog
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualContacts, setManualContacts] = useState<ManualContact[]>([]);
+  const [loadingManual, setLoadingManual] = useState(false);
+
   // Phone data for advogado variable (editable override)
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
   const defaultPhoneName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
