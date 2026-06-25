@@ -17,12 +17,13 @@ import { Label } from "@/components/ui/label";
 import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock, Zap } from "lucide-react";
+import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock, Zap, Hand } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ManualDispatchDialog, ManualContact } from "@/components/admin/ManualDispatchDialog";
 
 // --- Types & helpers ---
 
@@ -244,6 +245,11 @@ export default function AdminDisparosPage() {
   // Filter: only dispatch to contacts with valor_da_causa >= 10000
   const [highIncomeOnly, setHighIncomeOnly] = useState(false);
 
+  // Manual dispatch dialog
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualContacts, setManualContacts] = useState<ManualContact[]>([]);
+  const [loadingManual, setLoadingManual] = useState(false);
+
   // Phone data for advogado variable (editable override)
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
   const defaultPhoneName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
@@ -289,7 +295,7 @@ export default function AdminDisparosPage() {
   const approvedTemplates = allTemplates.filter((t) => t.status === "APPROVED");
   const templateBody = selectedTemplate ? getTemplateBody(selectedTemplate) : "";
   const templateVars = extractVariables(templateBody);
-  const effectiveCount = dispatchMode === "turbo" ? turboLimit : dispatchMode === "scheduled" ? listContactCount : batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
+  const effectiveCount = dispatchMode === "turbo" ? turboLimit : dispatchMode === "scheduled" || dispatchMode === "manual" ? listContactCount : batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
 
   const isStep1Valid = phones.length === 0 || !!selectedPhoneNumberId;
   const isStep2Valid = !!selectedTemplate;
@@ -398,6 +404,31 @@ export default function AdminDisparosPage() {
     }
     if (phones.length > 0 && !selectedPhoneNumberId) {
       toast.error("Selecione um número de disparo", { duration: 8000 });
+      return;
+    }
+
+    // 🖐️ Manual mode: open the manual dialog and do not run the autonomous loop
+    if (dispatchMode === "manual") {
+      setLoadingManual(true);
+      try {
+        const minIncomeFilter = highIncomeOnly ? 10000 : undefined;
+        const query = supabase
+          .from("contacts")
+          .select("id, name, phone, process_number, cpf, valor_da_causa, lawyer_name")
+          .eq("contact_list", selectedList)
+          .is("user_id", null);
+        if (typeof minIncomeFilter === "number") query.gte("valor_da_causa", minIncomeFilter);
+        const { data, error } = await query;
+        if (error || !data || data.length === 0) {
+          toast.error("Nenhum contato disponível na lista selecionada", { duration: 8000 });
+          return;
+        }
+        setManualContacts(data as ManualContact[]);
+        setManualOpen(true);
+        markDispatched();
+      } finally {
+        setLoadingManual(false);
+      }
       return;
     }
 
@@ -1275,24 +1306,38 @@ export default function AdminDisparosPage() {
 
                   <div className="rounded-lg border border-border p-3 space-y-3">
                     <p className="text-xs font-medium text-muted-foreground">Modo de disparo</p>
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                       <button onClick={() => setDispatchMode("batch")}
-                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "batch" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
+                        className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "batch" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
                         <Layers className="h-4 w-4 mx-auto mb-1" /> Lote
                       </button>
                       <button onClick={() => setDispatchMode("individual")}
-                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "individual" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
+                        className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "individual" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
                         <Timer className="h-4 w-4 mx-auto mb-1" /> Individual
                       </button>
+                      <button onClick={() => setDispatchMode("manual")}
+                        className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "manual" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
+                        <Hand className="h-4 w-4 mx-auto mb-1" /> Manual
+                      </button>
                       <button onClick={() => setDispatchMode("turbo")}
-                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "turbo" ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400" : "border-border hover:bg-muted"}`}>
+                        className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "turbo" ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400" : "border-border hover:bg-muted"}`}>
                         <Zap className="h-4 w-4 mx-auto mb-1" /> Turbo
                       </button>
                       <button onClick={() => setDispatchMode("scheduled")}
-                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "scheduled" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
+                        className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "scheduled" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
                         <span className="block text-base leading-none mb-1">📅</span> Programado
                       </button>
                     </div>
+
+                    {dispatchMode === "manual" && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                        className="rounded border border-primary/30 bg-primary/5 p-2 text-[10px] text-primary space-y-0.5">
+                        <p className="font-semibold">🖐️ Modo Manual — Um por um</p>
+                        <p>• Abre um diálogo mostrando cada contato da lista</p>
+                        <p>• Você decide entre <strong>Enviar</strong> ou <strong>Pular</strong></p>
+                        <p>• Ideal para revisão fina antes do envio</p>
+                      </motion.div>
+                    )}
 
                     {dispatchMode === "individual" && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
@@ -1498,7 +1543,7 @@ export default function AdminDisparosPage() {
                       { label: "Template", value: selectedTemplate?.name || "—" },
                       { label: "Lista", value: selectedList || "—" },
                       { label: "Contatos", value: batchMode ? `${Math.min(batchSize, listContactCount)} de ${listContactCount}` : String(listContactCount) },
-                      { label: "Modo", value: dispatchMode === "turbo" ? `Turbo (limite: ${turboLimit})` : dispatchMode === "individual" ? "Individual (progressivo)" : dispatchMode === "scheduled" ? `Programado (${progChunkSize}/${progIntervalMinutes}min até 18h)` : "Lote (blocos variáveis ~20)" },
+                      { label: "Modo", value: dispatchMode === "turbo" ? `Turbo (limite: ${turboLimit})` : dispatchMode === "individual" ? "Individual (progressivo)" : dispatchMode === "scheduled" ? `Programado (${progChunkSize}/${progIntervalMinutes}min até 18h)` : dispatchMode === "manual" ? "Manual (um por um)" : "Lote (blocos variáveis ~20)" },
                       { label: "Responsável", value: sharedDispatch ? "Compartilhado 👥" : (users.find(u => u.user_id === selectedUserId)?.full_name || "—") },
                       ...(isScheduled && scheduledDate ? [{ label: "📅 Agendado", value: `${format(scheduledDate, "dd/MM/yyyy")} às ${scheduledHour}:${scheduledMinute} BRT` }] : []),
                     ].map((row) => (
@@ -1577,6 +1622,19 @@ export default function AdminDisparosPage() {
           )}
         </div>
       </div>
+
+      <ManualDispatchDialog
+        open={manualOpen}
+        onOpenChange={setManualOpen}
+        contacts={manualContacts}
+        template={{ name: selectedTemplate?.name || "", language: selectedTemplate?.language || "pt_BR" }}
+        variableMappings={variableMappings}
+        phoneNumberId={selectedPhoneNumberId}
+        phoneVerifiedName={phoneVerifiedName}
+        userId={user?.id || ""}
+        assignedUserId={selectedUserId}
+        shared={sharedDispatch}
+      />
     </div>
   );
 }
