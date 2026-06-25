@@ -1306,24 +1306,38 @@ export default function AdminDisparosPage() {
 
                   <div className="rounded-lg border border-border p-3 space-y-3">
                     <p className="text-xs font-medium text-muted-foreground">Modo de disparo</p>
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                       <button onClick={() => setDispatchMode("batch")}
-                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "batch" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
+                        className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "batch" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
                         <Layers className="h-4 w-4 mx-auto mb-1" /> Lote
                       </button>
                       <button onClick={() => setDispatchMode("individual")}
-                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "individual" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
+                        className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "individual" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
                         <Timer className="h-4 w-4 mx-auto mb-1" /> Individual
                       </button>
+                      <button onClick={() => setDispatchMode("manual")}
+                        className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "manual" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
+                        <Hand className="h-4 w-4 mx-auto mb-1" /> Manual
+                      </button>
                       <button onClick={() => setDispatchMode("turbo")}
-                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "turbo" ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400" : "border-border hover:bg-muted"}`}>
+                        className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "turbo" ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400" : "border-border hover:bg-muted"}`}>
                         <Zap className="h-4 w-4 mx-auto mb-1" /> Turbo
                       </button>
                       <button onClick={() => setDispatchMode("scheduled")}
-                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "scheduled" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
+                        className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${dispatchMode === "scheduled" ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}>
                         <span className="block text-base leading-none mb-1">📅</span> Programado
                       </button>
                     </div>
+
+                    {dispatchMode === "manual" && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                        className="rounded border border-primary/30 bg-primary/5 p-2 text-[10px] text-primary space-y-0.5">
+                        <p className="font-semibold">🖐️ Modo Manual — Um por um</p>
+                        <p>• Abre um diálogo mostrando cada contato da lista</p>
+                        <p>• Você decide entre <strong>Enviar</strong> ou <strong>Pular</strong></p>
+                        <p>• Ideal para revisão fina antes do envio</p>
+                      </motion.div>
+                    )}
 
                     {dispatchMode === "individual" && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
