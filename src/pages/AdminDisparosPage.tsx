@@ -17,12 +17,13 @@ import { Label } from "@/components/ui/label";
 import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock, Zap } from "lucide-react";
+import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock, Zap, Hand } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ManualDispatchDialog, ManualContact } from "@/components/admin/ManualDispatchDialog";
 
 // --- Types & helpers ---
 
