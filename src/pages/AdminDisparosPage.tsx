@@ -1622,6 +1622,19 @@ export default function AdminDisparosPage() {
           )}
         </div>
       </div>
+
+      <ManualDispatchDialog
+        open={manualOpen}
+        onOpenChange={setManualOpen}
+        contacts={manualContacts}
+        template={{ name: selectedTemplate?.name || "", language: selectedTemplate?.language || "pt_BR" }}
+        variableMappings={variableMappings}
+        phoneNumberId={selectedPhoneNumberId}
+        phoneVerifiedName={phoneVerifiedName}
+        userId={user?.id || ""}
+        assignedUserId={selectedUserId}
+        shared={sharedDispatch}
+      />
     </div>
   );
 }
