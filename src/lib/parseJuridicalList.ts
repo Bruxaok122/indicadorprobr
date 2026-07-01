@@ -537,9 +537,9 @@ export function parseJuridicalList(rawText: string): {
   };
 
   if (rawBlocks.length === 0) {
-    const parsed = parseBlock(rawText);
-    if (parsed && parsed.phones.length > 0) {
-      addContactsFromBlock(parsed);
+    const parsedList = parseBlock(rawText);
+    if (parsedList.length > 0) {
+      parsedList.forEach(addContactsFromBlock);
     } else {
       errors.push("Nenhum bloco válido encontrado. Verifique o formato da lista.");
     }
@@ -547,22 +547,16 @@ export function parseJuridicalList(rawText: string): {
   }
 
   rawBlocks.forEach((rawBlock, index) => {
-    const parsed = parseBlock(rawBlock);
+    const parsedList = parseBlock(rawBlock);
 
-    if (!parsed) {
-      // Só adiciona erro se o bloco não for uma mensagem ignorada
+    if (parsedList.length === 0) {
       if (!isMessageLine(rawBlock.trim().split('\n')[0] || '')) {
-        errors.push(`Bloco ${index + 1}: Formato inválido ou incompleto`);
+        errors.push(`Bloco ${index + 1}: Formato inválido ou nenhum celular encontrado`);
       }
       return;
     }
 
-    if (parsed.phones.length === 0) {
-      errors.push(`Bloco ${index + 1}: Nenhum telefone encontrado`);
-      return;
-    }
-
-    addContactsFromBlock(parsed);
+    parsedList.forEach(addContactsFromBlock);
   });
 
   return { contacts, errors, blocks };
