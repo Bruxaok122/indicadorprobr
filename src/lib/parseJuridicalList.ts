@@ -442,24 +442,22 @@ function parseBlockPoloFormat(block: string): ParsedBlock[] {
   }
   flushPerson();
 
-  // Constrói ParsedBlocks — uma pessoa por bloco
+  // Constrói ParsedBlocks apenas para pessoas do POLO ATIVO.
+  // A Parte Contrária é preenchida com o primeiro nome do POLO PASSIVO.
   const result: ParsedBlock[] = [];
-  const opposingName = (side: "ativo" | "passivo") =>
-    polos[side === "ativo" ? "passivo" : "ativo"].people[0]?.name || "********";
+  const parteContrariaName = polos.passivo.people[0]?.name || "********";
 
-  (["ativo", "passivo"] as const).forEach((side) => {
-    polos[side].people.forEach((person) => {
-      const uniquePhones = [...new Set(person.phones)];
-      if (uniquePhones.length === 0) return;
-      result.push({
-        lawyer: opposingName(side),
-        process,
-        clientName: person.name,
-        phones: uniquePhones,
-        cpf: person.cpf,
-        renda: person.renda,
-        contra: opposingName(side),
-      });
+  polos.ativo.people.forEach((person) => {
+    const uniquePhones = [...new Set(person.phones)];
+    if (uniquePhones.length === 0) return;
+    result.push({
+      lawyer: parteContrariaName,
+      process,
+      clientName: person.name,
+      phones: uniquePhones,
+      cpf: person.cpf,
+      renda: person.renda,
+      contra: parteContrariaName,
     });
   });
 
