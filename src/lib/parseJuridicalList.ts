@@ -339,22 +339,159 @@ function parseBlockDashFormat(block: string): ParsedBlock | null {
 }
 
 /**
- * Detecta qual formato usar e faz parse do bloco
+ * Parse do formato POLO ATIVO/PASSIVO (Tribunal completo)
+ * Retorna múltiplos blocks - um por pessoa com telefone celular
  */
-function parseBlock(block: string): ParsedBlock | null {
+function parseBlockPoloFormat(block: string): ParsedBlock[] {
+  const lines = block.split("\n").map((l) => l.trim());
+
+  // Processo
+  let process = "0031486-26.2025.8.26.0002";
+  const procLine = lines.find((l) => /^PROCESSO:/i.test(l));
+  if (procLine) {
+    const extracted = extractProcess(procLine);
+    process = extracted || procLine.replace(/^PROCESSO:\s*/i, "").trim() || process;
+  }
+
+  // Split em seções POLO ATIVO / POLO PASSIVO
+  interface Person {
+    name: string;
+    cpf?: string;
+    renda?: string;
+    phones: string[];
+  }
+  interface Polo {
+    people: Person[];
+    lawyer?: string;
+  }
+
+  const polos: { ativo: Polo; passivo: Polo } = {
+    ativo: { people: [] },
+    passivo: { people: [] },
+  };
+
+  let currentPoloKey: "ativo" | "passivo" | null = null;
+  let currentPerson: Person | null = null;
+  let inTelefones = false;
+
+  const flushPerson = () => {
+    if (currentPerson && currentPoloKey) {
+      polos[currentPoloKey].people.push(currentPerson);
+    }
+    currentPerson = null;
+    inTelefones = false;
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+
+    if (/^POLO ATIVO:/i.test(line)) {
+      flushPerson();
+      currentPoloKey = "ativo";
+      continue;
+    }
+    if (/^POLO PASSIVO:/i.test(line)) {
+      flushPerson();
+      currentPoloKey = "passivo";
+      continue;
+    }
+    if (!currentPoloKey) continue;
+
+    // NOME começa novo pessoa
+    const nomeMatch = line.match(/^-?\s*NOME:\s*(.+)$/i);
+    if (nomeMatch) {
+      flushPerson();
+      currentPerson = { name: nomeMatch[1].trim(), phones: [] };
+      continue;
+    }
+    if (!currentPerson) continue;
+
+    const docMatch = line.match(/^-?\s*DOC:\s*(.+)$/i);
+    if (docMatch) {
+      const doc = docMatch[1].replace(/\D/g, "");
+      // CPF = 11 dígitos; CNPJ = 14 → só grava se CPF
+      if (doc.length === 11) currentPerson.cpf = doc;
+      inTelefones = false;
+      continue;
+    }
+    const rendaMatch = line.match(/^-?\s*RENDA:\s*R?\$?\s*([\d.,]+)/i);
+    if (rendaMatch) {
+      currentPerson.renda = rendaMatch[1];
+      inTelefones = false;
+      continue;
+    }
+    if (/^-?\s*IDADE:/i.test(line)) { inTelefones = false; continue; }
+    if (/^-?\s*TELEFONES?:/i.test(line)) { inTelefones = true; continue; }
+
+    // Linha de advogado do polo — encerra a pessoa atual e associa ao polo
+    if (/^-?\s*ADVOGADO:/i.test(line)) {
+      const adv = line.replace(/^-?\s*ADVOGADO:\s*/i, "").trim();
+      // Pega o primeiro nome antes de "(CPF" ou ";"
+      const firstName = adv.split(/\(|;/)[0].trim();
+      polos[currentPoloKey].lawyer = firstName || adv;
+      flushPerson();
+      continue;
+    }
+
+    // Linhas de telefone
+    if (inTelefones) {
+      const extracted = extractPhones(line);
+      if (extracted.length > 0) currentPerson.phones.push(...extracted);
+    }
+  }
+  flushPerson();
+
+  // Constrói ParsedBlocks — uma pessoa por bloco
+  const result: ParsedBlock[] = [];
+  const opposingName = (side: "ativo" | "passivo") =>
+    polos[side === "ativo" ? "passivo" : "ativo"].people[0]?.name || "********";
+
+  (["ativo", "passivo"] as const).forEach((side) => {
+    polos[side].people.forEach((person) => {
+      const uniquePhones = [...new Set(person.phones)];
+      if (uniquePhones.length === 0) return;
+      result.push({
+        lawyer: opposingName(side),
+        process,
+        clientName: person.name,
+        phones: uniquePhones,
+        cpf: person.cpf,
+        renda: person.renda,
+        contra: opposingName(side),
+      });
+    });
+  });
+
+  return result;
+}
+
+/**
+ * Detecta qual formato usar e faz parse do bloco
+ * Retorna array pois alguns formatos geram múltiplos blocos por bloco de texto.
+ */
+function parseBlock(block: string): ParsedBlock[] {
+  // Polo format (Tribunal completo)
+  if (/POLO ATIVO:/i.test(block) || /POLO PASSIVO:/i.test(block)) {
+    return parseBlockPoloFormat(block);
+  }
+
   // Detect dash format (has NOME: / TELEFONE: / np: fields)
   if (/^NOME:/im.test(block) || /^TELEFONE:/im.test(block) || /^np:/im.test(block) || (/^CPF:/im.test(block) && /^CONTRA:/im.test(block))) {
-    return parseBlockDashFormat(block);
+    const b = parseBlockDashFormat(block);
+    return b ? [b] : [];
   }
 
   // Detectar novo formato (contém emojis ou "👤 Nome:")
   const isNewFormat = block.includes("👤") || block.includes("📞") || block.includes("⚖️");
-  
+
   if (isNewFormat) {
-    return parseBlockNewFormat(block);
+    const b = parseBlockNewFormat(block);
+    return b ? [b] : [];
   }
-  
-  return parseBlockOldFormat(block);
+
+  const b = parseBlockOldFormat(block);
+  return b ? [b] : [];
 }
 
 /**
@@ -400,9 +537,9 @@ export function parseJuridicalList(rawText: string): {
   };
 
   if (rawBlocks.length === 0) {
-    const parsed = parseBlock(rawText);
-    if (parsed && parsed.phones.length > 0) {
-      addContactsFromBlock(parsed);
+    const parsedList = parseBlock(rawText);
+    if (parsedList.length > 0) {
+      parsedList.forEach(addContactsFromBlock);
     } else {
       errors.push("Nenhum bloco válido encontrado. Verifique o formato da lista.");
     }
@@ -410,22 +547,16 @@ export function parseJuridicalList(rawText: string): {
   }
 
   rawBlocks.forEach((rawBlock, index) => {
-    const parsed = parseBlock(rawBlock);
+    const parsedList = parseBlock(rawBlock);
 
-    if (!parsed) {
-      // Só adiciona erro se o bloco não for uma mensagem ignorada
+    if (parsedList.length === 0) {
       if (!isMessageLine(rawBlock.trim().split('\n')[0] || '')) {
-        errors.push(`Bloco ${index + 1}: Formato inválido ou incompleto`);
+        errors.push(`Bloco ${index + 1}: Formato inválido ou nenhum celular encontrado`);
       }
       return;
     }
 
-    if (parsed.phones.length === 0) {
-      errors.push(`Bloco ${index + 1}: Nenhum telefone encontrado`);
-      return;
-    }
-
-    addContactsFromBlock(parsed);
+    parsedList.forEach(addContactsFromBlock);
   });
 
   return { contacts, errors, blocks };
