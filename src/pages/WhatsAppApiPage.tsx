@@ -126,6 +126,33 @@ export default function WhatsAppApiPage() {
   const selectedPhoneStatus = selectedPhone ? phoneStatuses[selectedPhone.phone_number_id] : null;
   const isPhoneConnected = selectedPhoneStatus?.status === "CONNECTED";
 
+  // Wizard (operator only)
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(1);
+  const wizardPhone = availablePhones.find((p) => p.phone_number_id === phoneNumberIdForCode);
+  const wizardStatus = phoneNumberIdForCode ? phoneStatuses[phoneNumberIdForCode] : undefined;
+  const wizardConnected = wizardStatus?.status === "CONNECTED";
+
+  // Real-time status polling on step 3
+  useEffect(() => {
+    if (isAdmin) return;
+    if (wizardStep !== 3 || !phoneNumberIdForCode) return;
+    checkPhoneStatus(phoneNumberIdForCode);
+    const iv = setInterval(() => {
+      checkPhoneStatus(phoneNumberIdForCode);
+    }, 5000);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wizardStep, phoneNumberIdForCode, isAdmin]);
+
+  // When entering step 4, auto-select the phone we just registered (if available)
+  useEffect(() => {
+    if (isAdmin) return;
+    if (wizardStep === 4 && wizardPhone && !selectedPhoneId) {
+      setSelectedPhoneId(wizardPhone.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wizardStep, wizardPhone?.id, isAdmin]);
+
   const getInvokeErrorMessage = async (invokeError: any, fallback: string) => {
     const response = invokeError?.context;
     const statusCode = response?.status;
