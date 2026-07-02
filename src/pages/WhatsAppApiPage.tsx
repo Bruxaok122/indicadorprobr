@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Phone, UserCircle, Send, CheckCircle, RefreshCw, Wifi, WifiOff, AlertCircle, Upload, Image, Lock, Trash2 } from "lucide-react";
+import { Phone, UserCircle, Send, CheckCircle, RefreshCw, Wifi, WifiOff, AlertCircle, Upload, Image, Lock, Trash2, ChevronRight, ChevronLeft, ShieldCheck, MessageSquare } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -124,6 +125,33 @@ export default function WhatsAppApiPage() {
   const selectedPhone = availablePhones.find((p) => p.id === selectedPhoneId);
   const selectedPhoneStatus = selectedPhone ? phoneStatuses[selectedPhone.phone_number_id] : null;
   const isPhoneConnected = selectedPhoneStatus?.status === "CONNECTED";
+
+  // Wizard (operator only)
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(1);
+  const wizardPhone = availablePhones.find((p) => p.phone_number_id === phoneNumberIdForCode);
+  const wizardStatus = phoneNumberIdForCode ? phoneStatuses[phoneNumberIdForCode] : undefined;
+  const wizardConnected = wizardStatus?.status === "CONNECTED";
+
+  // Real-time status polling on step 3
+  useEffect(() => {
+    if (isAdmin) return;
+    if (wizardStep !== 3 || !phoneNumberIdForCode) return;
+    checkPhoneStatus(phoneNumberIdForCode);
+    const iv = setInterval(() => {
+      checkPhoneStatus(phoneNumberIdForCode);
+    }, 5000);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wizardStep, phoneNumberIdForCode, isAdmin]);
+
+  // When entering step 4, auto-select the phone we just registered (if available)
+  useEffect(() => {
+    if (isAdmin) return;
+    if (wizardStep === 4 && wizardPhone && !selectedPhoneId) {
+      setSelectedPhoneId(wizardPhone.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wizardStep, wizardPhone?.id, isAdmin]);
 
   const getInvokeErrorMessage = async (invokeError: any, fallback: string) => {
     const response = invokeError?.context;
@@ -575,6 +603,7 @@ export default function WhatsAppApiPage() {
               </CardContent>
             </Card>
 
+            {isAdmin && (<>
             {/* Register Phone Number */}
             <Card>
               <CardHeader>
@@ -960,6 +989,434 @@ export default function WhatsAppApiPage() {
                   )}
                 </CardContent>
               </Card>
+            </>)}
+
+            {!isAdmin && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5" />
+                    Assistente de Novo Número
+                  </CardTitle>
+                  <CardDescription>
+                    Siga as 4 etapas para cadastrar seu número no WhatsApp Business.
+                  </CardDescription>
+
+                  {/* Steps indicator */}
+                  <div className="flex items-center gap-1 sm:gap-2 pt-3">
+                    {[
+                      { n: 1, label: "Registrar", icon: Phone },
+                      { n: 2, label: "Verificar SMS", icon: MessageSquare },
+                      { n: 3, label: "Definir PIN", icon: Lock },
+                      { n: 4, label: "Perfil", icon: UserCircle },
+                    ].map((s, idx) => {
+                      const Icon = s.icon;
+                      const active = wizardStep === s.n;
+                      const done = wizardStep > s.n;
+                      return (
+                        <div key={s.n} className="flex items-center gap-1 sm:gap-2 flex-1">
+                          <div
+                            className={cn(
+                              "flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium transition-colors flex-1 justify-center",
+                              active && "bg-primary text-primary-foreground",
+                              done && "bg-primary/20 text-primary",
+                              !active && !done && "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {done ? <CheckCircle className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+                            <span className="hidden sm:inline">{s.n}. {s.label}</span>
+                            <span className="sm:hidden">{s.n}</span>
+                          </div>
+                          {idx < 3 && <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* STEP 1: Register */}
+                  {wizardStep === 1 && (
+                    <div className="space-y-4">
+                      {availablePhones.length >= 3 ? (
+                        <div className="flex items-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm">
+                          <AlertCircle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                          <span>Você atingiu o limite de 3 números. Exclua um número existente para registrar outro.</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
+                            Informe o número de telefone (com DDD) e o nome que aparecerá no WhatsApp. Após registrar, o próximo passo será a verificação por SMS.
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Número de Telefone (com DDD)</Label>
+                            <Input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="11999998888" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Nome de Exibição</Label>
+                            <Input value={verifiedName} onChange={(e) => setVerifiedName(e.target.value)} placeholder="Nome que aparecerá no WhatsApp" />
+                          </div>
+                          <Button
+                            onClick={async () => {
+                              const prevId = phoneNumberIdForCode;
+                              await handleRegister();
+                              // Advance if a new phoneNumberIdForCode was set
+                              setTimeout(() => {
+                                setPhoneNumberIdForCode((curr) => {
+                                  if (curr && curr !== prevId) {
+                                    setWizardStep(2);
+                                  }
+                                  return curr;
+                                });
+                              }, 100);
+                            }}
+                            disabled={registering || availablePhones.length >= 3 || !phoneNumber || !verifiedName}
+                            className="w-full"
+                          >
+                            {registering ? <LoadingSpinner size="sm" /> : <Send className="mr-2 h-4 w-4" />}
+                            {registering ? "Registrando..." : "Registrar e Avançar"}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* STEP 2: Verify SMS */}
+                  {wizardStep === 2 && (
+                    <div className="space-y-4">
+                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
+                        Solicite o código de verificação por SMS ou ligação e insira o código recebido no número cadastrado.
+                      </div>
+                      <div className="space-y-2">
+                        <Label>ID do Número (preenchido automaticamente)</Label>
+                        <Input value={phoneNumberIdForCode} readOnly className="bg-muted font-mono text-xs" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Select value={codeMethod} onValueChange={setCodeMethod}>
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="SMS">SMS</SelectItem>
+                            <SelectItem value="VOICE">Ligação</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button onClick={handleRequestCode} disabled={requestingCode || !phoneNumberIdForCode} variant="outline" className="flex-1">
+                          {requestingCode ? <LoadingSpinner size="sm" /> : <MessageSquare className="mr-2 h-4 w-4" />}
+                          {requestingCode ? "Enviando..." : "Solicitar Código"}
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Código Recebido</Label>
+                        <Input
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                          placeholder="Ex: 123456"
+                          className="text-center text-lg tracking-widest font-mono"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setWizardStep(1)} className="flex-1">
+                          <ChevronLeft className="mr-1 h-4 w-4" /> Voltar
+                        </Button>
+                        <Button
+                          onClick={async () => {
+                            await handleVerifyCode();
+                            setTimeout(() => setWizardStep(3), 300);
+                          }}
+                          disabled={verifyingCode || !verificationCode}
+                          className="flex-1"
+                        >
+                          {verifyingCode ? <LoadingSpinner size="sm" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                          {verifyingCode ? "Verificando..." : "Verificar e Avançar"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* STEP 3: Set PIN + realtime status */}
+                  {wizardStep === 3 && (
+                    <div className="space-y-4">
+                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
+                        Defina um PIN de 6 dígitos. Após confirmar, aguarde o status ficar <strong>Conectado</strong> — atualizamos automaticamente a cada 5 segundos.
+                      </div>
+
+                      {/* Realtime status */}
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {(() => {
+                            const info = getStatusInfo(wizardStatus?.status);
+                            const Icon = info.icon;
+                            return (
+                              <>
+                                <Icon className={cn("h-5 w-5 flex-shrink-0", info.color)} />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium">Status atual</p>
+                                  {wizardStatus?.loading ? (
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                      <LoadingSpinner size="sm" /> verificando...
+                                    </div>
+                                  ) : (
+                                    <Badge variant={info.variant} className="text-xs mt-0.5">{info.label}</Badge>
+                                  )}
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => phoneNumberIdForCode && checkPhoneStatus(phoneNumberIdForCode)}
+                          disabled={!phoneNumberIdForCode || wizardStatus?.loading}
+                        >
+                          <RefreshCw className={cn("h-4 w-4", wizardStatus?.loading && "animate-spin")} />
+                        </Button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>PIN de 6 dígitos</Label>
+                        <Input
+                          value={setPinValue || pin}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+                            setSetPinValue(v);
+                            setPin(v);
+                          }}
+                          placeholder="123456"
+                          maxLength={6}
+                          className="text-center text-lg tracking-widest font-mono"
+                        />
+                        <p className="text-xs text-muted-foreground">Guarde este PIN — ele é usado em futuras verificações.</p>
+                      </div>
+
+                      <Button
+                        onClick={async () => {
+                          const pinVal = (setPinValue || pin || "123456");
+                          if (pinVal.length !== 6) {
+                            toast.error("O PIN deve ter 6 dígitos");
+                            return;
+                          }
+                          setSettingPin(true);
+                          try {
+                            const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
+                              body: { action: "set_pin", phone_number_id: phoneNumberIdForCode, pin: pinVal },
+                            });
+                            if (error) throw error;
+                            if (data?.error) throw new Error(data.error);
+                            toast.success("PIN definido! Aguardando conexão...");
+                            checkPhoneStatus(phoneNumberIdForCode);
+                          } catch (err: any) {
+                            const msg = await getInvokeErrorMessage(err, "Erro ao definir PIN");
+                            toast.error("Erro ao definir PIN", { description: msg });
+                          } finally {
+                            setSettingPin(false);
+                          }
+                        }}
+                        disabled={settingPin || !phoneNumberIdForCode}
+                        className="w-full"
+                      >
+                        {settingPin ? <LoadingSpinner size="sm" /> : <Lock className="mr-2 h-4 w-4" />}
+                        {settingPin ? "Definindo..." : "Definir PIN"}
+                      </Button>
+
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setWizardStep(2)} className="flex-1">
+                          <ChevronLeft className="mr-1 h-4 w-4" /> Voltar
+                        </Button>
+                        <Button
+                          onClick={() => setWizardStep(4)}
+                          disabled={!wizardConnected}
+                          className="flex-1"
+                        >
+                          Avançar <ChevronRight className="ml-1 h-4 w-4" />
+                        </Button>
+                      </div>
+                      {!wizardConnected && (
+                        <p className="text-xs text-muted-foreground text-center">
+                          O botão "Avançar" será liberado quando o número estiver Conectado.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* STEP 4: Business Profile */}
+                  {wizardStep === 4 && (
+                    <div className="space-y-4">
+                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
+                        Monte seu perfil comercial: foto, nome, descrição e categoria. Isso aumenta a confiança nos disparos.
+                      </div>
+
+                      {!selectedPhone ? (
+                        <div className="space-y-2">
+                          <Label>Selecione o Número</Label>
+                          <Select value={selectedPhoneId} onValueChange={setSelectedPhoneId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Escolha um número..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availablePhones.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.display_phone_number} {p.verified_name ? `(${p.verified_name})` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between rounded-lg border p-3">
+                          <div className="text-sm">
+                            <p className="font-medium">{selectedPhone.display_phone_number}</p>
+                            <p className="text-xs text-muted-foreground">{selectedPhone.verified_name || "Sem nome"}</p>
+                          </div>
+                          <Button size="sm" variant="outline" onClick={handleLoadProfile} disabled={profileLoading || !isPhoneConnected}>
+                            {profileLoading ? <LoadingSpinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      )}
+
+                      {selectedPhoneId && !isPhoneConnected && (
+                        <div className="flex items-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm">
+                          <AlertCircle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                          <span>Este número ainda não está conectado. Volte à etapa 3 para verificar.</span>
+                        </div>
+                      )}
+
+                      {isPhoneConnected && (
+                        <>
+                          <div className="flex items-center gap-4">
+                            {profileData.profile_picture_url ? (
+                              <img
+                                src={profileData.profile_picture_url}
+                                alt="Foto do perfil"
+                                className="h-16 w-16 rounded-full object-cover border"
+                              />
+                            ) : (
+                              <div className="h-16 w-16 rounded-full border flex items-center justify-center bg-muted">
+                                <Image className="h-6 w-6 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">
+                                {profileData.profile_picture_url ? "Foto atual do perfil" : "Sem foto de perfil"}
+                              </p>
+                              <label className="cursor-pointer">
+                                <input
+                                  type="file"
+                                  accept="image/jpeg,image/png"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleUploadPhoto(file);
+                                    e.target.value = "";
+                                  }}
+                                  disabled={uploadingPhoto}
+                                />
+                                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+                                  {uploadingPhoto ? (
+                                    <><LoadingSpinner size="sm" /> Enviando...</>
+                                  ) : (
+                                    <><Upload className="h-4 w-4" /> Alterar foto</>
+                                  )}
+                                </span>
+                              </label>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Sobre (até 139 caracteres)</Label>
+                            <Input
+                              value={profileData.about}
+                              onChange={(e) => setProfileData({ ...profileData, about: e.target.value.slice(0, 139) })}
+                              placeholder="Breve descrição"
+                              maxLength={139}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Descrição (até 512 caracteres)</Label>
+                            <Textarea
+                              value={profileData.description}
+                              onChange={(e) => setProfileData({ ...profileData, description: e.target.value.slice(0, 512) })}
+                              placeholder="Descrição detalhada"
+                              maxLength={512}
+                              rows={3}
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Endereço</Label>
+                              <Input
+                                value={profileData.address}
+                                onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                                placeholder="Rua, nº - Cidade/UF"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Email</Label>
+                              <Input
+                                value={profileData.email}
+                                onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                                placeholder="contato@empresa.com"
+                                type="email"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Websites (separados por vírgula)</Label>
+                            <Input
+                              value={profileData.websites}
+                              onChange={(e) => setProfileData({ ...profileData, websites: e.target.value })}
+                              placeholder="https://empresa.com"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Categoria do Negócio</Label>
+                            <Select
+                              value={profileData.vertical}
+                              onValueChange={(v) => setProfileData({ ...profileData, vertical: v })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {VERTICALS.map((v) => (
+                                  <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button onClick={handleSaveProfile} disabled={savingProfile} className="w-full">
+                            {savingProfile ? <LoadingSpinner size="sm" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                            {savingProfile ? "Salvando..." : "Salvar Perfil Comercial"}
+                          </Button>
+                        </>
+                      )}
+
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setWizardStep(3)} className="flex-1">
+                          <ChevronLeft className="mr-1 h-4 w-4" /> Voltar
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            // Reset wizard for a new number
+                            setWizardStep(1);
+                            setPhoneNumber("");
+                            setVerifiedName("");
+                            setPhoneNumberIdForCode("");
+                            setVerificationCode("");
+                            setSetPinValue("");
+                            toast.success("Assistente reiniciado!");
+                          }}
+                          variant="secondary"
+                          className="flex-1"
+                        >
+                          Concluir <CheckCircle className="ml-1 h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
