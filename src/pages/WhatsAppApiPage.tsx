@@ -989,7 +989,6 @@ export default function WhatsAppApiPage() {
                   )}
                 </CardContent>
               </Card>
-              </Card>
             </>)}
 
             {!isAdmin && (
