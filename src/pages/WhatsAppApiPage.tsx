@@ -603,6 +603,7 @@ export default function WhatsAppApiPage() {
               </CardContent>
             </Card>
 
+            {isAdmin && (<>
             {/* Register Phone Number */}
             <Card>
               <CardHeader>
