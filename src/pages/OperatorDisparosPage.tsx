@@ -889,65 +889,109 @@ export default function OperatorDisparosPage() {
               </Card>
             )}
 
-            <Tabs defaultValue="listas" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="listas" className="gap-2"><Users className="h-4 w-4" /> Listas</TabsTrigger>
-                <TabsTrigger value="disparar" className="gap-2"><Send className="h-4 w-4" /> Disparar</TabsTrigger>
-              </TabsList>
+            {/* Dispatch wizard card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Send className="h-5 w-5 text-accent" /> Configurar Disparo
+                </CardTitle>
 
-
-              {/* Tab: Listas */}
-              <TabsContent value="listas" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <CardTitle className="flex items-center gap-2 text-base">
-                          <Users className="h-5 w-5 text-accent" /> Minhas Listas
-                        </CardTitle>
-                        <CardDescription>Visualize os contatos das listas que você importou</CardDescription>
-                      </div>
-                      <Button variant="outline" size="sm" onClick={refreshLists} disabled={loadingLists}>
-                        <RefreshCw className={cn("h-3.5 w-3.5", loadingLists && "animate-spin")} />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {loadingLists ? (
-                      <LoadingSpinner size="sm" text="Carregando listas..." />
-                    ) : availableLists.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-6">Nenhuma lista importada ainda.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {availableLists.map(l => (
-                          <div key={l.name} className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
-                            <div className="min-w-0 flex-1">
-                              <p className="font-medium text-sm truncate">{l.name}</p>
-                              <p className="text-xs text-muted-foreground">{l.count} contatos</p>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <Button variant="outline" size="sm" onClick={() => loadListContacts(l.name)}>
-                                <Eye className="mr-1.5 h-3.5 w-3.5" /> Ver
-                              </Button>
-                              <Button variant="ghost" size="sm"
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => handleDeleteList(l.name)}
-                                disabled={deletingList === l.name}>
-                                {deletingList === l.name ? <LoadingSpinner size="sm" /> : <Trash2 className="h-3.5 w-3.5" />}
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                {/* Tipo de disparo — Lista vs Avulso (definido no início) */}
+                <div className="mt-2 rounded-lg border p-1 grid grid-cols-2 gap-1 bg-muted/30">
+                  <button
+                    type="button"
+                    onClick={() => { setDispatchType("lista"); if (wizardStep > 2) setWizardStep(2); }}
+                    className={cn(
+                      "rounded-md py-1.5 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
+                      dispatchType === "lista"
+                        ? "bg-primary text-primary-foreground shadow"
+                        : "text-muted-foreground hover:text-foreground",
                     )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                  >
+                    <Users className="h-3.5 w-3.5" /> Lista
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDispatchType("avulso"); if (wizardStep > 2) setWizardStep(2); }}
+                    className={cn(
+                      "rounded-md py-1.5 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5",
+                      dispatchType === "avulso"
+                        ? "bg-primary text-primary-foreground shadow"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Avulso (1 contato)
+                  </button>
+                </div>
 
-              {/* Tab: Dispatch — admin-style wizard with 3 modes */}
-              <TabsContent value="disparar" className="space-y-4">
-                <Card>
-                  <CardHeader>
+                <div className="flex items-center gap-1 pt-3">
+                  {stepLabels.map((label, i) => (
+                    <div key={i} className="flex items-center gap-1 flex-1">
+                      <button
+                        onClick={() => i < wizardStep && setWizardStep(i)}
+                        className={`flex items-center justify-center h-7 w-7 rounded-full text-xs font-bold shrink-0 transition-colors ${
+                          i === wizardStep ? "bg-primary text-primary-foreground"
+                            : i < wizardStep ? "bg-primary/20 text-primary cursor-pointer"
+                            : "bg-muted text-muted-foreground"
+                        }`}>
+                        {i + 1}
+                      </button>
+                      <span className={`text-[11px] truncate ${i === wizardStep ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+                        {label}
+                      </span>
+                      {i < 3 && <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />}
+                    </div>
+                  ))}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="mx-auto max-w-xl">
+                  <AnimatePresence mode="wait">
+                    {/* Step 0: Phone */}
+                    {wizardStep === 0 && (
+                      <motion.div key="s0" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Número de Disparo</Label>
+                          {phones.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">Nenhum número disponível.</p>
+                          ) : (
+                            <Select value={selectedPhoneNumberId} onValueChange={setSelectedPhoneNumberId}>
+                              <SelectTrigger><SelectValue placeholder="Selecione o número..." /></SelectTrigger>
+                              <SelectContent>
+                                {phones.map(p => (
+                                  <SelectItem key={p.phone_number_id} value={p.phone_number_id}>
+                                    <span className="flex items-center gap-2">
+                                      <Phone className="h-3 w-3" />
+                                      {p.display_phone_number} {p.verified_name ? `(${p.verified_name})` : ""}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+
+                        {selectedPhoneData && (
+                          <div className="space-y-2 rounded-lg border p-3">
+                            <Label className="text-xs font-semibold">Nome do Advogado (variável)</Label>
+                            <Input value={customAdvogadoName} onChange={e => setCustomAdvogadoName(e.target.value)}
+                              placeholder={defaultPhoneName || "Nome do advogado..."} className="h-9" />
+                            <p className="text-xs text-muted-foreground">
+                              Derivado do nome de exibição: <span className="font-mono">{rawDisplayName}</span>
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="flex justify-end pt-2">
+                          <Button onClick={() => setWizardStep(1)} disabled={!isStep0Valid}>
+                            Próximo <ChevronRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* Step 1: Template */}
+                    {wizardStep === 1 && (
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Send className="h-5 w-5 text-accent" /> Configurar Disparo
                     </CardTitle>
