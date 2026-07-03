@@ -1269,8 +1269,6 @@ export default function OperatorDisparosPage() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
-            </Tabs>
           </div>
         </div>
       </div>
