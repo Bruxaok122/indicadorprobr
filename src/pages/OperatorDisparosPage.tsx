@@ -827,7 +827,7 @@ export default function OperatorDisparosPage() {
   return (
     <AppLayout>
       <div className="flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden">
-        <PageHeader title="Listas e Disparos" description="Importe contatos e dispare mensagens via WhatsApp" />
+        <PageHeader title="Disparos" description="Configure e envie mensagens via WhatsApp" />
 
         <div className="flex-1 overflow-auto p-4 md:p-6">
           <div className="mx-auto max-w-3xl space-y-6">
