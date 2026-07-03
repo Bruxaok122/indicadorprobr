@@ -889,42 +889,12 @@ export default function OperatorDisparosPage() {
               </Card>
             )}
 
-            <Tabs defaultValue="importar" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="importar" className="gap-2"><Upload className="h-4 w-4" /> Importar</TabsTrigger>
+            <Tabs defaultValue="listas" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="listas" className="gap-2"><Users className="h-4 w-4" /> Listas</TabsTrigger>
                 <TabsTrigger value="disparar" className="gap-2"><Send className="h-4 w-4" /> Disparar</TabsTrigger>
               </TabsList>
 
-              {/* Tab: Import */}
-              <TabsContent value="importar" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <FileText className="h-5 w-5 text-accent" /> Colar Lista de Contatos
-                    </CardTitle>
-                    <CardDescription>Cole os dados no formato NOME / CPF / TELEFONE / CONTRA / PROCESSO</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Nome da Lista</Label>
-                      <Input value={listName} onChange={e => setListName(e.target.value)} placeholder="Ex: Lista Janeiro 2026" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Dados dos Contatos</Label>
-                      <Textarea
-                        value={rawText}
-                        onChange={e => setRawText(e.target.value)}
-                        placeholder={`NOME: CAIO HENRIQUE PEDRO FERREIRA  - renda $1861,27\n\nCPF: 41173349804\n\nTELEFONE: +5511970178814,+551126110638\n\nCONTRA: Qualicorp Consultoria\n\nPROCESSO: 4017392-65.2026.8.26.0100`}
-                        className="min-h-[250px] font-mono text-sm"
-                      />
-                    </div>
-                    <Button onClick={handleParse} disabled={!rawText.trim() || !listName.trim()} className="w-full" size="lg">
-                      <Upload className="mr-2 h-4 w-4" /> Processar Lista
-                    </Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
 
               {/* Tab: Listas */}
               <TabsContent value="listas" className="space-y-4">
