@@ -19,9 +19,6 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Tabs, TabsContent, TabsList, TabsTrigger,
-} from "@/components/ui/tabs";
 import { Upload, Send, Trash2, Pause, Play, XCircle, FileText, Phone, Radio, CheckCircle, X, ChevronRight, ChevronLeft, Plus, Clock, Eye, Users, ShieldCheck, RefreshCw, Layers, Timer, Zap, Coffee } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useContacts } from "@/hooks/useContacts";
