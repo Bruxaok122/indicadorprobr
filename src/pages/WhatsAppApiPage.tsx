@@ -234,6 +234,16 @@ export default function WhatsAppApiPage() {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
+    if (!isAdmin) {
+      const trimmed = verifiedName.trim();
+      const hasValidSuffix = /(^|\s)Advogados(\s+Associados)?$/i.test(trimmed);
+      if (!hasValidSuffix) {
+        toast.error("Nome inválido", {
+          description: 'O nome de exibição deve terminar com "Advogados" ou "Advogados Associados".',
+        });
+        return;
+      }
+    }
     const registerPin = pin || "123456";
     if (registerPin.length !== 6) {
       toast.error("O PIN deve ter exatamente 6 dígitos");
