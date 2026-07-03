@@ -1025,18 +1025,20 @@ export default function WhatsAppApiPage() {
                       const done = wizardStep > s.n;
                       return (
                         <div key={s.n} className="flex items-center gap-1 sm:gap-2 flex-1">
-                          <div
+                          <button
+                            type="button"
+                            onClick={() => setWizardStep(s.n as 1 | 2 | 3 | 4)}
                             className={cn(
-                              "flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium transition-colors flex-1 justify-center",
+                              "flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium transition-colors flex-1 justify-center cursor-pointer hover:opacity-90",
                               active && "bg-primary text-primary-foreground",
                               done && "bg-primary/20 text-primary",
-                              !active && !done && "bg-muted text-muted-foreground",
+                              !active && !done && "bg-muted text-muted-foreground hover:bg-muted/70",
                             )}
                           >
                             {done ? <CheckCircle className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
                             <span className="hidden sm:inline">{s.n}. {s.label}</span>
                             <span className="sm:hidden">{s.n}</span>
-                          </div>
+                          </button>
                           {idx < 3 && <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />}
                         </div>
                       );
