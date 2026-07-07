@@ -82,7 +82,7 @@ export default function OperatorDisparosPage() {
     handleCancel,
   } = useDispatchContext();
 
-  const { isReady: cooldownReady, remainingMs: cooldownMs, markDispatched } = useDispatchCooldown(user?.id);
+  const { isReady: cooldownReady, remainingMs: cooldownMs, markDispatched } = useDispatchCooldown(user?.id, !!(profile as any)?.bypass_dispatch_cooldown);
 
   const persisted = loadPersistedState();
 
