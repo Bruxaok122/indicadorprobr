@@ -22,7 +22,6 @@ interface UserCardProps {
   onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
   onToggleManageNumbers: (params: { userId: string; canManageNumbers: boolean }) => void;
   onToggleDispatch: (params: { userId: string; canDispatch: boolean }) => void;
-  onToggleBypassCooldown: (params: { userId: string; bypass: boolean }) => void;
   onDelete: (user: Profile) => void;
   onClearTempBan: (userId: string) => void;
   onManagePhones: (user: Profile) => void;
@@ -33,7 +32,7 @@ interface UserCardProps {
   onSetMaxBatchSize?: (params: { userId: string; maxBatchSize: number | null }) => void;
 }
 
-export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onToggleBypassCooldown, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat, onSetMaxBatchSize }: UserCardProps) {
+export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat, onSetMaxBatchSize }: UserCardProps) {
    const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
    const [batchLimitDraft, setBatchLimitDraft] = useState<string>(
      user.max_batch_size != null ? String(user.max_batch_size) : ""
@@ -329,18 +328,6 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleM
                    onToggleDispatch({
                      userId: user.user_id,
                      canDispatch: checked,
-                   })
-                 }
-               />
-             </div>
-             <div className="flex items-center gap-1">
-               <span className="text-xs text-muted-foreground flex items-center gap-1"><Timer className="h-3 w-3" />Sem Timer</span>
-               <Switch
-                 checked={(user as any).bypass_dispatch_cooldown || false}
-                 onCheckedChange={(checked) =>
-                   onToggleBypassCooldown({
-                     userId: user.user_id,
-                     bypass: checked,
                    })
                  }
                />

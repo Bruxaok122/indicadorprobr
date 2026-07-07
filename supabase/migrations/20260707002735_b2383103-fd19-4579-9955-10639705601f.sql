@@ -1,1 +1,0 @@
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS bypass_dispatch_cooldown boolean NOT NULL DEFAULT false;

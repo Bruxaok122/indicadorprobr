@@ -198,25 +198,6 @@ export function useAdmin() {
     },
   });
 
-  // Toggle bypass dispatch cooldown mutation
-  const toggleBypassCooldownMutation = useMutation({
-    mutationFn: async ({ userId, bypass }: { userId: string; bypass: boolean }) => {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ bypass_dispatch_cooldown: bypass } as any)
-        .eq("user_id", userId);
-      if (error) throw error;
-    },
-    onSuccess: (_, { bypass }) => {
-      toast.success(bypass ? "Cronômetro desativado!" : "Cronômetro ativado!");
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-    },
-    onError: (error: any) => {
-      toast.error("Erro ao alterar cronômetro", { description: error.message });
-    },
-  });
-
-
   // Set max batch size mutation (null = unlimited)
   const setMaxBatchSizeMutation = useMutation({
     mutationFn: async ({ userId, maxBatchSize }: { userId: string; maxBatchSize: number | null }) => {
@@ -410,8 +391,6 @@ export function useAdmin() {
     isTogglingManageNumbers: toggleManageNumbersMutation.isPending,
     toggleDispatch: toggleDispatchMutation.mutate,
     isTogglingDispatch: toggleDispatchMutation.isPending,
-    toggleBypassCooldown: toggleBypassCooldownMutation.mutate,
-    isTogglingBypassCooldown: toggleBypassCooldownMutation.isPending,
     setMaxBatchSize: setMaxBatchSizeMutation.mutate,
     isSettingMaxBatchSize: setMaxBatchSizeMutation.isPending,
     deleteUser: deleteUserMutation.mutate,

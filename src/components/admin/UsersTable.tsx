@@ -44,7 +44,6 @@ interface UsersTableProps {
   onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
   onToggleManageNumbers: (params: { userId: string; canManageNumbers: boolean }) => void;
   onToggleDispatch: (params: { userId: string; canDispatch: boolean }) => void;
-  onToggleBypassCooldown: (params: { userId: string; bypass: boolean }) => void;
   onDelete: (userId: string) => void;
   onClearTempBan: (userId: string) => void;
   onManagePhones: (user: Profile) => void;
@@ -54,7 +53,7 @@ interface UsersTableProps {
   onMonitorChat: (user: Profile) => void;
 }
 
-export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onToggleBypassCooldown, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UsersTableProps) {
+export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UsersTableProps) {
   // Controlled delete dialog - prevents closure/portal issues with inline AlertDialogs in loops
   const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
 
@@ -82,12 +81,6 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
              <TableHead>API</TableHead>
              <TableHead>Números</TableHead>
              <TableHead>Disparos</TableHead>
-             <TableHead>
-               <div className="flex items-center gap-1">
-                 <Timer className="h-3.5 w-3.5" />
-                 Sem Timer
-               </div>
-             </TableHead>
             <TableHead>Dispositivo</TableHead>
             <TableHead>Mensagens</TableHead>
             <TableHead>Último Acesso</TableHead>
@@ -216,35 +209,17 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
                      }
                    />
                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={(user as any).can_dispatch || false}
-                      onCheckedChange={(checked) =>
-                        onToggleDispatch({
-                          userId: user.user_id,
-                          canDispatch: checked,
-                        })
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div>
-                          <Switch
-                            checked={(user as any).bypass_dispatch_cooldown || false}
-                            onCheckedChange={(checked) =>
-                              onToggleBypassCooldown({
-                                userId: user.user_id,
-                                bypass: checked,
-                              })
-                            }
-                          />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>Desativa o cronômetro (cooldown) do botão de disparo</TooltipContent>
-                    </Tooltip>
-                  </TableCell>
+                 <TableCell>
+                   <Switch
+                     checked={(user as any).can_dispatch || false}
+                     onCheckedChange={(checked) =>
+                       onToggleDispatch({
+                         userId: user.user_id,
+                         canDispatch: checked,
+                       })
+                     }
+                   />
+                 </TableCell>
             <TableCell>
               <div className="flex flex-col gap-1.5">
                 {user.authorized_fingerprint ? (
