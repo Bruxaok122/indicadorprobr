@@ -82,6 +82,12 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
              <TableHead>API</TableHead>
              <TableHead>Números</TableHead>
              <TableHead>Disparos</TableHead>
+             <TableHead>
+               <div className="flex items-center gap-1">
+                 <Timer className="h-3.5 w-3.5" />
+                 Sem Timer
+               </div>
+             </TableHead>
             <TableHead>Dispositivo</TableHead>
             <TableHead>Mensagens</TableHead>
             <TableHead>Último Acesso</TableHead>
