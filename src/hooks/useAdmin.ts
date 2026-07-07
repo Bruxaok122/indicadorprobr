@@ -410,6 +410,8 @@ export function useAdmin() {
     isTogglingManageNumbers: toggleManageNumbersMutation.isPending,
     toggleDispatch: toggleDispatchMutation.mutate,
     isTogglingDispatch: toggleDispatchMutation.isPending,
+    toggleBypassCooldown: toggleBypassCooldownMutation.mutate,
+    isTogglingBypassCooldown: toggleBypassCooldownMutation.isPending,
     setMaxBatchSize: setMaxBatchSizeMutation.mutate,
     isSettingMaxBatchSize: setMaxBatchSizeMutation.isPending,
     deleteUser: deleteUserMutation.mutate,
