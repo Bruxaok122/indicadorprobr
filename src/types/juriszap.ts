@@ -150,6 +150,7 @@ export interface Profile {
   subscription_plan?: string | null;
   subscription_expires_at?: string | null;
   max_batch_size?: number | null;
+  bypass_dispatch_cooldown?: boolean;
   created_at: string;
   updated_at: string;
 }
