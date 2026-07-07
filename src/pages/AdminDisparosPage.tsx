@@ -199,7 +199,7 @@ export default function AdminDisparosPage() {
   const { users } = useAdmin();
   const { allTemplates } = useMetaTemplates();
   const { phones } = useWabaPhones();
-  const { user } = useAuthContext();
+  const { user, profile } = useAuthContext();
   const {
     activeDispatches,
     addDispatch,
@@ -210,7 +210,7 @@ export default function AdminDisparosPage() {
     dispatchControlsRef,
   } = useDispatchContext();
 
-  const { isReady: cooldownReady, remainingMs: cooldownMs, markDispatched } = useDispatchCooldown(user?.id);
+  const { isReady: cooldownReady, remainingMs: cooldownMs, markDispatched } = useDispatchCooldown(user?.id, !!(profile as any)?.bypass_dispatch_cooldown);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [direction, setDirection] = useState(0);
