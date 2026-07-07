@@ -7,7 +7,7 @@ function storageKey(userId: string | undefined | null) {
   return `${STORAGE_PREFIX}${userId ?? "anon"}`;
 }
 
-export function useDispatchCooldown(userId: string | undefined | null) {
+export function useDispatchCooldown(userId: string | undefined | null, bypass: boolean = false) {
   const [lastAt, setLastAt] = useState<number>(() => {
     if (typeof window === "undefined" || !userId) return 0;
     const raw = window.localStorage.getItem(storageKey(userId));
