@@ -216,17 +216,35 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
                      }
                    />
                  </TableCell>
-                 <TableCell>
-                   <Switch
-                     checked={(user as any).can_dispatch || false}
-                     onCheckedChange={(checked) =>
-                       onToggleDispatch({
-                         userId: user.user_id,
-                         canDispatch: checked,
-                       })
-                     }
-                   />
-                 </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={(user as any).can_dispatch || false}
+                      onCheckedChange={(checked) =>
+                        onToggleDispatch({
+                          userId: user.user_id,
+                          canDispatch: checked,
+                        })
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Switch
+                            checked={(user as any).bypass_dispatch_cooldown || false}
+                            onCheckedChange={(checked) =>
+                              onToggleBypassCooldown({
+                                userId: user.user_id,
+                                bypass: checked,
+                              })
+                            }
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>Desativa o cronômetro (cooldown) do botão de disparo</TooltipContent>
+                    </Tooltip>
+                  </TableCell>
             <TableCell>
               <div className="flex flex-col gap-1.5">
                 {user.authorized_fingerprint ? (
