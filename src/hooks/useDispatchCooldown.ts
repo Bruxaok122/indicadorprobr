@@ -40,8 +40,8 @@ export function useDispatchCooldown(userId: string | undefined | null, bypass: b
   }, [userId]);
 
   const elapsed = lastAt ? now - lastAt : COOLDOWN_MS;
-  const remainingMs = Math.max(0, COOLDOWN_MS - elapsed);
-  const isReady = remainingMs <= 0;
+  const remainingMs = bypass ? 0 : Math.max(0, COOLDOWN_MS - elapsed);
+  const isReady = bypass ? true : remainingMs <= 0;
 
   const markDispatched = useCallback(() => {
     if (!userId) return;
