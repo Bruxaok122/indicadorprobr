@@ -7,7 +7,7 @@ function storageKey(userId: string | undefined | null) {
   return `${STORAGE_PREFIX}${userId ?? "anon"}`;
 }
 
-export function useDispatchCooldown(userId: string | undefined | null) {
+export function useDispatchCooldown(userId: string | undefined | null, bypass: boolean = false) {
   const [lastAt, setLastAt] = useState<number>(() => {
     if (typeof window === "undefined" || !userId) return 0;
     const raw = window.localStorage.getItem(storageKey(userId));
@@ -40,8 +40,8 @@ export function useDispatchCooldown(userId: string | undefined | null) {
   }, [userId]);
 
   const elapsed = lastAt ? now - lastAt : COOLDOWN_MS;
-  const remainingMs = Math.max(0, COOLDOWN_MS - elapsed);
-  const isReady = remainingMs <= 0;
+  const remainingMs = bypass ? 0 : Math.max(0, COOLDOWN_MS - elapsed);
+  const isReady = bypass ? true : remainingMs <= 0;
 
   const markDispatched = useCallback(() => {
     if (!userId) return;

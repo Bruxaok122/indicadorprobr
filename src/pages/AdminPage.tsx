@@ -48,6 +48,7 @@ function AdminPageInner() {
     toggleApiPermission,
     toggleManageNumbers,
     toggleDispatch,
+    toggleBypassCooldown,
     deleteUser,
     clearTempBan,
     setSubscriptionPlan,
@@ -167,6 +168,7 @@ function AdminPageInner() {
                         onToggleApiPermission={toggleApiPermission}
                         onToggleManageNumbers={toggleManageNumbers}
                         onToggleDispatch={toggleDispatch}
+                        onToggleBypassCooldown={toggleBypassCooldown}
                         onDelete={setUserToDeleteMobile}
                         onClearTempBan={clearTempBan}
                         onManagePhones={setPhonePermUser}
@@ -185,6 +187,7 @@ function AdminPageInner() {
                     onToggleApiPermission={toggleApiPermission}
                     onToggleManageNumbers={toggleManageNumbers}
                     onToggleDispatch={toggleDispatch}
+                    onToggleBypassCooldown={toggleBypassCooldown}
                     onDelete={deleteUser}
                     onClearTempBan={clearTempBan}
                     onManagePhones={setPhonePermUser}
