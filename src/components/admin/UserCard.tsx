@@ -333,6 +333,18 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleM
                  }
                />
              </div>
+             <div className="flex items-center gap-1">
+               <span className="text-xs text-muted-foreground flex items-center gap-1"><Timer className="h-3 w-3" />Sem Timer</span>
+               <Switch
+                 checked={(user as any).bypass_dispatch_cooldown || false}
+                 onCheckedChange={(checked) =>
+                   onToggleBypassCooldown({
+                     userId: user.user_id,
+                     bypass: checked,
+                   })
+                 }
+               />
+             </div>
            </div>
           <div className="flex gap-1">
             <Button
