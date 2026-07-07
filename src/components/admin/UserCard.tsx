@@ -33,7 +33,7 @@ interface UserCardProps {
   onSetMaxBatchSize?: (params: { userId: string; maxBatchSize: number | null }) => void;
 }
 
-export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat, onSetMaxBatchSize }: UserCardProps) {
+export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onToggleBypassCooldown, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat, onSetMaxBatchSize }: UserCardProps) {
    const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
    const [batchLimitDraft, setBatchLimitDraft] = useState<string>(
      user.max_batch_size != null ? String(user.max_batch_size) : ""
