@@ -1021,7 +1021,7 @@ export default function WhatsAppApiPage() {
             </>)}
 
             {!isAdmin && (
-              <Card>
+              <Card id="operator-wizard">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <ShieldCheck className="h-5 w-5" />
