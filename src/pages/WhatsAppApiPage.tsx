@@ -529,6 +529,25 @@ export default function WhatsAppApiPage() {
                     <CardDescription>Status de conexão dos seus números</CardDescription>
                   </div>
                   <div className="flex gap-2">
+                    {!isAdmin && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setWizardStep(1);
+                          setPhoneNumber("");
+                          setVerifiedName("");
+                          setPhoneNumberIdForCode("");
+                          setVerificationCode("");
+                          setTimeout(() => {
+                            document.getElementById("operator-wizard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }, 50);
+                        }}
+                        disabled={availablePhones.length >= 3}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Adicionar Número
+                      </Button>
+                    )}
                     {isAdmin && (
                       <Button variant="outline" size="sm" onClick={() => syncPhones()} disabled={isSyncing}>
                         <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
