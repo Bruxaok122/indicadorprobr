@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Phone, UserCircle, Send, CheckCircle, RefreshCw, Wifi, WifiOff, AlertCircle, Upload, Image, Lock, Trash2, ChevronRight, ChevronLeft, ShieldCheck, MessageSquare } from "lucide-react";
+import { Phone, UserCircle, Send, CheckCircle, RefreshCw, Wifi, WifiOff, AlertCircle, Upload, Image, Lock, Trash2, ChevronRight, ChevronLeft, ShieldCheck, MessageSquare, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
