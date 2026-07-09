@@ -19,9 +19,6 @@ import { ptBR } from "date-fns/locale";
 interface UserCardProps {
   user: Profile;
   onToggleBlock: (params: { userId: string; isBlocked: boolean }) => void;
-  onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
-  onToggleManageNumbers: (params: { userId: string; canManageNumbers: boolean }) => void;
-  onToggleDispatch: (params: { userId: string; canDispatch: boolean }) => void;
   onDelete: (user: Profile) => void;
   onClearTempBan: (userId: string) => void;
   onManagePhones: (user: Profile) => void;
@@ -29,10 +26,11 @@ interface UserCardProps {
   onAuthorizeDevice: (userId: string) => void;
   onResetDevice: (userId: string) => void;
   onMonitorChat: (user: Profile) => void;
+  onManagePermissions: (user: Profile) => void;
   onSetMaxBatchSize?: (params: { userId: string; maxBatchSize: number | null }) => void;
 }
 
-export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat, onSetMaxBatchSize }: UserCardProps) {
+export function UserCard({ user, onToggleBlock, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat, onManagePermissions, onSetMaxBatchSize }: UserCardProps) {
    const isTempBanned = user.temp_banned_until && new Date(user.temp_banned_until) > new Date();
    const [batchLimitDraft, setBatchLimitDraft] = useState<string>(
      user.max_batch_size != null ? String(user.max_batch_size) : ""
@@ -275,64 +273,16 @@ export function UserCard({ user, onToggleBlock, onToggleApiPermission, onToggleM
 
          {/* Actions */}
          <div className="space-y-2 pt-2 border-t">
-          {/* All permissions toggle */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4 text-primary" />
-              <span className="text-xs font-semibold">Todas as Permissões</span>
-            </div>
-            <Switch
-              checked={
-                (user.can_use_shared_api || false) &&
-                ((user as any).can_manage_numbers || false) &&
-                ((user as any).can_dispatch || false)
-              }
-              onCheckedChange={(checked) => {
-                onToggleApiPermission({ userId: user.user_id, canUseSharedApi: checked });
-                onToggleManageNumbers({ userId: user.user_id, canManageNumbers: checked });
-                onToggleDispatch({ userId: user.user_id, canDispatch: checked });
-              }}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-           <div className="flex items-center gap-3">
-             <div className="flex items-center gap-1">
-               <span className="text-xs text-muted-foreground">API</span>
-               <Switch
-                 checked={user.can_use_shared_api || false}
-                 onCheckedChange={(checked) =>
-                   onToggleApiPermission({
-                     userId: user.user_id,
-                     canUseSharedApi: checked,
-                   })
-                 }
-               />
-             </div>
-             <div className="flex items-center gap-1">
-               <span className="text-xs text-muted-foreground">Números</span>
-               <Switch
-                 checked={(user as any).can_manage_numbers || false}
-                 onCheckedChange={(checked) =>
-                   onToggleManageNumbers({
-                     userId: user.user_id,
-                     canManageNumbers: checked,
-                   })
-                 }
-               />
-             </div>
-             <div className="flex items-center gap-1">
-               <span className="text-xs text-muted-foreground">Disparos</span>
-               <Switch
-                 checked={(user as any).can_dispatch || false}
-                 onCheckedChange={(checked) =>
-                   onToggleDispatch({
-                     userId: user.user_id,
-                     canDispatch: checked,
-                   })
-                 }
-               />
-             </div>
-           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-1.5"
+            onClick={() => onManagePermissions(user)}
+          >
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            Gerenciar Permissões
+          </Button>
+          <div className="flex items-center justify-end">
           <div className="flex gap-1">
             <Button
               variant="ghost"
