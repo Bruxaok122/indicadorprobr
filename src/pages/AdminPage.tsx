@@ -17,6 +17,7 @@ import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { PhoneNumbersSection } from "@/components/admin/PhoneNumbersSection";
 
 import { PhonePermissionsDialog } from "@/components/admin/PhonePermissionsDialog";
+import { PermissionsDialog } from "@/components/admin/PermissionsDialog";
 import { AdminChatMonitor } from "@/components/admin/AdminChatMonitor";
 import { ApiHealthMonitor } from "@/components/admin/ApiHealthMonitor";
 import { Profile } from "@/types/juriszap";
@@ -246,11 +247,22 @@ function AdminPageInner() {
         isSaving={isUpdatingPermissions}
       />
 
+      <PermissionsDialog
+        open={!!permissionsUser}
+        onOpenChange={(open) => !open && setPermissionsUser(null)}
+        user={permissionsUser}
+        onToggleApiPermission={toggleApiPermission}
+        onToggleManageNumbers={toggleManageNumbers}
+        onToggleDispatch={toggleDispatch}
+        onToggleCreateTemplates={toggleCreateTemplates}
+      />
+
       <AdminChatMonitor
         open={!!monitorUser}
         onOpenChange={(open) => !open && setMonitorUser(null)}
         user={monitorUser}
       />
+
 
       {/* Mobile delete confirmation dialog */}
       <AlertDialog open={!!userToDeleteMobile} onOpenChange={(open) => !open && setUserToDeleteMobile(null)}>
