@@ -127,6 +127,8 @@ export interface Profile {
   is_blocked: boolean;
   can_use_shared_api: boolean;
   can_manage_numbers?: boolean;
+  can_dispatch?: boolean;
+  can_create_templates?: boolean;
   device_fingerprint?: string;
   last_device_info?: {
     browser?: string;
