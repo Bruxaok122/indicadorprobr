@@ -155,60 +155,17 @@ export function UsersTable({ users, onToggleBlock, onDelete, onClearTempBan, onM
                      )}
                    </div>
                  </TableCell>
-                 <TableCell>
-                   <Tooltip>
-                     <TooltipTrigger asChild>
-                       <div>
-                         <Switch
-                           checked={
-                             (user.can_use_shared_api || false) &&
-                             ((user as any).can_manage_numbers || false) &&
-                             ((user as any).can_dispatch || false)
-                           }
-                           onCheckedChange={(checked) => {
-                             onToggleApiPermission({ userId: user.user_id, canUseSharedApi: checked });
-                             onToggleManageNumbers({ userId: user.user_id, canManageNumbers: checked });
-                             onToggleDispatch({ userId: user.user_id, canDispatch: checked });
-                           }}
-                         />
-                       </div>
-                     </TooltipTrigger>
-                     <TooltipContent>Liga/desliga todas as permissões de uma vez</TooltipContent>
-                   </Tooltip>
-                 </TableCell>
-                 <TableCell>
-                   <Switch
-                     checked={user.can_use_shared_api || false}
-                     onCheckedChange={(checked) =>
-                       onToggleApiPermission({
-                         userId: user.user_id,
-                         canUseSharedApi: checked,
-                       })
-                     }
-                   />
-                 </TableCell>
-                 <TableCell>
-                   <Switch
-                     checked={(user as any).can_manage_numbers || false}
-                     onCheckedChange={(checked) =>
-                       onToggleManageNumbers({
-                         userId: user.user_id,
-                         canManageNumbers: checked,
-                       })
-                     }
-                   />
-                 </TableCell>
-                 <TableCell>
-                   <Switch
-                     checked={(user as any).can_dispatch || false}
-                     onCheckedChange={(checked) =>
-                       onToggleDispatch({
-                         userId: user.user_id,
-                         canDispatch: checked,
-                       })
-                     }
-                   />
-                 </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5"
+                      onClick={() => onManagePermissions(user)}
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      Gerenciar
+                    </Button>
+                  </TableCell>
             <TableCell>
               <div className="flex flex-col gap-1.5">
                 {user.authorized_fingerprint ? (
