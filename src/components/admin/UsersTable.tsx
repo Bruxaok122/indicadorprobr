@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Profile } from "@/types/juriszap";
 import { Badge } from "@/components/ui/badge";
 import { Phone, CalendarClock, Smartphone, SmartphoneNfc, Eye, ShieldCheck } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -41,9 +40,6 @@ import { ptBR } from "date-fns/locale";
 interface UsersTableProps {
   users: Profile[];
   onToggleBlock: (params: { userId: string; isBlocked: boolean }) => void;
-  onToggleApiPermission: (params: { userId: string; canUseSharedApi: boolean }) => void;
-  onToggleManageNumbers: (params: { userId: string; canManageNumbers: boolean }) => void;
-  onToggleDispatch: (params: { userId: string; canDispatch: boolean }) => void;
   onDelete: (userId: string) => void;
   onClearTempBan: (userId: string) => void;
   onManagePhones: (user: Profile) => void;
@@ -51,9 +47,10 @@ interface UsersTableProps {
   onAuthorizeDevice: (userId: string) => void;
   onResetDevice: (userId: string) => void;
   onMonitorChat: (user: Profile) => void;
+  onManagePermissions: (user: Profile) => void;
 }
 
-export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onToggleManageNumbers, onToggleDispatch, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat }: UsersTableProps) {
+export function UsersTable({ users, onToggleBlock, onDelete, onClearTempBan, onManagePhones, onSetPlan, onAuthorizeDevice, onResetDevice, onMonitorChat, onManagePermissions }: UsersTableProps) {
   // Controlled delete dialog - prevents closure/portal issues with inline AlertDialogs in loops
   const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
 
@@ -72,15 +69,7 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
             <TableHead>Usuário</TableHead>
              <TableHead>Status</TableHead>
              <TableHead>Plano</TableHead>
-             <TableHead>
-               <div className="flex items-center gap-1">
-                 <ShieldCheck className="h-3.5 w-3.5" />
-                 Todas
-               </div>
-             </TableHead>
-             <TableHead>API</TableHead>
-             <TableHead>Números</TableHead>
-             <TableHead>Disparos</TableHead>
+             <TableHead>Permissões</TableHead>
             <TableHead>Dispositivo</TableHead>
             <TableHead>Mensagens</TableHead>
             <TableHead>Último Acesso</TableHead>
@@ -166,60 +155,17 @@ export function UsersTable({ users, onToggleBlock, onToggleApiPermission, onTogg
                      )}
                    </div>
                  </TableCell>
-                 <TableCell>
-                   <Tooltip>
-                     <TooltipTrigger asChild>
-                       <div>
-                         <Switch
-                           checked={
-                             (user.can_use_shared_api || false) &&
-                             ((user as any).can_manage_numbers || false) &&
-                             ((user as any).can_dispatch || false)
-                           }
-                           onCheckedChange={(checked) => {
-                             onToggleApiPermission({ userId: user.user_id, canUseSharedApi: checked });
-                             onToggleManageNumbers({ userId: user.user_id, canManageNumbers: checked });
-                             onToggleDispatch({ userId: user.user_id, canDispatch: checked });
-                           }}
-                         />
-                       </div>
-                     </TooltipTrigger>
-                     <TooltipContent>Liga/desliga todas as permissões de uma vez</TooltipContent>
-                   </Tooltip>
-                 </TableCell>
-                 <TableCell>
-                   <Switch
-                     checked={user.can_use_shared_api || false}
-                     onCheckedChange={(checked) =>
-                       onToggleApiPermission({
-                         userId: user.user_id,
-                         canUseSharedApi: checked,
-                       })
-                     }
-                   />
-                 </TableCell>
-                 <TableCell>
-                   <Switch
-                     checked={(user as any).can_manage_numbers || false}
-                     onCheckedChange={(checked) =>
-                       onToggleManageNumbers({
-                         userId: user.user_id,
-                         canManageNumbers: checked,
-                       })
-                     }
-                   />
-                 </TableCell>
-                 <TableCell>
-                   <Switch
-                     checked={(user as any).can_dispatch || false}
-                     onCheckedChange={(checked) =>
-                       onToggleDispatch({
-                         userId: user.user_id,
-                         canDispatch: checked,
-                       })
-                     }
-                   />
-                 </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5"
+                      onClick={() => onManagePermissions(user)}
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      Gerenciar
+                    </Button>
+                  </TableCell>
             <TableCell>
               <div className="flex flex-col gap-1.5">
                 {user.authorized_fingerprint ? (

@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS can_create_templates boolean NOT NULL DEFAULT false;
