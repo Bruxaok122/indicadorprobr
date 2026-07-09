@@ -9,6 +9,7 @@ import {
   FileUp,
   Radio,
   Phone,
+  FileStack,
   LogOut,
   Scale,
 } from "lucide-react";
