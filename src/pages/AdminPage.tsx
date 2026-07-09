@@ -48,6 +48,7 @@ function AdminPageInner() {
     toggleApiPermission,
     toggleManageNumbers,
     toggleDispatch,
+    toggleCreateTemplates,
     deleteUser,
     clearTempBan,
     setSubscriptionPlan,
@@ -65,6 +66,7 @@ function AdminPageInner() {
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [phonePermUser, setPhonePermUser] = useState<Profile | null>(null);
+  const [permissionsUser, setPermissionsUser] = useState<Profile | null>(null);
   const [monitorUser, setMonitorUser] = useState<Profile | null>(null);
   const [userToDeleteMobile, setUserToDeleteMobile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState("tempo-real");
