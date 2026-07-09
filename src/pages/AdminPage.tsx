@@ -166,9 +166,6 @@ function AdminPageInner() {
                         key={user.id}
                         user={user}
                         onToggleBlock={toggleBlock}
-                        onToggleApiPermission={toggleApiPermission}
-                        onToggleManageNumbers={toggleManageNumbers}
-                        onToggleDispatch={toggleDispatch}
                         onDelete={setUserToDeleteMobile}
                         onClearTempBan={clearTempBan}
                         onManagePhones={setPhonePermUser}
@@ -176,6 +173,7 @@ function AdminPageInner() {
                         onAuthorizeDevice={authorizeDevice}
                         onResetDevice={resetDevice}
                         onMonitorChat={setMonitorUser}
+                        onManagePermissions={setPermissionsUser}
                         onSetMaxBatchSize={setMaxBatchSize}
                       />
                     ))}
@@ -184,9 +182,6 @@ function AdminPageInner() {
                   <UsersTable
                     users={users}
                     onToggleBlock={toggleBlock}
-                    onToggleApiPermission={toggleApiPermission}
-                    onToggleManageNumbers={toggleManageNumbers}
-                    onToggleDispatch={toggleDispatch}
                     onDelete={deleteUser}
                     onClearTempBan={clearTempBan}
                     onManagePhones={setPhonePermUser}
@@ -194,6 +189,7 @@ function AdminPageInner() {
                     onAuthorizeDevice={authorizeDevice}
                     onResetDevice={resetDevice}
                     onMonitorChat={setMonitorUser}
+                    onManagePermissions={setPermissionsUser}
                   />
                 )}
               </CardContent>
