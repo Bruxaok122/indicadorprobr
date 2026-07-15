@@ -197,21 +197,22 @@ export function useAdmin() {
       toast.error("Erro ao alterar permissão", { description: error.message });
     },
   });
-  // Toggle create templates permission mutation
-  const toggleCreateTemplatesMutation = useMutation({
-    mutationFn: async ({ userId, canCreateTemplates }: { userId: string; canCreateTemplates: boolean }) => {
+
+  // Toggle bypass dispatch cooldown mutation
+  const toggleBypassCooldownMutation = useMutation({
+    mutationFn: async ({ userId, bypass }: { userId: string; bypass: boolean }) => {
       const { error } = await supabase
         .from("profiles")
-        .update({ can_create_templates: canCreateTemplates } as any)
+        .update({ bypass_dispatch_cooldown: bypass } as any)
         .eq("user_id", userId);
       if (error) throw error;
     },
-    onSuccess: (_, { canCreateTemplates }) => {
-      toast.success(canCreateTemplates ? "Permissão de criar templates concedida!" : "Permissão de criar templates removida!");
+    onSuccess: (_, { bypass }) => {
+      toast.success(bypass ? "Cronômetro desativado!" : "Cronômetro ativado!");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
     onError: (error: any) => {
-      toast.error("Erro ao alterar permissão", { description: error.message });
+      toast.error("Erro ao alterar cronômetro", { description: error.message });
     },
   });
 
@@ -409,8 +410,8 @@ export function useAdmin() {
     isTogglingManageNumbers: toggleManageNumbersMutation.isPending,
     toggleDispatch: toggleDispatchMutation.mutate,
     isTogglingDispatch: toggleDispatchMutation.isPending,
-    toggleCreateTemplates: toggleCreateTemplatesMutation.mutate,
-    isTogglingCreateTemplates: toggleCreateTemplatesMutation.isPending,
+    toggleBypassCooldown: toggleBypassCooldownMutation.mutate,
+    isTogglingBypassCooldown: toggleBypassCooldownMutation.isPending,
     setMaxBatchSize: setMaxBatchSizeMutation.mutate,
     isSettingMaxBatchSize: setMaxBatchSizeMutation.isPending,
     deleteUser: deleteUserMutation.mutate,

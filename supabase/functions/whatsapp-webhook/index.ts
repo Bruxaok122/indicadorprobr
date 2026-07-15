@@ -518,63 +518,25 @@ serve(async (req) => {
                   }
                   content = `[Contato compartilhado]\n${lines.join("\n\n")}`;
                 } else if (message.type === "unsupported") {
-                  // WhatsApp sends "unsupported" type when a client deletes a message for everyone.
-                  console.log("🔎 Unsupported message payload:", JSON.stringify(message));
-                  const hasRevoke = message.errors?.some(
-                    (e: any) =>
-                      e.code === 131051 ||
-                      String(e.title || "").toLowerCase().includes("revoke") ||
-                      String(e.message || "").toLowerCase().includes("revoke") ||
-                      String(e.error_data?.details || "").toLowerCase().includes("revoke")
-                  );
-                  // Try any id field Meta might use to reference the deleted message.
-                  const candidateIds = [
-                    message.context?.id,
-                    message.referral?.message_id,
-                    message.errors?.[0]?.error_data?.message_id,
-                    message.id, // deletion notifications sometimes reuse original wamid
-                  ].filter(Boolean);
-
-                  let marked = false;
-                  for (const refId of candidateIds) {
+                  // WhatsApp sends "unsupported" type when a message is deleted
+                  // Check if there's a reference to an existing message (context.id)
+                  const refId = message.context?.id || message.referral?.message_id;
+                  if (refId) {
                     const { data: origMsg } = await supabase
                       .from("messages")
                       .select("id")
                       .eq("whatsapp_message_id", refId)
                       .maybeSingle();
                     if (origMsg) {
-                      await supabase
-                        .from("messages")
-                        .update({ is_deleted: true, content: "Mensagem apagada" })
-                        .eq("id", origMsg.id);
-                      console.log(`🗑️ Message ${refId} marked as deleted (unsupported/revoke)`);
-                      marked = true;
-                      break;
+                      await supabase.from("messages").update({ is_deleted: true, content: "Mensagem apagada" }).eq("id", origMsg.id);
+                      console.log(`🗑️ Message ${refId} marked as deleted`);
+                      continue;
                     }
                   }
-                  if (marked) continue;
-
-                  // Fallback: revoke signal but no id match — mark most recent incoming
-                  // message from this contact as deleted (best-effort).
+                  // Also treat as possible deletion if errors contain revoke code
+                  const hasRevoke = message.errors?.some((e: any) => e.code === 131051 || e.title?.toLowerCase().includes("revoke"));
                   if (hasRevoke) {
-                    const { data: recentMsg } = await supabase
-                      .from("messages")
-                      .select("id")
-                      .eq("contact_id", contactId)
-                      .eq("direction", "incoming")
-                      .eq("is_deleted", false)
-                      .order("created_at", { ascending: false })
-                      .limit(1)
-                      .maybeSingle();
-                    if (recentMsg) {
-                      await supabase
-                        .from("messages")
-                        .update({ is_deleted: true, content: "Mensagem apagada" })
-                        .eq("id", recentMsg.id);
-                      console.log(`🗑️ Fallback: latest incoming message marked as deleted for contact ${contactId}`);
-                    } else {
-                      console.log(`🗑️ Revoke received but no message to mark for contact ${contactId}`);
-                    }
+                    console.log(`🗑️ Received revoke notification, skipping`);
                     continue;
                   }
                   content = `[${message.type}]`;

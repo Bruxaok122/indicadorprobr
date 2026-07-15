@@ -17,7 +17,6 @@ import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { PhoneNumbersSection } from "@/components/admin/PhoneNumbersSection";
 
 import { PhonePermissionsDialog } from "@/components/admin/PhonePermissionsDialog";
-import { PermissionsDialog } from "@/components/admin/PermissionsDialog";
 import { AdminChatMonitor } from "@/components/admin/AdminChatMonitor";
 import { ApiHealthMonitor } from "@/components/admin/ApiHealthMonitor";
 import { Profile } from "@/types/juriszap";
@@ -49,7 +48,7 @@ function AdminPageInner() {
     toggleApiPermission,
     toggleManageNumbers,
     toggleDispatch,
-    toggleCreateTemplates,
+    toggleBypassCooldown,
     deleteUser,
     clearTempBan,
     setSubscriptionPlan,
@@ -67,7 +66,6 @@ function AdminPageInner() {
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [phonePermUser, setPhonePermUser] = useState<Profile | null>(null);
-  const [permissionsUser, setPermissionsUser] = useState<Profile | null>(null);
   const [monitorUser, setMonitorUser] = useState<Profile | null>(null);
   const [userToDeleteMobile, setUserToDeleteMobile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState("tempo-real");
@@ -167,6 +165,10 @@ function AdminPageInner() {
                         key={user.id}
                         user={user}
                         onToggleBlock={toggleBlock}
+                        onToggleApiPermission={toggleApiPermission}
+                        onToggleManageNumbers={toggleManageNumbers}
+                        onToggleDispatch={toggleDispatch}
+                        onToggleBypassCooldown={toggleBypassCooldown}
                         onDelete={setUserToDeleteMobile}
                         onClearTempBan={clearTempBan}
                         onManagePhones={setPhonePermUser}
@@ -174,7 +176,6 @@ function AdminPageInner() {
                         onAuthorizeDevice={authorizeDevice}
                         onResetDevice={resetDevice}
                         onMonitorChat={setMonitorUser}
-                        onManagePermissions={setPermissionsUser}
                         onSetMaxBatchSize={setMaxBatchSize}
                       />
                     ))}
@@ -183,6 +184,10 @@ function AdminPageInner() {
                   <UsersTable
                     users={users}
                     onToggleBlock={toggleBlock}
+                    onToggleApiPermission={toggleApiPermission}
+                    onToggleManageNumbers={toggleManageNumbers}
+                    onToggleDispatch={toggleDispatch}
+                    onToggleBypassCooldown={toggleBypassCooldown}
                     onDelete={deleteUser}
                     onClearTempBan={clearTempBan}
                     onManagePhones={setPhonePermUser}
@@ -190,7 +195,6 @@ function AdminPageInner() {
                     onAuthorizeDevice={authorizeDevice}
                     onResetDevice={resetDevice}
                     onMonitorChat={setMonitorUser}
-                    onManagePermissions={setPermissionsUser}
                   />
                 )}
               </CardContent>
@@ -247,22 +251,11 @@ function AdminPageInner() {
         isSaving={isUpdatingPermissions}
       />
 
-      <PermissionsDialog
-        open={!!permissionsUser}
-        onOpenChange={(open) => !open && setPermissionsUser(null)}
-        user={permissionsUser}
-        onToggleApiPermission={toggleApiPermission}
-        onToggleManageNumbers={toggleManageNumbers}
-        onToggleDispatch={toggleDispatch}
-        onToggleCreateTemplates={toggleCreateTemplates}
-      />
-
       <AdminChatMonitor
         open={!!monitorUser}
         onOpenChange={(open) => !open && setMonitorUser(null)}
         user={monitorUser}
       />
-
 
       {/* Mobile delete confirmation dialog */}
       <AlertDialog open={!!userToDeleteMobile} onOpenChange={(open) => !open && setUserToDeleteMobile(null)}>

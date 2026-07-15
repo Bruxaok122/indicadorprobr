@@ -37,7 +37,6 @@ const baseUserNavItems = [
 
 const numerosItem = { title: "Números", href: "/whatsapp-api", icon: Phone };
 const disparosItem = { title: "Disparos", href: "/disparos", icon: Radio };
-const templatesItem = { title: "Templates", href: "/templates", icon: FileStack };
 
 export function TopNav() {
   const location = useLocation();
@@ -49,7 +48,6 @@ export function TopNav() {
     const items = [...baseUserNavItems];
     if ((profile as any)?.can_dispatch) items.push(disparosItem);
     if ((profile as any)?.can_manage_numbers) items.push(numerosItem);
-    if ((profile as any)?.can_create_templates) items.push(templatesItem);
     return items;
   }, [isAdmin, profile]);
 

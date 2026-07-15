@@ -667,7 +667,6 @@ export type Database = {
           authorized_fingerprint: string | null
           ban_reason: string | null
           bypass_dispatch_cooldown: boolean
-          can_create_templates: boolean
           can_dispatch: boolean | null
           can_manage_numbers: boolean | null
           can_replay_admin_dispatch: boolean | null
@@ -696,7 +695,6 @@ export type Database = {
           authorized_fingerprint?: string | null
           ban_reason?: string | null
           bypass_dispatch_cooldown?: boolean
-          can_create_templates?: boolean
           can_dispatch?: boolean | null
           can_manage_numbers?: boolean | null
           can_replay_admin_dispatch?: boolean | null
@@ -725,7 +723,6 @@ export type Database = {
           authorized_fingerprint?: string | null
           ban_reason?: string | null
           bypass_dispatch_cooldown?: boolean
-          can_create_templates?: boolean
           can_dispatch?: boolean | null
           can_manage_numbers?: boolean | null
           can_replay_admin_dispatch?: boolean | null
