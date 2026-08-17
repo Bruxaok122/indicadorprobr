@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,6 +79,8 @@ function getStatusInfo(status?: string) {
 
 export default function WhatsAppApiPage() {
   const { isAdmin } = useAuthContext();
+  const queryClient = useQueryClient();
+
   
   // Phone Registration State
   const [cc, setCc] = useState("55");
@@ -106,6 +110,13 @@ export default function WhatsAppApiPage() {
   const [pinByIdPin, setPinByIdPin] = useState("123456");
   const [pinByIdToken, setPinByIdToken] = useState("");
   const [settingPinById, setSettingPinById] = useState(false);
+  // Adicionar número externo (qualquer BM) pelo Phone Number ID
+  const [extPhoneId, setExtPhoneId] = useState("");
+  const [extToken, setExtToken] = useState("");
+  const [extPin, setExtPin] = useState("123456");
+  const [extLawyer, setExtLawyer] = useState("");
+  const [addingExt, setAddingExt] = useState(false);
+
 
   // Business Profile State
   const [selectedPhoneId, setSelectedPhoneId] = useState("");
@@ -392,6 +403,52 @@ export default function WhatsAppApiPage() {
       setSettingPinById(false);
     }
   };
+
+  const handleAddExternalPhone = async () => {
+    const pnid = extPhoneId.trim();
+    if (!pnid) {
+      toast.error("Informe o Phone Number ID");
+      return;
+    }
+    if (extPin && extPin.length !== 6) {
+      toast.error("O PIN deve ter exatamente 6 dígitos");
+      return;
+    }
+    setAddingExt(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
+        body: {
+          action: "add_external_phone",
+          phone_number_id: pnid,
+          access_token: extToken.trim() || undefined,
+          pin: extPin || undefined,
+          lawyer_name: extLawyer.trim() || undefined,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const pinInfo = data?.pin;
+      toast.success(`Número ${data?.phone?.display_phone_number || pnid} adicionado!`, {
+        description: pinInfo
+          ? pinInfo.success
+            ? "PIN de 2 fatores ativado."
+            : `Número salvo, mas o PIN falhou: ${pinInfo.error}`
+          : undefined,
+      });
+      setExtPhoneId("");
+      setExtToken("");
+      setExtLawyer("");
+      queryClient.invalidateQueries({ queryKey: ["waba-phones"] });
+      queryClient.invalidateQueries({ queryKey: ["waba-phones-all"] });
+    } catch (err: any) {
+      const msg = await getInvokeErrorMessage(err, "Erro ao adicionar número");
+      toast.error("Erro ao adicionar número", { description: msg });
+    } finally {
+      setAddingExt(false);
+    }
+  };
+
+
 
   const handleDeletePhone = async (phone: typeof availablePhones[0]) => {
 
@@ -811,6 +868,61 @@ export default function WhatsAppApiPage() {
                   <Button onClick={handleSetPinById} disabled={settingPinById} className="w-full">
                     {settingPinById ? <LoadingSpinner size="sm" /> : <Lock className="mr-2 h-4 w-4" />}
                     {settingPinById ? "Definindo PIN..." : "Definir PIN"}
+                  </Button>
+                </CardContent>
+              </Card>
+
+            {/* Adicionar número de qualquer BM pelo Phone Number ID */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Phone className="h-5 w-5" />
+                    Adicionar Número de Outra BM (por ID)
+                  </CardTitle>
+                  <CardDescription>
+                    Informe o Phone Number ID de qualquer BM. O número é salvo no sistema e o PIN de 2 fatores é ativado. Se você não tiver acesso à BM, cole um access token dela abaixo.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Phone Number ID</Label>
+                    <Input
+                      value={extPhoneId}
+                      onChange={(e) => setExtPhoneId(e.target.value.replace(/\s/g, ""))}
+                      placeholder="1010147042192402"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Access Token da BM (opcional)</Label>
+                    <Input
+                      type="password"
+                      value={extToken}
+                      onChange={(e) => setExtToken(e.target.value)}
+                      placeholder="Deixe vazio para tentar com os tokens já configurados"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>PIN de 2 Fatores (6 dígitos)</Label>
+                      <Input
+                        value={extPin}
+                        onChange={(e) => setExtPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        placeholder="123456"
+                        maxLength={6}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Advogado (opcional)</Label>
+                      <Input
+                        value={extLawyer}
+                        onChange={(e) => setExtLawyer(e.target.value)}
+                        placeholder="Nome do advogado"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={handleAddExternalPhone} disabled={addingExt} className="w-full">
+                    {addingExt ? <LoadingSpinner size="sm" /> : <Phone className="mr-2 h-4 w-4" />}
+                    {addingExt ? "Adicionando..." : "Adicionar número e ativar PIN"}
                   </Button>
                 </CardContent>
               </Card>

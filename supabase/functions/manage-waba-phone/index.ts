@@ -75,12 +75,16 @@ serve(async (req) => {
       wabaId = sharedConfig?.waba_id || null;
     }
 
-    if (!accessToken || !wabaId) {
+    // Ações que aceitam token informado manualmente não exigem API configurada
+    const allowsCustomToken = action === "set_pin_by_id" || action === "add_external_phone";
+
+    if ((!accessToken || !wabaId) && !allowsCustomToken) {
       return new Response(JSON.stringify({ error: "WhatsApp API não configurada. Configure primeiro em Configuração." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     if (action === "register") {
       const { cc, phone_number, verified_name } = body;
@@ -342,6 +346,151 @@ serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+
+    } else if (action === "add_external_phone") {
+      // Adiciona ao sistema um número de qualquer BM, informando apenas o Phone Number ID
+      // (e opcionalmente um access token da BM dona). Pode já ativar o PIN de 2 fatores.
+      const { phone_number_id, pin, access_token: customToken, lawyer_name } = body;
+
+      if (!phone_number_id) {
+        return new Response(JSON.stringify({ error: "Phone Number ID é obrigatório" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (pin && String(pin).length !== 6) {
+        return new Response(JSON.stringify({ error: "O PIN deve ter 6 dígitos" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Tokens candidatos
+      const cands: { token: string; label: string; apiConfigId?: string | null }[] = [];
+      if (customToken && String(customToken).trim()) {
+        cands.push({ token: String(customToken).trim(), label: "token informado", apiConfigId: null });
+      }
+      const { data: apiConfigsX } = await serviceClient
+        .from("api_configs")
+        .select("id, access_token, waba_id, name, is_active")
+        .order("is_active", { ascending: false });
+      for (const c of apiConfigsX || []) {
+        if (c.access_token) cands.push({ token: c.access_token, label: `api_config ${c.name || c.waba_id || ""}`, apiConfigId: c.id });
+      }
+      const { data: userConfigsX } = await serviceClient
+        .from("user_whatsapp_config")
+        .select("access_token, waba_id")
+        .eq("user_id", userId);
+      for (const c of userConfigsX || []) {
+        if (c.access_token) cands.push({ token: c.access_token, label: `user waba ${c.waba_id || ""}`, apiConfigId: null });
+      }
+
+      const seenT = new Set<string>();
+      const uniq = cands.filter((t) => (seenT.has(t.token) ? false : (seenT.add(t.token), true)));
+
+      if (uniq.length === 0) {
+        return new Response(JSON.stringify({ error: "Informe um access token com acesso a este número" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      let resolved: { info: any; cand: typeof uniq[0] } | null = null;
+      let lastErr = "Nenhum token conseguiu acessar este Phone Number ID";
+      for (const t of uniq) {
+        try {
+          const r = await fetch(
+            `https://graph.facebook.com/v21.0/${phone_number_id}?fields=display_phone_number,verified_name,quality_rating,code_verification_status,platform_type`,
+            { headers: { Authorization: `Bearer ${t.token}` } }
+          );
+          const d = await r.json();
+          if (r.ok && d?.id) {
+            resolved = { info: d, cand: t };
+            break;
+          }
+          lastErr = d?.error?.error_user_msg || d?.error?.message || lastErr;
+        } catch (e) {
+          console.log("add_external_phone lookup error:", e);
+        }
+      }
+
+      if (!resolved) {
+        return new Response(JSON.stringify({ error: lastErr }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Ativa PIN de 2 fatores (registro na Cloud API), se solicitado
+      let pinResult: { success: boolean; error?: string } | null = null;
+      if (pin) {
+        try {
+          const pr = await fetch(
+            `https://graph.facebook.com/v21.0/${phone_number_id}/register`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${resolved.cand.token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ messaging_product: "whatsapp", pin: String(pin) }),
+            }
+          );
+          const pd = await pr.json();
+          pinResult = pr.ok
+            ? { success: true }
+            : { success: false, error: pd?.error?.error_user_msg || pd?.error?.message || "Erro ao definir PIN" };
+        } catch (e: any) {
+          pinResult = { success: false, error: e?.message || "Erro ao definir PIN" };
+        }
+      }
+
+      // Salva/atualiza no sistema
+      const row: Record<string, unknown> = {
+        phone_number_id: String(phone_number_id),
+        display_phone_number: resolved.info.display_phone_number || String(phone_number_id),
+        verified_name: resolved.info.verified_name || null,
+        quality_rating: resolved.info.quality_rating || null,
+        is_active: true,
+        created_by: userId,
+        api_config_id: resolved.cand.apiConfigId || null,
+      };
+      if (lawyer_name) row.lawyer_name = String(lawyer_name).trim();
+
+      const { data: existing } = await serviceClient
+        .from("waba_phone_numbers")
+        .select("id")
+        .eq("phone_number_id", String(phone_number_id))
+        .maybeSingle();
+
+      let dbError: string | null = null;
+      if (existing?.id) {
+        const { error } = await serviceClient
+          .from("waba_phone_numbers")
+          .update(row)
+          .eq("id", existing.id);
+        dbError = error?.message || null;
+      } else {
+        const { error } = await serviceClient.from("waba_phone_numbers").insert(row);
+        dbError = error?.message || null;
+      }
+
+      if (dbError) {
+        return new Response(JSON.stringify({ error: `Erro ao salvar número: ${dbError}` }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          phone: row,
+          used_token: resolved.cand.label,
+          pin: pinResult,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
 
 
     } else if (action === "delete_phone") {
