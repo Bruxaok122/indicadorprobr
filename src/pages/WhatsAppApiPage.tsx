@@ -400,6 +400,52 @@ export default function WhatsAppApiPage() {
     }
   };
 
+  const handleAddExternalPhone = async () => {
+    const pnid = extPhoneId.trim();
+    if (!pnid) {
+      toast.error("Informe o Phone Number ID");
+      return;
+    }
+    if (extPin && extPin.length !== 6) {
+      toast.error("O PIN deve ter exatamente 6 dígitos");
+      return;
+    }
+    setAddingExt(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
+        body: {
+          action: "add_external_phone",
+          phone_number_id: pnid,
+          access_token: extToken.trim() || undefined,
+          pin: extPin || undefined,
+          lawyer_name: extLawyer.trim() || undefined,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const pinInfo = data?.pin;
+      toast.success(`Número ${data?.phone?.display_phone_number || pnid} adicionado!`, {
+        description: pinInfo
+          ? pinInfo.success
+            ? "PIN de 2 fatores ativado."
+            : `Número salvo, mas o PIN falhou: ${pinInfo.error}`
+          : undefined,
+      });
+      setExtPhoneId("");
+      setExtToken("");
+      setExtLawyer("");
+      queryClient.invalidateQueries({ queryKey: ["waba-phones"] });
+      queryClient.invalidateQueries({ queryKey: ["waba-phones-all"] });
+    } catch (err: any) {
+      const msg = await getInvokeErrorMessage(err, "Erro ao adicionar número");
+      toast.error("Erro ao adicionar número", { description: msg });
+    } finally {
+      setAddingExt(false);
+    }
+  };
+
+
+
   const handleDeletePhone = async (phone: typeof availablePhones[0]) => {
 
     setDeletingPhoneId(phone.id);
