@@ -106,6 +106,13 @@ export default function WhatsAppApiPage() {
   const [pinByIdPin, setPinByIdPin] = useState("123456");
   const [pinByIdToken, setPinByIdToken] = useState("");
   const [settingPinById, setSettingPinById] = useState(false);
+  // Adicionar número externo (qualquer BM) pelo Phone Number ID
+  const [extPhoneId, setExtPhoneId] = useState("");
+  const [extToken, setExtToken] = useState("");
+  const [extPin, setExtPin] = useState("123456");
+  const [extLawyer, setExtLawyer] = useState("");
+  const [addingExt, setAddingExt] = useState(false);
+
 
   // Business Profile State
   const [selectedPhoneId, setSelectedPhoneId] = useState("");
