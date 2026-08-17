@@ -872,6 +872,61 @@ export default function WhatsAppApiPage() {
                 </CardContent>
               </Card>
 
+            {/* Adicionar número de qualquer BM pelo Phone Number ID */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Phone className="h-5 w-5" />
+                    Adicionar Número de Outra BM (por ID)
+                  </CardTitle>
+                  <CardDescription>
+                    Informe o Phone Number ID de qualquer BM. O número é salvo no sistema e o PIN de 2 fatores é ativado. Se você não tiver acesso à BM, cole um access token dela abaixo.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Phone Number ID</Label>
+                    <Input
+                      value={extPhoneId}
+                      onChange={(e) => setExtPhoneId(e.target.value.replace(/\s/g, ""))}
+                      placeholder="1010147042192402"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Access Token da BM (opcional)</Label>
+                    <Input
+                      type="password"
+                      value={extToken}
+                      onChange={(e) => setExtToken(e.target.value)}
+                      placeholder="Deixe vazio para tentar com os tokens já configurados"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>PIN de 2 Fatores (6 dígitos)</Label>
+                      <Input
+                        value={extPin}
+                        onChange={(e) => setExtPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        placeholder="123456"
+                        maxLength={6}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Advogado (opcional)</Label>
+                      <Input
+                        value={extLawyer}
+                        onChange={(e) => setExtLawyer(e.target.value)}
+                        placeholder="Nome do advogado"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={handleAddExternalPhone} disabled={addingExt} className="w-full">
+                    {addingExt ? <LoadingSpinner size="sm" /> : <Phone className="mr-2 h-4 w-4" />}
+                    {addingExt ? "Adicionando..." : "Adicionar número e ativar PIN"}
+                  </Button>
+                </CardContent>
+              </Card>
+
 
 
             {/* Business Profile - available to all users */}
