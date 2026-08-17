@@ -75,12 +75,16 @@ serve(async (req) => {
       wabaId = sharedConfig?.waba_id || null;
     }
 
-    if (!accessToken || !wabaId) {
+    // Ações que aceitam token informado manualmente não exigem API configurada
+    const allowsCustomToken = action === "set_pin_by_id" || action === "add_external_phone";
+
+    if ((!accessToken || !wabaId) && !allowsCustomToken) {
       return new Response(JSON.stringify({ error: "WhatsApp API não configurada. Configure primeiro em Configuração." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     if (action === "register") {
       const { cc, phone_number, verified_name } = body;
