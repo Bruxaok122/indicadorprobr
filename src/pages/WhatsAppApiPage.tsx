@@ -77,6 +77,8 @@ function getStatusInfo(status?: string) {
 
 export default function WhatsAppApiPage() {
   const { isAdmin } = useAuthContext();
+  const queryClient = useQueryClient();
+
   
   // Phone Registration State
   const [cc, setCc] = useState("55");
