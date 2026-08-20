@@ -296,7 +296,7 @@ serve(async (req) => {
         // Build template object with personalized variables
         const templateObj: any = {
           name: templateName,
-          language: { code: templateLanguage || "pt_BR" },
+          language: { code: effectiveLanguage },
         };
 
         if (hasVariables) {
