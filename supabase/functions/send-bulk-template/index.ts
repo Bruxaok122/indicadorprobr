@@ -364,6 +364,15 @@ serve(async (req) => {
             case 131053:
               friendlyMsg = "📵 Número de telefone inválido ou não registrado";
               break;
+            case 132001:
+              friendlyMsg = `📄 Template "${templateName}" não existe nesta API/idioma. Atualize a lista de templates e selecione novamente.`;
+              shouldStopBatch = true;
+              break;
+            case 132000:
+              friendlyMsg = "📄 Número de variáveis do template não confere com o cadastrado na Meta.";
+              shouldStopBatch = true;
+              break;
+
           }
           
           results.failed++;
