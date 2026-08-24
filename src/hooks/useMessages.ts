@@ -52,6 +52,8 @@ export function useMessages(contactId: string | null) {
         .select("window_expires_at")
         .eq("contact_id", contactId)
         .eq("is_active", true)
+        .order("window_expires_at", { ascending: false, nullsFirst: false })
+        .limit(1)
         .maybeSingle();
       return data;
     },
@@ -60,12 +62,21 @@ export function useMessages(contactId: string | null) {
   });
 
   const hasMessages = messages.length > 0;
-  const hasIncomingMessages = messages.some(m => m.direction === "incoming");
+  const incomingMessages = messages.filter((m) => m.direction === "incoming");
+  const hasIncomingMessages = incomingMessages.length > 0;
+  // Fallback: quando a conversa foi iniciada pelo cliente e o registro de janela
+  // não existe/está desatualizado, usa a última mensagem recebida (regra 24h).
+  const lastIncomingAt = hasIncomingMessages
+    ? new Date(incomingMessages[incomingMessages.length - 1].created_at).getTime()
+    : 0;
+  const isWindowOpenByMessage =
+    lastIncomingAt > 0 && Date.now() - lastIncomingAt < 24 * 60 * 60 * 1000;
   const isWindowOpen = activeConversation?.window_expires_at
     ? new Date(activeConversation.window_expires_at) > new Date()
-    : false;
+    : isWindowOpenByMessage;
   // Free text allowed only if client has replied AND 24h window is still open
-  const canSendFreeText = hasIncomingMessages && isWindowOpen;
+  const canSendFreeText = hasIncomingMessages && (isWindowOpen || isWindowOpenByMessage);
+
 
   // Realtime subscription
   useEffect(() => {
