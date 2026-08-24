@@ -97,6 +97,12 @@ serve(async (req) => {
               const value = change.value;
               const messages = value.messages || [];
               const contacts = value.contacts || [];
+              // Número (nosso) que RECEBEU a mensagem. Essencial para responder
+              // pela mesma linha e manter a janela de 24h aberta em conversas
+              // iniciadas pelo cliente.
+              const receivingPhoneNumberId: string | null =
+                value?.metadata?.phone_number_id || null;
+
 
               for (const message of messages) {
                 const phone = message.from;
