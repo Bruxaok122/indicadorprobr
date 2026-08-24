@@ -195,15 +195,22 @@ serve(async (req) => {
                   }
                   
                   // Update contact status and last message + mark as has_whatsapp
+                  const inboundContactUpdate: Record<string, any> = {
+                    status: "respondido",
+                    last_message_at: timestamp.toISOString(),
+                    has_whatsapp: true,
+                  };
+                  // Vincula a linha que recebeu a mensagem quando ainda não há vínculo,
+                  // para que a resposta saia pelo mesmo número (janela de 24h).
+                  if (!existingContact.dispatched_phone_number_id && receivingPhoneNumberId) {
+                    inboundContactUpdate.dispatched_phone_number_id = receivingPhoneNumberId;
+                  }
                   await supabase
                     .from("contacts")
-                    .update({
-                      status: "respondido",
-                      last_message_at: timestamp.toISOString(),
-                      has_whatsapp: true,
-                    })
+                    .update(inboundContactUpdate)
                     .eq("id", contactId);
                 }
+
 
                 // Find or create conversation for this specific contact
                 let { data: conversation } = await supabase
