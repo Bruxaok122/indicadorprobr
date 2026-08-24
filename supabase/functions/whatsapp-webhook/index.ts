@@ -170,7 +170,9 @@ serve(async (req) => {
                       last_message_at: timestamp.toISOString(),
                       user_id: null,
                       has_whatsapp: true,
+                      dispatched_phone_number_id: receivingPhoneNumberId,
                     })
+
                     .select()
                     .single();
 
