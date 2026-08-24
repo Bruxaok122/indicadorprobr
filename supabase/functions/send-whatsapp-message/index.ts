@@ -159,7 +159,7 @@ serve(async (req) => {
         .eq("phone_number_id", contact.dispatched_phone_number_id)
         .maybeSingle();
 
-      if (!phoneWithApi || !phoneWithApi.is_active) {
+      if (phoneWithApi && !phoneWithApi.is_active) {
         return new Response(
           JSON.stringify({
             error: "O número original deste atendimento está inativo. Reative o número para responder este cliente sem quebrar a janela de conversa.",
@@ -168,24 +168,22 @@ serve(async (req) => {
         );
       }
 
-      if (phoneWithApi.api_config_id) {
+      // Número não cadastrado localmente (ex.: conversa iniciada pelo cliente em
+      // uma linha ainda não sincronizada): segue com o token da API ativa.
+      if (phoneWithApi?.api_config_id) {
         const { data: apiConfig } = await supabase
           .from("api_configs")
           .select("access_token")
           .eq("id", phoneWithApi.api_config_id)
           .eq("is_active", true)
-          .single();
+          .maybeSingle();
 
         if (apiConfig?.access_token) {
           config = { ...config, access_token: apiConfig.access_token };
-        } else {
-          return new Response(
-            JSON.stringify({ error: "A API vinculada ao número original deste atendimento não está ativa." }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
         }
       }
     } else if (selectedPhoneNumberId) {
+
       // Sem vínculo prévio, permite seleção manual no primeiro envio
       const { data: phoneRecord } = await supabase
         .from("waba_phone_numbers")

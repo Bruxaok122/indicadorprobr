@@ -97,6 +97,12 @@ serve(async (req) => {
               const value = change.value;
               const messages = value.messages || [];
               const contacts = value.contacts || [];
+              // Número (nosso) que RECEBEU a mensagem. Essencial para responder
+              // pela mesma linha e manter a janela de 24h aberta em conversas
+              // iniciadas pelo cliente.
+              const receivingPhoneNumberId: string | null =
+                value?.metadata?.phone_number_id || null;
+
 
               for (const message of messages) {
                 const phone = message.from;
@@ -164,7 +170,9 @@ serve(async (req) => {
                       last_message_at: timestamp.toISOString(),
                       user_id: null,
                       has_whatsapp: true,
+                      dispatched_phone_number_id: receivingPhoneNumberId,
                     })
+
                     .select()
                     .single();
 
@@ -187,15 +195,22 @@ serve(async (req) => {
                   }
                   
                   // Update contact status and last message + mark as has_whatsapp
+                  const inboundContactUpdate: Record<string, any> = {
+                    status: "respondido",
+                    last_message_at: timestamp.toISOString(),
+                    has_whatsapp: true,
+                  };
+                  // Vincula a linha que recebeu a mensagem quando ainda não há vínculo,
+                  // para que a resposta saia pelo mesmo número (janela de 24h).
+                  if (!existingContact.dispatched_phone_number_id && receivingPhoneNumberId) {
+                    inboundContactUpdate.dispatched_phone_number_id = receivingPhoneNumberId;
+                  }
                   await supabase
                     .from("contacts")
-                    .update({
-                      status: "respondido",
-                      last_message_at: timestamp.toISOString(),
-                      has_whatsapp: true,
-                    })
+                    .update(inboundContactUpdate)
                     .eq("id", contactId);
                 }
+
 
                 // Find or create conversation for this specific contact
                 let { data: conversation } = await supabase
