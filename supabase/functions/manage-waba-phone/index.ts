@@ -6,6 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function getMetaErrorMessage(data: any, fallback: string) {
+  const err = data?.error;
+  const code = err?.code ? ` (#${err.code})` : "";
+  const subcode = err?.error_subcode ? ` [subcode: ${err.error_subcode}]` : "";
+  return `${err?.error_user_msg || err?.message || fallback}${code}${subcode}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -76,7 +83,7 @@ serve(async (req) => {
     }
 
     // Ações que aceitam token informado manualmente não exigem API configurada
-    const allowsCustomToken = action === "set_pin_by_id" || action === "add_external_phone";
+    const allowsCustomToken = action === "set_pin_by_id" || action === "add_external_phone" || action === "refresh_display_name_certificate";
 
     if ((!accessToken || !wabaId) && !allowsCustomToken) {
       return new Response(JSON.stringify({ error: "WhatsApp API não configurada. Configure primeiro em Configuração." }), {
@@ -491,7 +498,165 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    } else if (action === "delete_phone") {
+    } else if (action === "refresh_display_name_certificate") {
+      const { phone_number_id, db_id, pin } = body;
+      const normalizedPhoneNumberId = String(phone_number_id || "").trim();
+      const normalizedPin = String(pin || "").replace(/\D/g, "").slice(0, 6);
 
+      if (!normalizedPhoneNumberId || normalizedPin.length !== 6) {
+        return new Response(JSON.stringify({ error: "Selecione um número e informe o PIN atual de 6 dígitos" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: isAdmin } = await serviceClient.rpc("is_admin", { _user_id: userId });
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: "Acesso negado. Apenas administradores podem corrigir certificado de nome." }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      let phoneLookup = serviceClient
+        .from("waba_phone_numbers")
+        .select("id, api_config_id, phone_number_id, display_phone_number, verified_name, quality_rating")
+        .limit(1);
+
+      if (db_id) {
+        phoneLookup = phoneLookup.eq("id", String(db_id));
+      } else {
+        phoneLookup = phoneLookup.eq("phone_number_id", normalizedPhoneNumberId);
+      }
+
+      const { data: dbPhone } = await phoneLookup.maybeSingle();
+
+      const candidates: { token: string; apiConfigId?: string | null }[] = [];
+
+      if (dbPhone?.api_config_id) {
+        const { data: linkedApi } = await serviceClient
+          .from("api_configs")
+          .select("id, access_token")
+          .eq("id", dbPhone.api_config_id)
+          .maybeSingle();
+        if (linkedApi?.access_token) {
+          candidates.push({ token: linkedApi.access_token, apiConfigId: linkedApi.id });
+        }
+      }
+
+      const { data: apiConfigsForRefresh } = await serviceClient
+        .from("api_configs")
+        .select("id, access_token, is_active")
+        .order("is_active", { ascending: false })
+        .order("updated_at", { ascending: false });
+      for (const config of apiConfigsForRefresh || []) {
+        if (config.access_token) candidates.push({ token: config.access_token, apiConfigId: config.id });
+      }
+
+      if (accessToken) candidates.push({ token: accessToken, apiConfigId: null });
+
+      const { data: sharedConfigsForRefresh } = await serviceClient
+        .from("whatsapp_config")
+        .select("access_token");
+      for (const config of sharedConfigsForRefresh || []) {
+        if (config.access_token) candidates.push({ token: config.access_token, apiConfigId: null });
+      }
+
+      const seenTokens = new Set<string>();
+      const uniqueCandidates = candidates.filter((candidate) => {
+        if (seenTokens.has(candidate.token)) return false;
+        seenTokens.add(candidate.token);
+        return true;
+      });
+
+      if (uniqueCandidates.length === 0) {
+        return new Response(JSON.stringify({ error: "Nenhuma API configurada tem token disponível para corrigir este número" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      let lastError = "Nenhuma API configurada conseguiu revalidar este número";
+      let refreshed: { info: any; apiConfigId?: string | null } | null = null;
+
+      for (const candidate of uniqueCandidates) {
+        try {
+          const registerRes = await fetch(
+            `https://graph.facebook.com/v21.0/${normalizedPhoneNumberId}/register`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${candidate.token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ messaging_product: "whatsapp", pin: normalizedPin }),
+            }
+          );
+          const registerData = await registerRes.json();
+          if (!registerRes.ok) {
+            lastError = getMetaErrorMessage(registerData, "Erro ao revalidar certificado do número");
+            continue;
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+
+          const statusRes = await fetch(
+            `https://graph.facebook.com/v21.0/${normalizedPhoneNumberId}?fields=verified_name,code_verification_status,display_phone_number,quality_rating,status,name_status`,
+            { headers: { Authorization: `Bearer ${candidate.token}` } }
+          );
+          const statusData = await statusRes.json();
+          if (!statusRes.ok) {
+            lastError = getMetaErrorMessage(statusData, "Certificado revalidado, mas não foi possível sincronizar o nome");
+            continue;
+          }
+
+          refreshed = { info: statusData, apiConfigId: candidate.apiConfigId };
+          break;
+        } catch (error: any) {
+          lastError = error?.message || lastError;
+        }
+      }
+
+      if (!refreshed) {
+        return new Response(JSON.stringify({ error: lastError }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const nextPhoneRow: Record<string, unknown> = {
+        phone_number_id: normalizedPhoneNumberId,
+        display_phone_number: refreshed.info.display_phone_number || dbPhone?.display_phone_number || normalizedPhoneNumberId,
+        verified_name: refreshed.info.verified_name || dbPhone?.verified_name || null,
+        quality_rating: refreshed.info.quality_rating || dbPhone?.quality_rating || null,
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      };
+      if (refreshed.apiConfigId) nextPhoneRow.api_config_id = refreshed.apiConfigId;
+
+      if (dbPhone?.id) {
+        const { error: updateError } = await serviceClient
+          .from("waba_phone_numbers")
+          .update(nextPhoneRow)
+          .eq("id", dbPhone.id);
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await serviceClient
+          .from("waba_phone_numbers")
+          .insert({ ...nextPhoneRow, created_by: userId });
+        if (insertError) throw insertError;
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: refreshed.info,
+          phone: nextPhoneRow,
+          name_changed: Boolean(dbPhone?.verified_name && refreshed.info.verified_name && dbPhone.verified_name !== refreshed.info.verified_name),
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
 
     } else if (action === "delete_phone") {
       const { phone_number_id, db_id } = body;
