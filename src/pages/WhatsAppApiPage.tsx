@@ -105,9 +105,6 @@ export default function WhatsAppApiPage() {
   const [setPinPhoneId, setSetPinPhoneId] = useState("");
   const [setPinValue, setSetPinValue] = useState("");
   const [settingPin, setSettingPin] = useState(false);
-  const [refreshNamePhoneId, setRefreshNamePhoneId] = useState("");
-  const [refreshNamePin, setRefreshNamePin] = useState("");
-  const [refreshingName, setRefreshingName] = useState(false);
   // Set PIN by raw phone_number_id (any WABA/account)
   const [pinByIdValue, setPinByIdValue] = useState("");
   const [pinByIdPin, setPinByIdPin] = useState("123456");
@@ -139,7 +136,6 @@ export default function WhatsAppApiPage() {
   const selectedPhone = availablePhones.find((p) => p.id === selectedPhoneId);
   const selectedPhoneStatus = selectedPhone ? phoneStatuses[selectedPhone.phone_number_id] : null;
   const isPhoneConnected = selectedPhoneStatus?.status === "CONNECTED";
-  const selectedRefreshNamePhone = availablePhones.find((p) => p.id === refreshNamePhoneId);
 
   // Wizard (operator only)
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(1);
@@ -371,55 +367,6 @@ export default function WhatsAppApiPage() {
       toast.error("Erro ao definir PIN", { description: err.message });
     } finally {
       setSettingPin(false);
-    }
-  };
-
-  const handleRefreshDisplayNameCertificate = async () => {
-    if (!selectedRefreshNamePhone) {
-      toast.error("Selecione o número com problema");
-      return;
-    }
-    if (refreshNamePin.length !== 6) {
-      toast.error("Informe o PIN atual de 6 dígitos");
-      return;
-    }
-
-    setRefreshingName(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
-        body: {
-          action: "refresh_display_name_certificate",
-          db_id: selectedRefreshNamePhone.id,
-          phone_number_id: selectedRefreshNamePhone.phone_number_id,
-          pin: refreshNamePin,
-        },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      const syncedName = data?.phone?.verified_name || data?.data?.verified_name;
-      const previousName = data?.data?.previous_verified_name;
-      const forcedRenewal = data?.data?.forced_renewal === true;
-      const nameStatus = data?.data?.name_status;
-      const changed = Boolean(previousName && syncedName && previousName !== syncedName);
-
-      if (changed) {
-        toast.success("Novo nome sincronizado!", { description: `Nome atual: ${syncedName}` });
-      } else {
-        toast.warning("Certificado renovado, mas a Meta ainda devolveu o nome anterior", {
-          description: `${forcedRenewal ? "Foi realizado o desligamento e novo registro completo do número. " : ""}Status do nome: ${nameStatus || "não informado"}. Neste caso, a liberação depende da Meta/BSP.`,
-          duration: 10000,
-        });
-      }
-      setRefreshNamePin("");
-      queryClient.invalidateQueries({ queryKey: ["waba-phones"] });
-      queryClient.invalidateQueries({ queryKey: ["waba-phones-all"] });
-      checkPhoneStatus(selectedRefreshNamePhone.phone_number_id);
-    } catch (err: any) {
-      const msg = await getInvokeErrorMessage(err, "Erro ao corrigir nome de exibição");
-      toast.error("Erro ao corrigir nome", { description: msg });
-    } finally {
-      setRefreshingName(false);
     }
   };
 
@@ -876,68 +823,6 @@ export default function WhatsAppApiPage() {
                   <Button onClick={handleSetPin} disabled={settingPin} className="w-full">
                     {settingPin ? <LoadingSpinner size="sm" /> : <Lock className="mr-2 h-4 w-4" />}
                     {settingPin ? "Definindo PIN..." : "Definir PIN"}
-                  </Button>
-                </CardContent>
-              </Card>
-
-            {/* Refresh display name certificate */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <RefreshCw className="h-5 w-5" />
-                    Corrigir Nome de Exibição
-                  </CardTitle>
-                  <CardDescription>
-                    Renova completamente o registro Cloud API e solicita novamente o certificado do nome aprovado.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Selecione o Número</Label>
-                    <Select value={refreshNamePhoneId} onValueChange={setRefreshNamePhoneId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Escolha o número com problema..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availablePhones.map((p) => {
-                          const ps = phoneStatuses[p.phone_number_id];
-                          const statusInfo = getStatusInfo(ps?.status);
-                          return (
-                            <SelectItem key={p.id} value={p.id}>
-                              <span className="flex items-center gap-2">
-                                <span className={cn("inline-block h-2 w-2 rounded-full", ps?.status === "CONNECTED" ? "bg-success" : "bg-muted-foreground")} />
-                                {p.display_phone_number} {p.verified_name ? `(${p.verified_name})` : ""}
-                                {ps?.status ? ` — ${statusInfo.label}` : ""}
-                              </span>
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>PIN atual de 2 Fatores</Label>
-                    <Input
-                      value={refreshNamePin}
-                      onChange={(e) => setRefreshNamePin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                      placeholder="123456"
-                      maxLength={6}
-                      className="font-mono"
-                    />
-                  </div>
-                  {selectedRefreshNamePhone && (
-                    <div className="space-y-1 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
-                      <p>Atual: <span className="font-medium text-foreground">{selectedRefreshNamePhone.verified_name || "sem nome sincronizado"}</span></p>
-                      <p>A linha será desligada e registrada novamente automaticamente. O envio pode ficar indisponível por alguns segundos.</p>
-                    </div>
-                  )}
-                  <Button
-                    onClick={handleRefreshDisplayNameCertificate}
-                    disabled={refreshingName || !selectedRefreshNamePhone || refreshNamePin.length !== 6}
-                    className="w-full"
-                  >
-                    {refreshingName ? <LoadingSpinner size="sm" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                    {refreshingName ? "Corrigindo..." : "Corrigir nome aprovado"}
                   </Button>
                 </CardContent>
               </Card>
