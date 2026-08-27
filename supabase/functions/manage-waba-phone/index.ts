@@ -582,6 +582,18 @@ serve(async (req) => {
 
       for (const candidate of uniqueCandidates) {
         try {
+          // Confirma que o token realmente enxerga o número antes de qualquer alteração.
+          const beforeRes = await fetch(
+            `https://graph.facebook.com/v21.0/${normalizedPhoneNumberId}?fields=verified_name,code_verification_status,display_phone_number,quality_rating,status,name_status`,
+            { headers: { Authorization: `Bearer ${candidate.token}` } }
+          );
+          const beforeData = await beforeRes.json();
+          if (!beforeRes.ok) {
+            lastError = getMetaErrorMessage(beforeData, "A API configurada não tem acesso a este número");
+            console.log("Display name refresh lookup failed:", JSON.stringify({ phone_number_id: normalizedPhoneNumberId, error: beforeData?.error }));
+            continue;
+          }
+
           const registerRes = await fetch(
             `https://graph.facebook.com/v21.0/${normalizedPhoneNumberId}/register`,
             {
@@ -596,22 +608,85 @@ serve(async (req) => {
           const registerData = await registerRes.json();
           if (!registerRes.ok) {
             lastError = getMetaErrorMessage(registerData, "Erro ao revalidar certificado do número");
+            console.log("Display name register failed:", JSON.stringify({ phone_number_id: normalizedPhoneNumberId, error: registerData?.error }));
             continue;
           }
 
-          await new Promise((resolve) => setTimeout(resolve, 1500));
+          await new Promise((resolve) => setTimeout(resolve, 2000));
 
-          const statusRes = await fetch(
+          let statusRes = await fetch(
             `https://graph.facebook.com/v21.0/${normalizedPhoneNumberId}?fields=verified_name,code_verification_status,display_phone_number,quality_rating,status,name_status`,
             { headers: { Authorization: `Bearer ${candidate.token}` } }
           );
-          const statusData = await statusRes.json();
+          let statusData = await statusRes.json();
           if (!statusRes.ok) {
             lastError = getMetaErrorMessage(statusData, "Certificado revalidado, mas não foi possível sincronizar o nome");
             continue;
           }
 
-          refreshed = { info: statusData, apiConfigId: candidate.apiConfigId };
+          let forcedRenewal = false;
+          const oldName = String(beforeData?.verified_name || dbPhone?.verified_name || "").trim();
+          const returnedName = String(statusData?.verified_name || "").trim();
+
+          // Um /register bem-sucedido pode apenas reutilizar o certificado antigo. Se o nome
+          // continua igual após a aprovação, faz uma renovação completa da sessão Cloud API.
+          if (oldName && returnedName === oldName) {
+            const deregisterRes = await fetch(
+              `https://graph.facebook.com/v21.0/${normalizedPhoneNumberId}/deregister`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${candidate.token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ messaging_product: "whatsapp" }),
+              }
+            );
+            const deregisterData = await deregisterRes.json();
+            if (!deregisterRes.ok) {
+              lastError = getMetaErrorMessage(deregisterData, "A Meta não permitiu renovar completamente o certificado");
+              console.log("Display name deregister failed:", JSON.stringify({ phone_number_id: normalizedPhoneNumberId, error: deregisterData?.error }));
+              continue;
+            }
+
+            const reregisterRes = await fetch(
+              `https://graph.facebook.com/v21.0/${normalizedPhoneNumberId}/register`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${candidate.token}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ messaging_product: "whatsapp", pin: normalizedPin }),
+              }
+            );
+            const reregisterData = await reregisterRes.json();
+            if (!reregisterRes.ok) {
+              lastError = getMetaErrorMessage(reregisterData, "Número removido do registro, mas a Meta recusou o novo registro");
+              console.log("Display name reregister failed:", JSON.stringify({ phone_number_id: normalizedPhoneNumberId, error: reregisterData?.error }));
+              continue;
+            }
+            forcedRenewal = true;
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            statusRes = await fetch(
+              `https://graph.facebook.com/v21.0/${normalizedPhoneNumberId}?fields=verified_name,code_verification_status,display_phone_number,quality_rating,status,name_status`,
+              { headers: { Authorization: `Bearer ${candidate.token}` } }
+            );
+            statusData = await statusRes.json();
+            if (!statusRes.ok) {
+              lastError = getMetaErrorMessage(statusData, "Número registrado novamente, mas o status ainda não pôde ser consultado");
+              continue;
+            }
+          }
+
+          refreshed = { info: { ...statusData, forced_renewal: forcedRenewal, previous_verified_name: beforeData?.verified_name || null }, apiConfigId: candidate.apiConfigId };
+          console.log("Display name certificate refresh completed:", JSON.stringify({
+            phone_number_id: normalizedPhoneNumberId,
+            previous_verified_name: beforeData?.verified_name || null,
+            returned_verified_name: statusData?.verified_name || null,
+            name_status: statusData?.name_status || null,
+            forced_renewal: forcedRenewal,
+          }));
           break;
         } catch (error: any) {
           lastError = error?.message || lastError;

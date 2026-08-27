@@ -398,11 +398,19 @@ export default function WhatsAppApiPage() {
       if (data?.error) throw new Error(data.error);
 
       const syncedName = data?.phone?.verified_name || data?.data?.verified_name;
-      toast.success("Nome de exibição corrigido!", {
-        description: syncedName
-          ? `Nome sincronizado: ${syncedName}`
-          : "Certificado revalidado. Pode levar algumas horas para contatos antigos verem a alteração.",
-      });
+      const previousName = data?.data?.previous_verified_name;
+      const forcedRenewal = data?.data?.forced_renewal === true;
+      const nameStatus = data?.data?.name_status;
+      const changed = Boolean(previousName && syncedName && previousName !== syncedName);
+
+      if (changed) {
+        toast.success("Novo nome sincronizado!", { description: `Nome atual: ${syncedName}` });
+      } else {
+        toast.warning("Certificado renovado, mas a Meta ainda devolveu o nome anterior", {
+          description: `${forcedRenewal ? "Foi realizado o desligamento e novo registro completo do número. " : ""}Status do nome: ${nameStatus || "não informado"}. Neste caso, a liberação depende da Meta/BSP.`,
+          duration: 10000,
+        });
+      }
       setRefreshNamePin("");
       queryClient.invalidateQueries({ queryKey: ["waba-phones"] });
       queryClient.invalidateQueries({ queryKey: ["waba-phones-all"] });
@@ -880,7 +888,7 @@ export default function WhatsAppApiPage() {
                     Corrigir Nome de Exibição
                   </CardTitle>
                   <CardDescription>
-                    Revalida o número com o PIN atual e sincroniza o nome aprovado na Meta.
+                    Renova completamente o registro Cloud API e solicita novamente o certificado do nome aprovado.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -918,8 +926,9 @@ export default function WhatsAppApiPage() {
                     />
                   </div>
                   {selectedRefreshNamePhone && (
-                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
-                      Atual: <span className="font-medium text-foreground">{selectedRefreshNamePhone.verified_name || "sem nome sincronizado"}</span>
+                    <div className="space-y-1 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+                      <p>Atual: <span className="font-medium text-foreground">{selectedRefreshNamePhone.verified_name || "sem nome sincronizado"}</span></p>
+                      <p>A linha será desligada e registrada novamente automaticamente. O envio pode ficar indisponível por alguns segundos.</p>
                     </div>
                   )}
                   <Button
