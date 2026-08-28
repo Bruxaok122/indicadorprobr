@@ -76,7 +76,10 @@ serve(async (req) => {
     }
 
     // Ações que aceitam token informado manualmente não exigem API configurada
-    const allowsCustomToken = action === "set_pin_by_id" || action === "add_external_phone";
+    const allowsCustomToken =
+      action === "set_pin_by_id" ||
+      action === "add_external_phone" ||
+      action === "refresh_display_name";
 
     if ((!accessToken || !wabaId) && !allowsCustomToken) {
       return new Response(JSON.stringify({ error: "WhatsApp API não configurada. Configure primeiro em Configuração." }), {
