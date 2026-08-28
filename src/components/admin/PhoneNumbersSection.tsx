@@ -81,6 +81,7 @@ function PhoneCard({ phone }: { phone: WabaPhoneNumber & { lawyer_name?: string 
   const [lawyerName, setLawyerName] = useState(phone.lawyer_name || "");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRefreshingName, setIsRefreshingName] = useState(false);
   const queryClient = useQueryClient();
 
   const handleSave = async () => {
@@ -99,6 +100,41 @@ function PhoneCard({ phone }: { phone: WabaPhoneNumber & { lawyer_name?: string 
       toast.error("Erro ao salvar", { description: err.message });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  /**
+   * Força a Cloud API a baixar o certificado novo (nome de exibição aprovado
+   * na Meta que não refletiu em produção). `force` faz o ciclo completo
+   * deregister + register, usado apenas quando o re-registro simples falha.
+   */
+  const handleRefreshName = async (force: boolean) => {
+    setIsRefreshingName(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("manage-waba-phone", {
+        body: {
+          action: "refresh_display_name",
+          phone_number_id: phone.phone_number_id,
+          pin: "123456",
+          force,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.changed) {
+        toast.success(`Nome atualizado para "${data.after?.verified_name}"`);
+      } else {
+        toast.warning("Certificado re-sincronizado, mas o nome não mudou", {
+          description: `Meta reporta: ${data?.after?.verified_name ?? "—"} (name_status: ${data?.after?.name_status ?? "—"})${force ? "" : ". Use 'Forçar' para o ciclo completo."}`,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["waba-phones"] });
+      queryClient.invalidateQueries({ queryKey: ["waba-phones-all"] });
+    } catch (err: any) {
+      toast.error("Erro ao atualizar nome", { description: err.message });
+    } finally {
+      setIsRefreshingName(false);
     }
   };
 
