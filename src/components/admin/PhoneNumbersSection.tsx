@@ -212,6 +212,41 @@ function PhoneCard({ phone }: { phone: WabaPhoneNumber & { lawyer_name?: string 
         </div>
       </div>
 
+      {/* Sincronizar nome de exibição (certificado) */}
+      <div className="flex items-center gap-1.5">
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 flex-1 text-xs"
+          disabled={isRefreshingName}
+          onClick={() => handleRefreshName(false)}
+        >
+          <RefreshCw className={cn("mr-1.5 h-3 w-3", isRefreshingName && "animate-spin")} />
+          Sincronizar nome
+        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button size="sm" variant="ghost" className="h-7 text-xs" disabled={isRefreshingName}>
+              Forçar
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Forçar novo certificado</AlertDialogTitle>
+              <AlertDialogDescription>
+                Isso vai desregistrar e registrar novamente o número <strong>{phone.display_phone_number}</strong> na Cloud API (PIN 123456) para baixar o certificado com o nome aprovado. O número fica alguns segundos sem enviar mensagens.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => handleRefreshName(true)}>Forçar atualização</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+
+
+
       {/* Lawyer name section */}
       {editing ? (
         <div className="space-y-1.5">
