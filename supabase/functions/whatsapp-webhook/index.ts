@@ -93,6 +93,34 @@ serve(async (req) => {
           const changes = entry.changes || [];
           
           for (const change of changes) {
+            // Eventos de alteração de nome de exibição / certificado.
+            // A Meta envia "phone_number_name_update" (e variações em
+            // account_update / automatic_events) quando o novo nome é
+            // aprovado. Persistimos imediatamente para o painel refletir.
+            if (
+              change.field === "phone_number_name_update" ||
+              change.field === "account_update" ||
+              change.field === "automatic_events"
+            ) {
+              const v = change.value || {};
+              const evtPhoneId: string | null =
+                v.phone_number_id || v?.metadata?.phone_number_id || null;
+              const newName: string | null =
+                v.decision === "APPROVED"
+                  ? v.requested_verified_name || v.verified_name || null
+                  : v.requested_verified_name || v.verified_name || null;
+
+              console.log("Name update event:", JSON.stringify({ field: change.field, v }));
+
+              if (evtPhoneId && newName && (!v.decision || v.decision === "APPROVED")) {
+                await supabase
+                  .from("waba_phone_numbers")
+                  .update({ verified_name: newName })
+                  .eq("phone_number_id", evtPhoneId);
+              }
+              continue;
+            }
+
             if (change.field === "messages") {
               const value = change.value;
               const messages = value.messages || [];

@@ -76,7 +76,10 @@ serve(async (req) => {
     }
 
     // Ações que aceitam token informado manualmente não exigem API configurada
-    const allowsCustomToken = action === "set_pin_by_id" || action === "add_external_phone";
+    const allowsCustomToken =
+      action === "set_pin_by_id" ||
+      action === "add_external_phone" ||
+      action === "refresh_display_name";
 
     if ((!accessToken || !wabaId) && !allowsCustomToken) {
       return new Response(JSON.stringify({ error: "WhatsApp API não configurada. Configure primeiro em Configuração." }), {
@@ -492,6 +495,148 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
 
+
+    } else if (action === "refresh_display_name") {
+      /**
+       * Força a atualização do certificado / nome de exibição na Cloud API.
+       * Fluxo recomendado pela Meta quando o novo nome foi aprovado mas a
+       * produção continua exibindo o nome antigo:
+       *   1. Ler o estado atual (verified_name / name_status)
+       *   2. Re-registrar o número (POST /register) → baixa o novo certificado
+       *   3. Se ainda estiver inconsistente e force=true, deregister + register
+       *   4. Reler e persistir o nome no banco
+       */
+      const {
+        phone_number_id,
+        pin,
+        force,
+        access_token: customToken,
+      } = body as {
+        phone_number_id?: string;
+        pin?: string;
+        force?: boolean;
+        access_token?: string;
+      };
+
+      if (!phone_number_id) {
+        return new Response(JSON.stringify({ error: "phone_number_id é obrigatório" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const token = (customToken && String(customToken).trim()) || accessToken;
+      if (!token) {
+        return new Response(JSON.stringify({ error: "Access token indisponível" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const pinToUse = (pin && String(pin).trim()) || "123456";
+      const FIELDS =
+        "verified_name,name_status,new_name_status,display_phone_number,quality_rating,status,code_verification_status,certificate";
+
+      const readState = async () => {
+        const res = await fetch(
+          `https://graph.facebook.com/v21.0/${phone_number_id}?fields=${FIELDS}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json?.error?.message || "Erro ao ler estado do número");
+        }
+        return json as Record<string, unknown>;
+      };
+
+      const before = await readState();
+      console.log("refresh_display_name before:", JSON.stringify(before));
+
+      const steps: string[] = [];
+
+      const doRegister = async () => {
+        const res = await fetch(
+          `https://graph.facebook.com/v21.0/${phone_number_id}/register`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ messaging_product: "whatsapp", pin: pinToUse }),
+          }
+        );
+        const json = await res.json();
+        console.log("refresh register:", res.status, JSON.stringify(json));
+        return { ok: res.ok, json };
+      };
+
+      // Passo 2 — re-registro simples (não derruba a linha)
+      const reg = await doRegister();
+      steps.push(reg.ok ? "register: ok" : `register: ${reg.json?.error?.message || "falhou"}`);
+
+      let after = await readState();
+
+      const stillStale =
+        String(before.verified_name || "") === String(after.verified_name || "");
+
+      // Passo 3 — ciclo completo só quando explicitamente solicitado
+      if (force && stillStale) {
+        try {
+          const deregRes = await fetch(
+            `https://graph.facebook.com/v21.0/${phone_number_id}/deregister`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ messaging_product: "whatsapp" }),
+            }
+          );
+          const deregJson = await deregRes.json();
+          console.log("refresh deregister:", deregRes.status, JSON.stringify(deregJson));
+          steps.push(deregRes.ok ? "deregister: ok" : `deregister: ${deregJson?.error?.message || "falhou"}`);
+        } catch (e) {
+          steps.push(`deregister: ${e instanceof Error ? e.message : "falhou"}`);
+        }
+
+        const reg2 = await doRegister();
+        steps.push(reg2.ok ? "re-register: ok" : `re-register: ${reg2.json?.error?.message || "falhou"}`);
+        after = await readState();
+      }
+
+      // Passo 4 — persistir no banco
+      const newName = (after.verified_name as string) || null;
+      if (newName) {
+        await serviceClient
+          .from("waba_phone_numbers")
+          .update({
+            verified_name: newName,
+            quality_rating: (after.quality_rating as string) || null,
+          })
+          .eq("phone_number_id", phone_number_id);
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          steps,
+          changed: String(before.verified_name || "") !== String(after.verified_name || ""),
+          before: {
+            verified_name: before.verified_name ?? null,
+            name_status: before.name_status ?? null,
+            new_name_status: before.new_name_status ?? null,
+          },
+          after: {
+            verified_name: after.verified_name ?? null,
+            name_status: after.name_status ?? null,
+            new_name_status: after.new_name_status ?? null,
+            status: after.status ?? null,
+          },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
 
     } else if (action === "delete_phone") {
       const { phone_number_id, db_id } = body;
