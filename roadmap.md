@@ -1,4 +1,4 @@
 # Tarefas
 
-- [ ] Concluir diagnóstico do cancelamento do registro do número após sincronizar o nome.
-- [ ] Adicionar e verificar a metatag de domínio da Meta.
+- [x] Diagnóstico do cancelamento: desregistro aceito pela Meta, seguido de falha no registro por PIN incompatível (133005); recuperação ainda não realizada.
+- [x] Adicionar e verificar a metatag de domínio da Meta.
