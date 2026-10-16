@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Users, UserPlus, Radio, Mic, HeartPulse, Zap, Activity, Eye, List, Phone, Scale, LogOut, RefreshCw, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -307,6 +308,7 @@ function AdminPageInner() {
             <DispatchMonitor />
           </TabsContent>
         </Tabs>
+        </motion.div>
         </div>
       </main>
 
