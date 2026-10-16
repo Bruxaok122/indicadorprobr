@@ -15,20 +15,17 @@ export type UniversalTarget =
   | "vencimento"
   | "final_cc"
   | "valor_fatura"
+  | "gasto_utilizado"
   | "extra"
   | "ignore";
 
+// Somente estes campos entram na importação (pedido do usuário)
 export const UNIVERSAL_TARGET_OPTIONS: { value: UniversalTarget; label: string }[] = [
   { value: "name", label: "Nome do Cliente" },
   { value: "phone", label: "Telefone" },
-  { value: "cpf", label: "CPF" },
-  { value: "process_number", label: "Número do Processo" },
-  { value: "lawyer_name", label: "Parte Contrária" },
-  { value: "valor_da_causa", label: "Renda / Valor" },
   { value: "vencimento", label: "📅 Vencimento (variável)" },
   { value: "final_cc", label: "💳 Final CC (variável)" },
-  { value: "valor_fatura", label: "💰 Valor Fatura (variável)" },
-  { value: "extra", label: "Campo livre (variável do template)" },
+  { value: "gasto_utilizado", label: "💸 Gasto (Utilizado) (variável)" },
   { value: "ignore", label: "Ignorar" },
 ];
 
@@ -52,14 +49,10 @@ export function guessTarget(key: string): UniversalTarget {
   const k = strip(key);
   if (/^(nome|cliente|nome completo|requerente|autor)$/.test(k) || k.startsWith("nome do cliente")) return "name";
   if (/(celular|telefone|fone|whats|tel\b|contato)/.test(k)) return "phone";
-  if (/(cpf|^doc|documento)/.test(k)) return "cpf";
-  if (/processo/.test(k)) return "process_number";
-  if (/(parte contraria|requerido|reu|polo passivo|empresa)/.test(k)) return "lawyer_name";
   if (/(venc)/.test(k)) return "vencimento";
   if (/(final\s*(do\s*)?(cc|cartao|credito)|4\s*ultimos)/.test(k)) return "final_cc";
-  if (/(valor\s*(da\s*)?fatura|^fatura)/.test(k)) return "valor_fatura";
-  if (/(renda|valor|salario|causa)/.test(k)) return "valor_da_causa";
-  return "extra";
+  if (/(gasto|utilizado)/.test(k)) return "gasto_utilizado";
+  return "ignore";
 }
 
 const KEY_RE = /(?:^|\||\n|\s{2,})\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9 ._\/()º°-]{0,40}?)\s*:(?!\/\/)/g;
@@ -146,6 +139,7 @@ export function buildUniversalContacts(
           break;
         }
         case "valor_fatura": base.extra_data["VALOR FATURA"] = value; break;
+        case "gasto_utilizado": base.extra_data["GASTO (UTILIZADO)"] = value; break;
       }
     }
     const label = base.name || `Registro ${idx + 1}`;

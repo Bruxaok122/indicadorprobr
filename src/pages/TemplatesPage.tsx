@@ -46,6 +46,7 @@ const CONTACT_FIELD_OPTIONS = [
   { value: "vencimento", label: "Vencimento" },
   { value: "final_cc", label: "Final CC" },
   { value: "valor_fatura", label: "Valor Fatura" },
+  { value: "gasto_utilizado", label: "Gasto (Utilizado)" },
 ];
 
 function extractVariablesFromText(text: string): number[] {

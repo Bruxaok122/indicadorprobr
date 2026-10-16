@@ -76,6 +76,10 @@ function resolveVariable(contact: any, fieldKey: string, extra?: { phoneVerified
       const raw = findExtraByPattern(contact, /^VALOR(\s*(DA\s*)?)?FATURA|^FATURA/) || findExtraByPattern(contact, /FATURA/);
       return raw ? formatBrl(raw) : "-";
     }
+    case "gasto_utilizado": {
+      const raw = findExtraByPattern(contact, /^GASTO(\s*\(?\s*UTILIZADO\)?)?$|UTILIZADO/) || findExtraByPattern(contact, /GASTO/);
+      return raw ? formatBrl(raw) : "-";
+    }
     case "advogado": {
       const raw = extra?.phoneVerifiedName || "Advogado";
       return raw.split("|")[0].trim();

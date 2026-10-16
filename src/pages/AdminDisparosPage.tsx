@@ -38,6 +38,7 @@ const CONTACT_FIELD_OPTIONS = [
   { value: "vencimento", label: "Vencimento", defaultHint: "Da lista universal (ex.: 04/11/2026)" },
   { value: "final_cc", label: "Final CC", defaultHint: "Últimos dígitos do cartão" },
   { value: "valor_fatura", label: "Valor Fatura", defaultHint: "Formatado em R$ (ex.: R$ 3.456,90)" },
+  { value: "gasto_utilizado", label: "Gasto (Utilizado)", defaultHint: "Formatado em R$ (ex.: R$ 1.234,56)" },
 ];
 
 function extractVariables(text: string): number[] {
