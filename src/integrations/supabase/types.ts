@@ -260,6 +260,7 @@ export type Database = {
           created_at: string
           dispatch_mode: string
           dispatched_phone_number_id: string | null
+          extra_data: Json | null
           has_whatsapp: boolean | null
           id: string
           is_priority: boolean
@@ -288,6 +289,7 @@ export type Database = {
           created_at?: string
           dispatch_mode?: string
           dispatched_phone_number_id?: string | null
+          extra_data?: Json | null
           has_whatsapp?: boolean | null
           id?: string
           is_priority?: boolean
@@ -316,6 +318,7 @@ export type Database = {
           created_at?: string
           dispatch_mode?: string
           dispatched_phone_number_id?: string | null
+          extra_data?: Json | null
           has_whatsapp?: boolean | null
           id?: string
           is_priority?: boolean
