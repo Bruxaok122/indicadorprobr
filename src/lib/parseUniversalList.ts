@@ -138,7 +138,13 @@ export function buildUniversalContacts(
         case "valor_da_causa": base.renda = parseMoney(value); break;
         case "extra": base.extra_data[key] = value; break;
         case "vencimento": base.extra_data["VENCIMENTO"] = value; break;
-        case "final_cc": base.extra_data["FINAL CC"] = value; break;
+        case "final_cc": {
+          // Final do cartão: só os 4 últimos dígitos; ignora valores em dinheiro
+          if (/R\$|\d,\d{2}\b/.test(value)) break;
+          const digits = value.replace(/\D/g, "");
+          if (digits.length >= 4 && !base.extra_data["FINAL CC"]) base.extra_data["FINAL CC"] = digits.slice(-4);
+          break;
+        }
         case "valor_fatura": base.extra_data["VALOR FATURA"] = value; break;
       }
     }
