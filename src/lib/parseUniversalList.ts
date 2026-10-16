@@ -138,6 +138,9 @@ export function buildUniversalContacts(
         case "process_number": base.process_number = value; break;
         case "lawyer_name": base.lawyer_name = value; break;
         case "valor_da_causa": base.renda = parseMoney(value); break;
+        case "vencimento": base.extra_data["VENCIMENTO"] = value; break;
+        case "final_cc": base.extra_data["FINAL CC"] = value; break;
+        case "valor_fatura": base.extra_data["VALOR FATURA"] = value; break;
       }
     }
     const label = base.name || `Registro ${idx + 1}`;
