@@ -900,7 +900,10 @@ export default function AdminContatosPage() {
                           ))}
                         </TableBody>
                       </Table>
+                      </div>
                     </ScrollArea>
+                    );
+                    })()
                   )}
                 </CardContent>
               </Card>
