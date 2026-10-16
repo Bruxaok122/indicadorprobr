@@ -43,6 +43,9 @@ const CONTACT_FIELD_OPTIONS = [
   { value: "process_number", label: "Número do Processo" },
   { value: "cpf", label: "CPF" },
   { value: "valor_da_causa", label: "Valor da Causa" },
+  { value: "vencimento", label: "Vencimento" },
+  { value: "final_cc", label: "Final CC" },
+  { value: "valor_fatura", label: "Valor Fatura" },
 ];
 
 function extractVariablesFromText(text: string): number[] {
