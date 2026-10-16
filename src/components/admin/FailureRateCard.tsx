@@ -12,13 +12,13 @@ export function FailureRateCard() {
   const rateColor = stats.failureRate >= THRESHOLD
     ? "text-destructive"
     : stats.failureRate >= THRESHOLD / 2
-      ? "text-amber-500"
-      : "text-emerald-500";
+      ? "text-warning"
+      : "text-success";
 
   const StatusIcon = stats.isAboveThreshold ? ShieldAlert : ShieldCheck;
 
   return (
-    <Card className={stats.isAboveThreshold ? "border-destructive/50 shadow-destructive/10 shadow-lg" : ""}>
+    <Card className={stats.isAboveThreshold ? "rounded-2xl border-destructive/50 bg-destructive/5" : "rounded-2xl border-border/60 bg-card/60"}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">Taxa de Falha (2h)</CardTitle>
         <StatusIcon className={`h-5 w-5 ${rateColor}`} />
@@ -48,7 +48,7 @@ export function FailureRateCard() {
                 <span>{stats.blockErrors} bloqueios</span>
               </div>
               <div className="flex items-center gap-1">
-                <PhoneOff className="h-3 w-3 text-amber-500" />
+                <PhoneOff className="h-3 w-3 text-warning" />
                 <span>{stats.unregisteredErrors} s/ WA</span>
               </div>
               <div className="flex items-center gap-1">
