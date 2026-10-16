@@ -194,6 +194,12 @@ function AdminPageInner() {
             </div>
           </div>
 
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+        >
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="tempo-real" className="mt-0">
             <RealtimeMonitorPanel />
@@ -291,7 +297,10 @@ function AdminPageInner() {
           </TabsContent>
 
           <TabsContent value="disparos" className="mt-0">
-            <AdminDisparosPage />
+            {/* Altura fixa + rolagem interna: evita que a página cresça/redimensione */}
+            <div className="h-[calc(100dvh-11rem)] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card/30 p-3 md:p-4 [scrollbar-gutter:stable]">
+              <AdminDisparosPage />
+            </div>
           </TabsContent>
 
           <TabsContent value="acompanhamento" className="mt-0">
