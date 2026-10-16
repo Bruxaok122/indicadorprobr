@@ -338,6 +338,7 @@ export default function AdminContatosPage() {
           process_number: c.process_number,
           cpf: (c as any).cpf || null,
           valor_da_causa: typeof (c as any).renda === "number" ? (c as any).renda : null,
+          extra_data: (c as any).extra_data ?? null,
           contact_list: targetList,
           status: "novo",
           user_id: null,

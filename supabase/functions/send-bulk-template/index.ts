@@ -50,6 +50,12 @@ function resolveVariable(contact: any, fieldKey: string, extra?: { phoneVerified
       const raw = extra?.phoneVerifiedName || "Advogado";
       return raw.split("|")[0].trim();
     }
+    case "valor_fatura":
+    case "vencimento":
+    case "cartao_final": {
+      const v = contact.extra_data?.[fieldKey];
+      return isEmpty(v) ? "Não informado" : String(v);
+    }
     default: return fieldKey;
   }
 }
