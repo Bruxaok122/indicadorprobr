@@ -50,7 +50,15 @@ function resolveVariable(contact: any, fieldKey: string, extra?: { phoneVerified
       const raw = extra?.phoneVerifiedName || "Advogado";
       return raw.split("|")[0].trim();
     }
-    default: return fieldKey;
+    default: {
+      // Campos livres da importação universal: "extra:CHAVE" → contact.extra_data[CHAVE]
+      if (fieldKey.startsWith("extra:")) {
+        const k = fieldKey.slice(6);
+        const v = contact.extra_data?.[k];
+        return isEmpty(v) ? "-" : String(v);
+      }
+      return fieldKey;
+    }
   }
 }
 

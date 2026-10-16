@@ -220,6 +220,27 @@ export default function AdminDisparosPage() {
   // Step 2: Template
   const [selectedTemplate, setSelectedTemplate] = useState<MetaTemplate | null>(null);
   const [variableMappings, setVariableMappings] = useState<Record<string, string>>({});
+  // Chaves de campos livres vindas da importação universal (contacts.extra_data)
+  const [extraFieldKeys, setExtraFieldKeys] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("contacts")
+        .select("extra_data")
+        .not("extra_data", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (cancelled || !data) return;
+      const keys = new Set<string>();
+      data.forEach((r) => {
+        const ed = r.extra_data;
+        if (ed && typeof ed === "object" && !Array.isArray(ed)) Object.keys(ed).forEach((k) => keys.add(k));
+      });
+      setExtraFieldKeys([...keys].sort());
+    })();
+    return () => { cancelled = true; };
+  }, []);
   // Step 3: List + dispatch mode
   const [selectedList, setSelectedList] = useState<string>("");
   const [availableLists, setAvailableLists] = useState<ContactList[]>([]);
@@ -1257,6 +1278,7 @@ export default function AdminDisparosPage() {
                                 <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Campo..." /></SelectTrigger>
                                 <SelectContent>
                                   {CONTACT_FIELD_OPTIONS.map((opt) => (<SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>))}
+                                  {extraFieldKeys.map((k) => (<SelectItem key={`extra:${k}`} value={`extra:${k}`} className="text-xs">📋 {k} (lista universal)</SelectItem>))}
                                 </SelectContent>
                               </Select>
                             </div>

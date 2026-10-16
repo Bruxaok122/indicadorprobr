@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { parseJuridicalList } from "@/lib/parseJuridicalList";
 import { getStateFromPhone } from "@/lib/dddToState";
 import { ParsedContact } from "@/types/juriszap";
+import { UniversalImportPanel } from "@/components/admin/UniversalImportPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -338,6 +339,7 @@ export default function AdminContatosPage() {
           process_number: c.process_number,
           cpf: (c as any).cpf || null,
           valor_da_causa: typeof (c as any).renda === "number" ? (c as any).renda : null,
+          extra_data: (c as any).extra_data ?? null,
           contact_list: targetList,
           status: "novo",
           user_id: null,
@@ -736,6 +738,9 @@ export default function AdminContatosPage() {
                       <TabsTrigger value="lista" className="flex-1 gap-1.5">
                         <Upload className="h-3.5 w-3.5" /> Importar Lista
                       </TabsTrigger>
+                      <TabsTrigger value="universal" className="flex-1 gap-1.5">
+                        <FileSpreadsheet className="h-3.5 w-3.5" /> Universal
+                      </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="individual" className="mt-4">
@@ -795,6 +800,18 @@ export default function AdminContatosPage() {
                       <Button className="w-full" onClick={handleParse} disabled={!rawText.trim()}>
                         <Upload className="h-4 w-4 mr-1.5" /> Processar Lista
                       </Button>
+                    </TabsContent>
+
+                    <TabsContent value="universal" className="mt-4">
+                      <UniversalImportPanel
+                        onParsed={(contacts, errors) => {
+                          setParsedContacts(contacts as unknown as ParsedContact[]);
+                          setParseErrors(errors);
+                          setWhatsappEntries([]);
+                          setFilterRendaMinValue(0);
+                          setShowPreview(true);
+                        }}
+                      />
                     </TabsContent>
                   </Tabs>
                 </CardContent>
