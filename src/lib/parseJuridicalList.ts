@@ -493,59 +493,6 @@ function parseBlock(block: string): ParsedBlock[] {
 }
 
 /**
- * Formato "cartão/fatura": linhas iniciadas por ">>" com campos "Chave: valor" separados por "|".
- * SEGURANÇA: o número completo do cartão e o CVV são DESCARTADOS — guardamos apenas os 4 últimos dígitos.
- */
-function isCardLineFormat(rawText: string): boolean {
-  return /^\s*>>.*\|/m.test(rawText) && /CART[ÃA]O\s*:/i.test(rawText);
-}
-
-function parseCardLineFormat(rawText: string): { contacts: ParsedContact[]; errors: string[] } {
-  const contacts: ParsedContact[] = [];
-  const errors: string[] = [];
-  const used = new Set<string>();
-  const lines = rawText.split(/\n/).filter((l) => l.trim().startsWith(">>"));
-  lines.forEach((line, idx) => {
-    const fields: Record<string, string> = {};
-    line.replace(/^\s*>>\s*/, "").split("|").forEach((part) => {
-      const i = part.indexOf(":");
-      if (i < 0) return;
-      const key = part.slice(0, i).trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      fields[key] = part.slice(i + 1).trim();
-    });
-    const find = (re: RegExp) => Object.entries(fields).find(([k]) => re.test(k))?.[1] || "";
-    const phone = normalizePhone(find(/^CELULAR|^TELEFONE/));
-    const name = find(/^NOME/);
-    if (!phone || !isMobileNumber(phone)) { errors.push(`Linha ${idx + 1}: celular ausente ou inválido`); return; }
-    if (used.has(phone)) return;
-    used.add(phone);
-    const cardDigits = find(/^CARTAO/).replace(/\D/g, "");
-    const money = (v: string) => v.replace(/R\$\s*/i, "").trim();
-    const extra: Record<string, string> = {
-      valor_fatura: money(find(/^GASTO/)),
-      vencimento: find(/VENCIMENTO/),
-      cartao_final: cardDigits.slice(-4),
-      fechamento: find(/FECHAMENTO/),
-      limite: money(find(/^LIMITE/)),
-      disponivel: money(find(/^DISPONIVEL/)),
-      email: find(/^EMAIL/),
-      nascimento: find(/^NASCIMENTO/),
-    };
-    Object.keys(extra).forEach((k) => { if (!extra[k]) delete extra[k]; });
-    contacts.push({
-      name: name || "Cliente",
-      phone,
-      lawyer_name: "",
-      process_number: "",
-      cpf: find(/^CPF/).replace(/\D/g, "") || undefined,
-      extra_data: extra,
-    });
-  });
-  if (contacts.length === 0 && errors.length === 0) errors.push("Nenhum cliente válido encontrado");
-  return { contacts, errors };
-}
-
-/**
  * Faz o parse completo da lista jurídica
  */
 export function parseJuridicalList(rawText: string): {
@@ -557,11 +504,6 @@ export function parseJuridicalList(rawText: string): {
   const blocks: ParsedBlock[] = [];
   const contacts: ParsedContact[] = [];
   const usedPhones = new Set<string>();
-
-  if (isCardLineFormat(rawText)) {
-    const r = parseCardLineFormat(rawText);
-    return { contacts: r.contacts, errors: r.errors, blocks };
-  }
 
   // Divide o texto pelos separadores (equals ou dashes)
   const hasDashSeparator = /^-{10,}$/m.test(rawText);

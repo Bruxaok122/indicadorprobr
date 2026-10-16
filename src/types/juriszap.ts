@@ -107,7 +107,6 @@ export interface ParsedContact {
   process_number: string;
   cpf?: string;
   renda?: number;
-  extra_data?: Record<string, string>;
 }
 
 export interface ParsedBlock {
