@@ -854,14 +854,23 @@ export default function AdminContatosPage() {
                       <p className="text-sm">Nenhum contato nesta lista</p>
                     </div>
                   ) : (
-                    <ScrollArea className="h-[400px]">
+                    (() => {
+                    // Colunas dinâmicas: campos designados na importação universal (extra_data)
+                    const extraKeys: string[] = Array.from(new Set(displayedContacts.flatMap((c: any) =>
+                      c.extra_data && typeof c.extra_data === "object" ? Object.keys(c.extra_data) : [])));
+                    const showLawyer = extraKeys.length === 0 || displayedContacts.some((c: any) => c.lawyer_name);
+                    const showProcess = extraKeys.length === 0 || displayedContacts.some((c: any) => c.process_number);
+                    return (
+                    <ScrollArea className="h-[400px] w-full">
+                      <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
                             <TableHead>Nome</TableHead>
                             <TableHead>Telefone</TableHead>
-                            <TableHead className="hidden md:table-cell">Parte Contrária</TableHead>
-                            <TableHead className="hidden lg:table-cell">Processo</TableHead>
+                            {showLawyer && <TableHead className="hidden md:table-cell">Parte Contrária</TableHead>}
+                            {showProcess && <TableHead className="hidden lg:table-cell">Processo</TableHead>}
+                            {extraKeys.map((k) => <TableHead key={k} className="whitespace-nowrap">{k}</TableHead>)}
                             <TableHead className="w-10"></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -870,8 +879,13 @@ export default function AdminContatosPage() {
                             <TableRow key={c.id}>
                               <TableCell className="font-medium text-sm">{c.name}</TableCell>
                               <TableCell className="font-mono text-xs">{c.phone}</TableCell>
-                              <TableCell className="hidden md:table-cell text-xs text-muted-foreground">{c.lawyer_name || "-"}</TableCell>
-                              <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">{c.process_number || "-"}</TableCell>
+                              {showLawyer && <TableCell className="hidden md:table-cell text-xs text-muted-foreground">{c.lawyer_name || "-"}</TableCell>}
+                              {showProcess && <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">{c.process_number || "-"}</TableCell>}
+                              {extraKeys.map((k) => (
+                                <TableCell key={k} className="text-xs text-muted-foreground whitespace-nowrap">
+                                  {String(c.extra_data?.[k] ?? "").split("\n")[0].trim() || "-"}
+                                </TableCell>
+                              ))}
                               <TableCell>
                                 <Button
                                   variant="ghost"
