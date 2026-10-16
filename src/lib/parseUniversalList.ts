@@ -55,6 +55,9 @@ export function guessTarget(key: string): UniversalTarget {
   if (/(cpf|^doc|documento)/.test(k)) return "cpf";
   if (/processo/.test(k)) return "process_number";
   if (/(parte contraria|requerido|reu|polo passivo|empresa)/.test(k)) return "lawyer_name";
+  if (/(venc)/.test(k)) return "vencimento";
+  if (/(final\s*(do\s*)?(cc|cartao|credito)|4\s*ultimos)/.test(k)) return "final_cc";
+  if (/(valor\s*(da\s*)?fatura|^fatura)/.test(k)) return "valor_fatura";
   if (/(renda|valor|salario|causa)/.test(k)) return "valor_da_causa";
   return "extra";
 }
