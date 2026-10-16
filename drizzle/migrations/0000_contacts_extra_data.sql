@@ -1,0 +1,2 @@
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS extra_data jsonb;
+COMMENT ON COLUMN public.contacts.extra_data IS 'Campos genéricos de listas não jurídicas (ex.: valor_fatura, vencimento, cartao_final). Nunca armazena número completo de cartão nem CVV.';
