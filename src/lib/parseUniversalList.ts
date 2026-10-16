@@ -125,10 +125,8 @@ export function buildUniversalContacts(
     const base: Omit<UniversalContact, "phone"> = { name: "", extra_data: {} };
     const phones: string[] = [];
     for (const [key, value] of Object.entries(rec)) {
-      const target = mapping[key] ?? "extra";
+      const target = mapping[key] ?? "ignore";
       if (target === "ignore" || !value) continue;
-      // Todos os campos não ignorados ficam disponíveis como variável de template
-      base.extra_data[key] = value;
       switch (target) {
         case "name": base.name = base.name || value; break;
         case "phone":
@@ -138,6 +136,7 @@ export function buildUniversalContacts(
         case "process_number": base.process_number = value; break;
         case "lawyer_name": base.lawyer_name = value; break;
         case "valor_da_causa": base.renda = parseMoney(value); break;
+        case "extra": base.extra_data[key] = value; break;
         case "vencimento": base.extra_data["VENCIMENTO"] = value; break;
         case "final_cc": base.extra_data["FINAL CC"] = value; break;
         case "valor_fatura": base.extra_data["VALOR FATURA"] = value; break;
