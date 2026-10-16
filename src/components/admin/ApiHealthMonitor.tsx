@@ -60,15 +60,15 @@ function HealthScoreBadge({ score }: { score: number }) {
   let Icon = XCircle;
 
   if (score >= 80) {
-    color = "bg-success/15 text-success border-green-500/30";
+    color = "bg-success/15 text-success border-success/30";
     label = "Excelente";
     Icon = CheckCircle;
   } else if (score >= 60) {
-    color = "bg-warning/15 text-warning border-yellow-500/30";
+    color = "bg-warning/15 text-warning border-warning/30";
     label = "Regular";
     Icon = AlertTriangle;
   } else if (score >= 40) {
-    color = "bg-orange-500/20 text-orange-400 border-orange-500/30";
+    color = "bg-warning/15 text-warning border-warning/30";
     label = "Atenção";
     Icon = AlertTriangle;
   }
@@ -277,10 +277,10 @@ export function ApiHealthMonitor() {
                       key={check.id}
                       className={`flex items-start gap-2 p-2 rounded-lg ${
                         check.status === "ok"
-                          ? "bg-green-500/10"
+                          ? "bg-success/10"
                           : check.status === "warning"
-                          ? "bg-yellow-500/10"
-                          : "bg-red-500/10"
+                          ? "bg-warning/10"
+                          : "bg-destructive/10"
                       }`}
                     >
                       {check.status === "ok" ? (
