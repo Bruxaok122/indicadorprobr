@@ -35,6 +35,9 @@ const CONTACT_FIELD_OPTIONS = [
   { value: "process_number", label: "Número do Processo", defaultHint: "Padrão: 0031486-26.2025.8.26.0002" },
   { value: "cpf", label: "CPF", defaultHint: "" },
   { value: "valor_da_causa", label: "Valor da Causa", defaultHint: "" },
+  { value: "vencimento", label: "Vencimento", defaultHint: "Da lista universal (ex.: 04/11/2026)" },
+  { value: "final_cc", label: "Final CC", defaultHint: "Últimos dígitos do cartão" },
+  { value: "valor_fatura", label: "Valor Fatura", defaultHint: "Formatado em R$ (ex.: R$ 3.456,90)" },
 ];
 
 function extractVariables(text: string): number[] {
