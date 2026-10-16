@@ -38,6 +38,24 @@ function validIdentity(value: string | null | undefined): string {
   return cleaned;
 }
 
+/** Busca um campo livre da importação universal pelo padrão da chave (ignora acentos/caixa). */
+function findExtraByPattern(contact: any, pattern: RegExp): string {
+  const ed = contact?.extra_data;
+  if (!ed || typeof ed !== "object") return "";
+  for (const [k, v] of Object.entries(ed)) {
+    const norm = String(k).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    if (pattern.test(norm) && !isEmpty(v as string)) return String(v).trim();
+  }
+  return "";
+}
+
+function formatBrl(raw: string): string {
+  const s = raw.replace(/[^\d,.-]/g, "");
+  if (!s) return "";
+  const n = Number(s.includes(",") ? s.replace(/\./g, "").replace(",", ".") : s);
+  return Number.isFinite(n) ? `R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : raw;
+}
+
 function resolveVariable(contact: any, fieldKey: string, extra?: { phoneVerifiedName?: string }): string {
   switch (fieldKey) {
     case "name": return isEmpty(contact.name) ? "Cliente" : formatFirstName(contact.name);
@@ -46,6 +64,12 @@ function resolveVariable(contact: any, fieldKey: string, extra?: { phoneVerified
     case "process_number": return isEmpty(contact.process_number) ? "0031486-26.2025.8.26.0002" : contact.process_number;
     case "cpf": return isEmpty(contact.cpf) ? "Não informado" : contact.cpf;
     case "valor_da_causa": return contact.valor_da_causa ? `R$ ${Number(contact.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Não informado";
+    case "vencimento": return findExtraByPattern(contact, /^(DATA\s*)?(DO\s*)?VENC|VENCIMENTO/) || "-";
+    case "final_cc": return findExtraByPattern(contact, /^FINAL(\s*(DO\s*)?(CC|CARTAO|CARTÃO|CREDITO|CRÉDITO|D+))?$|^4\s*ULTIMOS/) || "-";
+    case "valor_fatura": {
+      const raw = findExtraByPattern(contact, /^VALOR(\s*(DA\s*)?)?FATURA|^FATURA/) || findExtraByPattern(contact, /FATURA/);
+      return raw ? formatBrl(raw) : "-";
+    }
     case "advogado": {
       const raw = extra?.phoneVerifiedName || "Advogado";
       return raw.split("|")[0].trim();
