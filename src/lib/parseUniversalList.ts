@@ -12,6 +12,9 @@ export type UniversalTarget =
   | "process_number"
   | "lawyer_name"
   | "valor_da_causa"
+  | "vencimento"
+  | "final_cc"
+  | "valor_fatura"
   | "extra"
   | "ignore";
 
@@ -22,6 +25,9 @@ export const UNIVERSAL_TARGET_OPTIONS: { value: UniversalTarget; label: string }
   { value: "process_number", label: "Número do Processo" },
   { value: "lawyer_name", label: "Parte Contrária" },
   { value: "valor_da_causa", label: "Renda / Valor" },
+  { value: "vencimento", label: "📅 Vencimento (variável)" },
+  { value: "final_cc", label: "💳 Final CC (variável)" },
+  { value: "valor_fatura", label: "💰 Valor Fatura (variável)" },
   { value: "extra", label: "Campo livre (variável do template)" },
   { value: "ignore", label: "Ignorar" },
 ];
