@@ -65,7 +65,13 @@ function resolveVariable(contact: any, fieldKey: string, extra?: { phoneVerified
     case "cpf": return isEmpty(contact.cpf) ? "Não informado" : contact.cpf;
     case "valor_da_causa": return contact.valor_da_causa ? `R$ ${Number(contact.valor_da_causa).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Não informado";
     case "vencimento": return findExtraByPattern(contact, /^(DATA\s*)?(DO\s*)?VENC|VENCIMENTO/) || "-";
-    case "final_cc": return findExtraByPattern(contact, /^FINAL(\s*(DO\s*)?(CC|CARTAO|CARTÃO|CREDITO|CRÉDITO|D+))?$|^4\s*ULTIMOS/) || "-";
+    case "final_cc": {
+      const v = findExtraByPattern(contact, /^FINAL(\s*(DO\s*)?(CC|CARTAO|CARTÃO|CREDITO|CRÉDITO|D+))?$|^4\s*ULTIMOS/);
+      // Nunca envia valor em dinheiro como final do cartão; só 4 últimos dígitos
+      if (!v || /R\$|\d,\d{2}\b/.test(v)) return "-";
+      const d = v.replace(/\D/g, "");
+      return d.length >= 4 ? d.slice(-4) : "-";
+    }
     case "valor_fatura": {
       const raw = findExtraByPattern(contact, /^VALOR(\s*(DA\s*)?)?FATURA|^FATURA/) || findExtraByPattern(contact, /FATURA/);
       return raw ? formatBrl(raw) : "-";
