@@ -86,7 +86,7 @@ export function UniversalImportPanel({ onParsed }: UniversalImportPanelProps) {
             </div>
           ))}
           <p className="text-[10px] text-muted-foreground">
-            Todos os campos não ignorados ficam disponíveis como variável no template do disparo.
+            Somente os campos com variável designada entram na importação. Campos marcados como "Ignorar" são descartados.
           </p>
         </div>
       )}
