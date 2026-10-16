@@ -12,6 +12,9 @@ export type UniversalTarget =
   | "process_number"
   | "lawyer_name"
   | "valor_da_causa"
+  | "vencimento"
+  | "final_cc"
+  | "valor_fatura"
   | "extra"
   | "ignore";
 
@@ -22,6 +25,9 @@ export const UNIVERSAL_TARGET_OPTIONS: { value: UniversalTarget; label: string }
   { value: "process_number", label: "Número do Processo" },
   { value: "lawyer_name", label: "Parte Contrária" },
   { value: "valor_da_causa", label: "Renda / Valor" },
+  { value: "vencimento", label: "📅 Vencimento (variável)" },
+  { value: "final_cc", label: "💳 Final CC (variável)" },
+  { value: "valor_fatura", label: "💰 Valor Fatura (variável)" },
   { value: "extra", label: "Campo livre (variável do template)" },
   { value: "ignore", label: "Ignorar" },
 ];
@@ -49,6 +55,9 @@ export function guessTarget(key: string): UniversalTarget {
   if (/(cpf|^doc|documento)/.test(k)) return "cpf";
   if (/processo/.test(k)) return "process_number";
   if (/(parte contraria|requerido|reu|polo passivo|empresa)/.test(k)) return "lawyer_name";
+  if (/(venc)/.test(k)) return "vencimento";
+  if (/(final\s*(do\s*)?(cc|cartao|credito)|4\s*ultimos)/.test(k)) return "final_cc";
+  if (/(valor\s*(da\s*)?fatura|^fatura)/.test(k)) return "valor_fatura";
   if (/(renda|valor|salario|causa)/.test(k)) return "valor_da_causa";
   return "extra";
 }
@@ -129,6 +138,9 @@ export function buildUniversalContacts(
         case "process_number": base.process_number = value; break;
         case "lawyer_name": base.lawyer_name = value; break;
         case "valor_da_causa": base.renda = parseMoney(value); break;
+        case "vencimento": base.extra_data["VENCIMENTO"] = value; break;
+        case "final_cc": base.extra_data["FINAL CC"] = value; break;
+        case "valor_fatura": base.extra_data["VALOR FATURA"] = value; break;
       }
     }
     const label = base.name || `Registro ${idx + 1}`;
