@@ -45,7 +45,6 @@ const CONTACT_FIELD_OPTIONS = [
   { value: "valor_da_causa", label: "Valor da Causa" },
   { value: "vencimento", label: "Vencimento" },
   { value: "final_cc", label: "Final CC" },
-  { value: "valor_fatura", label: "Valor Fatura" },
   { value: "gasto_utilizado", label: "Gasto (Utilizado)" },
 ];
 
