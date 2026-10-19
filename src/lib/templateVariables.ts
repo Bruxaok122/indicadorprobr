@@ -61,8 +61,9 @@ export function guessVariableMappings(body: string): Record<string, string> {
         if (!used.has(field)) {
           result[String(v)] = field;
           used.add(field);
+          break;
         }
-        break;
+        // Field already taken by another variable — try the next rule
       }
     }
   }
