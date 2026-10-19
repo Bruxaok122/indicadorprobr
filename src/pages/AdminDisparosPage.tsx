@@ -318,6 +318,27 @@ export default function AdminDisparosPage() {
   const approvedTemplates = allTemplates.filter((t) => t.status === "APPROVED");
   const templateBody = selectedTemplate ? getTemplateBody(selectedTemplate) : "";
   const templateVars = extractVariables(templateBody);
+  // Sample values for the live phone preview (derived, no effect)
+  const previewSamples: Record<string, string> = {
+    name: "Maria Silva",
+    advogado: customAdvogadoName || defaultPhoneName || "Dr. Advogado",
+    phone: "(11) 98765-4321",
+    lawyer_name: "********",
+    process_number: "0031486-26.2025.8.26.0002",
+    cpf: "123.456.789-00",
+    valor_da_causa: "R$ 15.000,00",
+    vencimento: "04/11/2026",
+    final_cc: "8620",
+    valor_fatura: "R$ 3.456,90",
+    gasto_utilizado: "R$ 1.234,56",
+  };
+  const previewValues: Record<string, string> = Object.fromEntries(
+    templateVars.map((v) => {
+      const m = variableMappings[String(v)] || "";
+      const val = m.startsWith("extra:") ? `‹${m.slice(6)}›` : previewSamples[m] || "";
+      return [String(v), val];
+    }),
+  );
   const effectiveCount = dispatchMode === "turbo" ? turboLimit : dispatchMode === "scheduled" || dispatchMode === "manual" ? listContactCount : batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
 
   const isStep1Valid = phones.length === 0 || !!selectedPhoneNumberId;
@@ -1284,6 +1305,15 @@ export default function AdminDisparosPage() {
                   )}
                 </CardContent>
               </Card>
+              <div className="lg:sticky lg:top-4">
+                <WhatsAppPhonePreview
+                  template={selectedTemplate}
+                  body={templateBody}
+                  values={previewValues}
+                  senderName={customAdvogadoName || defaultPhoneName || phoneVerifiedName || ""}
+                />
+              </div>
+              </div>
             )}
 
             {currentStep === 3 && (
