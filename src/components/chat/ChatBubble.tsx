@@ -179,8 +179,8 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact, onRep
       );
     }
     // Clique em botão do template (inclui registros antigos salvos como "[button]")
-    if (message.message_type === "button_reply" || message.content === "[button]" || message.content === "[interactive]") {
-      const label = message.message_type === "button_reply" ? message.content : "Botão do template";
+    if (message.message_type === "button" || message.message_type === "interactive" || message.content === "[button]" || message.content === "[interactive]") {
+      const label = message.content && !message.content.startsWith("[") ? message.content : "Botão do template";
       return (
         <div className="flex flex-col gap-1">
           <span className="text-[9px] font-semibold uppercase tracking-wider opacity-60">👆 Clicou no botão</span>
@@ -382,7 +382,8 @@ export function getReplyPreview(msg: Message): { label: string; icon: "text" | "
       return { label: msg.document_name || "Documento", icon: "document" };
     case "sticker":
       return { label: "Figurinha", icon: "sticker" };
-    case "button_reply":
+    case "button":
+    case "interactive":
       return { label: `👆 ${msg.content || "Botão"}`, icon: "text" };
     case "template":
       return { label: msg.content || msg.template_name || "Template", icon: "text" };
