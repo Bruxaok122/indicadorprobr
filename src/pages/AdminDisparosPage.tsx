@@ -37,8 +37,10 @@ const CONTACT_FIELD_OPTIONS = [
   { value: "cpf", label: "🪪 CPF", defaultHint: "" },
   { value: "valor_da_causa", label: "💵 Valor da Causa", defaultHint: "" },
   { value: "vencimento", label: "📅 Vencimento", defaultHint: "Da lista universal (ex.: 04/11/2026)" },
-  { value: "final_cc", label: "💳 Final CC", defaultHint: "Últimos dígitos do cartão" },
+  { value: "final_cc", label: "💳 CC", defaultHint: "6 primeiros + XXXXXX + 4 últimos" },
   { value: "gasto_utilizado", label: "💸 Gasto (Utilizado)", defaultHint: "Formatado em R$ (ex.: R$ 1.234,56)" },
+  { value: "nome_completo", label: "🧾 Nome Completo", defaultHint: "Da lista universal" },
+  { value: "identificacao", label: "🆔 Identificação", defaultHint: "Da lista universal" },
 ];
 
 function extractVariables(text: string): number[] {
@@ -336,7 +338,9 @@ export default function AdminDisparosPage() {
     cpf: "123.456.789-00",
     valor_da_causa: "R$ 15.000,00",
     vencimento: "04/11/2026",
-    final_cc: "8620",
+    final_cc: "123456XXXXXX8620",
+    nome_completo: "Maria Aparecida da Silva",
+    identificacao: "ID-000123",
     gasto_utilizado: "R$ 1.234,56",
   };
   const previewValues: Record<string, string> = Object.fromEntries(
