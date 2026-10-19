@@ -26,13 +26,14 @@ export function LoginGlassCard() {
     setIsLoading(true);
 
     try {
-      const { data } = await signIn(email, password);
+      // signIn devolve { user, session } (sem o embrulho "data")
+      const authData = await signIn(email, password);
       toast.success("Login realizado com sucesso!");
       // Administrador entra direto no /administrador; demais perfis vão para o chat.
       // O papel é lido direto do banco: o listener de sessão ainda pode não ter
       // carregado o perfil no instante em que o signIn resolve.
       let target = "/";
-      const userId = data?.user?.id;
+      const userId = authData?.user?.id;
       if (userId) {
         const { data: roles } = await supabase
           .from("user_roles")
