@@ -4,7 +4,7 @@ import { guessVariableMappings, extractTemplateVariables } from "./templateVaria
 describe("guessVariableMappings", () => {
   it("guesses fields from surrounding template keywords", () => {
     const body =
-      "Prezado {{1}}, informamos sobre o processo {{2}}. Sua fatura vence em {{3}}. Final do cartao: {{4}}. Valor: {{5}}.";
+      "Prezado {{1}}, informamos sobre o processo {{2}}. Sua fatura vence em {{3}}. Final do cartao: {{4}}. Gasto: {{5}}.";
     const mapping = guessVariableMappings(body);
     expect(mapping["1"]).toBe("name");
     expect(mapping["2"]).toBe("process_number");
