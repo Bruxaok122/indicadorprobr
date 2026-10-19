@@ -1609,23 +1609,6 @@ export default function AdminDisparosPage() {
                     ))}
                   </motion.div>
 
-                  {/* Anti-ban protection summary */}
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                    className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-1.5">
-                    <p className="text-xs font-semibold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                      🛡️ Proteções Anti-Ban v2
-                    </p>
-                    <div className="text-[10px] text-muted-foreground space-y-0.5">
-                      <p>• Blocos variáveis (16-24 msgs) com respiro 10-12 min</p>
-                      <p>• Delay progressivo (aumenta 15% por bloco, máx 15s)</p>
-                      <p>• Horário restrito: seg-sex 10:00-17:00 (BRT)</p>
-                      <p>• Limite diário: {ANTI_BAN_DAILY_LIMIT} mensagens por sessão</p>
-                      <p>• Cooldown de emergência (3 erros consecutivos = 5 min)</p>
-                      <p>• Auto-bloqueio de respostas negativas</p>
-                      <p>• Circuit breaker em caso de bloqueio da Meta</p>
-                    </div>
-                  </motion.div>
-
                   {/* 💰 High income filter toggle */}
                   <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
