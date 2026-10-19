@@ -337,7 +337,6 @@ export default function AdminDisparosPage() {
     valor_da_causa: "R$ 15.000,00",
     vencimento: "04/11/2026",
     final_cc: "8620",
-    valor_fatura: "R$ 3.456,90",
     gasto_utilizado: "R$ 1.234,56",
   };
   const previewValues: Record<string, string> = Object.fromEntries(
