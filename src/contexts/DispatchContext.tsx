@@ -44,9 +44,9 @@ interface DispatchContextType {
 const DispatchContext = createContext<DispatchContextType | null>(null);
 
 /** Persist a dispatch record to the database */
-async function upsertDispatchToDb(dispatch: ActiveDispatch) {
+async function upsertDispatchToDb(dispatch: ActiveDispatch, includeControls: boolean = true) {
   try {
-    await supabase.from("active_dispatches").upsert({
+    const row: Record<string, unknown> = {
       id: dispatch.id,
       operator_name: dispatch.operatorName,
       operator_id: dispatch.operatorId,
@@ -57,14 +57,33 @@ async function upsertDispatchToDb(dispatch: ActiveDispatch) {
       sent: dispatch.sent,
       failed: dispatch.failed,
       current: dispatch.current,
-      is_paused: dispatch.isPaused,
-      is_cancelled: dispatch.isCancelled,
       is_finished: dispatch.isFinished,
       errors: dispatch.errors as any,
       updated_at: new Date().toISOString(),
-    } as any);
+    };
+    // Progress updates must not overwrite pause/cancel set remotely (other tab/device)
+    if (includeControls) {
+      row.is_paused = dispatch.isPaused;
+      row.is_cancelled = dispatch.isCancelled;
+    }
+    await supabase.from("active_dispatches").upsert(row as any);
   } catch (e) {
     console.error("Failed to persist dispatch to DB:", e);
+  }
+}
+
+async function writeControlsToDb(
+  dispatchId: string,
+  controls: { is_paused?: boolean; is_cancelled?: boolean },
+) {
+  try {
+    const { error } = await supabase
+      .from("active_dispatches")
+      .update({ ...controls, updated_at: new Date().toISOString() } as any)
+      .eq("id", dispatchId);
+    if (error) console.error("Failed to write dispatch controls:", error);
+  } catch (e) {
+    console.error("Failed to write dispatch controls:", e);
   }
 }
 
@@ -99,6 +118,7 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
   const [activeDispatches, setActiveDispatches] = useState<ActiveDispatch[]>([]);
   const [loadingFromDb, setLoadingFromDb] = useState(true);
   const dispatchControlsRef = useRef<Record<string, DispatchControls>>({});
+  const lastDbControlsRef = useRef<Record<string, DispatchControls>>({});
 
   // Load persisted dispatches from DB on mount
   useEffect(() => {
@@ -139,6 +159,24 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
             const merged = mapped.map((dbDispatch) => {
               if (localControlledIds.has(dbDispatch.id)) {
                 const local = prev.find((p) => p.id === dbDispatch.id);
+                // Apply pause/cancel changed remotely (other tab/device) to the running loop
+                const ctrl = dispatchControlsRef.current[dbDispatch.id];
+                const lastSeen = lastDbControlsRef.current[dbDispatch.id];
+                if (ctrl && lastSeen) {
+                  if (dbDispatch.isCancelled && !lastSeen.isCancelled) {
+                    ctrl.isCancelled = true;
+                    ctrl.isPaused = false;
+                  } else if (dbDispatch.isPaused !== lastSeen.isPaused) {
+                    ctrl.isPaused = dbDispatch.isPaused;
+                  }
+                }
+                lastDbControlsRef.current[dbDispatch.id] = {
+                  isPaused: dbDispatch.isPaused,
+                  isCancelled: dbDispatch.isCancelled,
+                };
+                if (local && ctrl) {
+                  return { ...local, isPaused: ctrl.isPaused, isCancelled: ctrl.isCancelled };
+                }
                 return local || dbDispatch;
               }
               return dbDispatch;
@@ -165,9 +203,10 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
   const updateDispatch = useCallback((dispatchId: string, updates: Partial<ActiveDispatch>) => {
     setActiveDispatches((prev) => {
       const updated = prev.map((d) => (d.id === dispatchId ? { ...d, ...updates } : d));
-      // Persist the updated dispatch to DB
+      // Persist the updated dispatch to DB (controls only when explicitly changed)
       const dispatch = updated.find((d) => d.id === dispatchId);
-      if (dispatch) upsertDispatchToDb(dispatch);
+      const touchesControls = "isPaused" in updates || "isCancelled" in updates;
+      if (dispatch) upsertDispatchToDb(dispatch, touchesControls);
       return updated;
     });
   }, []);
@@ -184,7 +223,17 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
 
   const handlePause = useCallback((dispatchId: string) => {
     const ctrl = dispatchControlsRef.current[dispatchId];
-    if (!ctrl) return;
+    if (!ctrl) {
+      // Dispatch runs in another tab/device: write to DB, the running loop picks it up via polling
+      setActiveDispatches((prev) => {
+        const target = prev.find((d) => d.id === dispatchId);
+        if (!target) return prev;
+        const next = !target.isPaused;
+        writeControlsToDb(dispatchId, { is_paused: next });
+        return prev.map((d) => (d.id === dispatchId ? { ...d, isPaused: next } : d));
+      });
+      return;
+    }
     ctrl.isPaused = !ctrl.isPaused;
     setActiveDispatches((prev) => {
       const updated = prev.map((d) => (d.id === dispatchId ? { ...d, isPaused: ctrl.isPaused } : d));
@@ -196,7 +245,13 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
 
   const handleCancel = useCallback((dispatchId: string) => {
     const ctrl = dispatchControlsRef.current[dispatchId];
-    if (!ctrl) return;
+    if (!ctrl) {
+      writeControlsToDb(dispatchId, { is_cancelled: true, is_paused: false });
+      setActiveDispatches((prev) =>
+        prev.map((d) => (d.id === dispatchId ? { ...d, isCancelled: true, isPaused: false } : d)),
+      );
+      return;
+    }
     ctrl.isCancelled = true;
     ctrl.isPaused = false;
     setActiveDispatches((prev) => {
