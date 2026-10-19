@@ -229,12 +229,14 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
         const target = prev.find((d) => d.id === dispatchId);
         if (!target) return prev;
         const next = !target.isPaused;
+        lastDbControlsRef.current[dispatchId] = { isPaused: next, isCancelled: target.isCancelled };
         writeControlsToDb(dispatchId, { is_paused: next });
         return prev.map((d) => (d.id === dispatchId ? { ...d, isPaused: next } : d));
       });
       return;
     }
     ctrl.isPaused = !ctrl.isPaused;
+    lastDbControlsRef.current[dispatchId] = { isPaused: ctrl.isPaused, isCancelled: ctrl.isCancelled };
     setActiveDispatches((prev) => {
       const updated = prev.map((d) => (d.id === dispatchId ? { ...d, isPaused: ctrl.isPaused } : d));
       const dispatch = updated.find((d) => d.id === dispatchId);
