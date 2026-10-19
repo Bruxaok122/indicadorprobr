@@ -27,7 +27,7 @@ function normalize(text: string): string {
 
 /** Ordered keyword rules: first match wins. */
 const KEYWORD_RULES: Array<[RegExp, string]> = [
-  [/vencimento|venc\b/, "vencimento"],
+  [/venc/, "vencimento"],
   [/final (do )?(cart|cc|card)|final cc/, "final_cc"],
   [/gasto|utilizad/, "gasto_utilizado"],
   [/valor da fatura|valor fatura|\bfatura\b/, "valor_fatura"],
