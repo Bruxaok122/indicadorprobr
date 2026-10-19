@@ -10,7 +10,7 @@ describe("guessVariableMappings", () => {
     expect(mapping["2"]).toBe("process_number");
     expect(mapping["3"]).toBe("vencimento");
     expect(mapping["4"]).toBe("final_cc");
-    expect(mapping["5"]).toBe("valor_fatura");
+    expect(mapping["5"]).toBe("gasto_utilizado");
   });
 
   it("fills EVERY variable with a default (no empty mappings)", () => {
