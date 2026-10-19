@@ -43,8 +43,17 @@ interface DispatchContextType {
 
 const DispatchContext = createContext<DispatchContextType | null>(null);
 
-/** Persist a dispatch record to the database */
-async function upsertDispatchToDb(dispatch: ActiveDispatch, includeControls: boolean = true) {
+/**
+ * Persist a dispatch record to the database.
+ * `create = true` only when the dispatch starts (insert). Every later write is
+ * update-only, so a card closed ("Fechar") or removed elsewhere can never be
+ * re-created by a tab that still holds the dispatch in memory.
+ */
+async function upsertDispatchToDb(
+  dispatch: ActiveDispatch,
+  includeControls: boolean = true,
+  create: boolean = false,
+) {
   try {
     const row: Record<string, unknown> = {
       id: dispatch.id,
@@ -66,7 +75,12 @@ async function upsertDispatchToDb(dispatch: ActiveDispatch, includeControls: boo
       row.is_paused = dispatch.isPaused;
       row.is_cancelled = dispatch.isCancelled;
     }
-    await supabase.from("active_dispatches").upsert(row as any);
+    if (create) {
+      await supabase.from("active_dispatches").upsert(row as any);
+    } else {
+      const { id, ...rest } = row;
+      await supabase.from("active_dispatches").update(rest as any).eq("id", id as string);
+    }
   } catch (e) {
     console.error("Failed to persist dispatch to DB:", e);
   }
