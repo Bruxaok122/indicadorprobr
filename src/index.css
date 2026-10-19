@@ -49,6 +49,11 @@
     --violet: 263 70% 58%;
     --violet-foreground: 0 0% 100%;
 
+    /* Painel: gradiente de fundo */
+    --panel-glow: 263 70% 58%;
+    --panel-from: 255 30% 96%;
+    --panel-to: 245 25% 89%;
+
     --radius: 0.5rem;
 
     /* WhatsApp chat colors */
@@ -101,6 +106,11 @@
     /* Violet accent (dark) */
     --violet: 263 70% 65%;
     --violet-foreground: 0 0% 100%;
+
+    /* Painel: gradiente de fundo (escuro) */
+    --panel-glow: 263 70% 65%;
+    --panel-from: 258 28% 11%;
+    --panel-to: 245 30% 4%;
 
     /* WhatsApp chat colors (dark) */
     --chat-bg: 220 18% 8%;
@@ -348,4 +358,13 @@ div[style*="Edit with Lovable"],
   width: 100%;
   mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+
+/* Painel administrativo: fundo gradiente violeta (referência do novo design) */
+.admin-gradient {
+  background-color: hsl(var(--panel-to));
+  background-image:
+    radial-gradient(90% 55% at 50% -8%, hsl(var(--panel-glow) / 0.3), transparent 70%),
+    radial-gradient(55% 40% at 10% 0%, hsl(var(--panel-glow) / 0.14), transparent 65%),
+    linear-gradient(165deg, hsl(var(--panel-from)) 0%, hsl(var(--panel-to)) 100%);
 }
