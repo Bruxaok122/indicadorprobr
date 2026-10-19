@@ -749,6 +749,7 @@ export default function AdminDisparosPage() {
             const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
               body: {
                 contactIds: [contactId],
+                dispatchId,
                 templateName: capturedTemplate.name,
                 templateLanguage: capturedTemplate.language,
                 userId: user?.id,
@@ -885,6 +886,7 @@ export default function AdminDisparosPage() {
             const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
               body: {
                 contactIds: [contactId],
+                dispatchId,
                 templateName: capturedTemplate.name,
                 templateLanguage: capturedTemplate.language,
                 userId: user?.id,
