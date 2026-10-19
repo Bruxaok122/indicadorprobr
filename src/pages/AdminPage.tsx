@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Users, UserPlus, Radio, Mic, HeartPulse, Zap, Activity, FileText, BotMessageSquare, Eye } from "lucide-react";
+import { Users, UserPlus, Radio, Mic, HeartPulse, Zap, Activity, FileText, BotMessageSquare, Eye, Phone, Contact } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { AdminHeader } from "@/components/admin/AdminHeader";
+import { AdminShell, AdminNavItem } from "@/components/admin/AdminShell";
 import { StatsCards } from "@/components/admin/StatsCards";
 import { UserCard } from "@/components/admin/UserCard";
 import { UsersTable } from "@/components/admin/UsersTable";
@@ -20,7 +20,6 @@ import { PhonePermissionsDialog } from "@/components/admin/PhonePermissionsDialo
 import { AdminChatMonitor } from "@/components/admin/AdminChatMonitor";
 import { ApiHealthMonitor } from "@/components/admin/ApiHealthMonitor";
 import { Profile } from "@/types/juriszap";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DispatchProvider, useDispatchContext } from "@/contexts/DispatchContext";
 import AdminDisparosPage from "@/pages/AdminDisparosPage";
 import AdminContatosPage from "@/pages/AdminContatosPage";
@@ -32,9 +31,23 @@ import { AITestPanel } from "@/components/admin/AITestPanel";
 import { FailureRateCard } from "@/components/admin/FailureRateCard";
 import { RealtimeMonitorPanel } from "@/components/admin/RealtimeMonitorPanel";
 
+const NAV_ITEMS: AdminNavItem[] = [
+  { value: "tempo-real", label: "Tempo Real", description: "Acompanhe operadores e conversas ao vivo", icon: Eye, group: "Geral" },
+  { value: "acompanhamento", label: "Acompanhamento", description: "Progresso dos disparos em andamento", icon: Activity, group: "Geral" },
+  { value: "disparos", label: "Disparos", description: "Configure e inicie envios de templates", icon: Radio, group: "Geral" },
+  { value: "contatos", label: "Contatos", description: "Listas importadas e contatos dos clientes", icon: Contact, group: "Geral" },
+  { value: "fichas", label: "Fichas", description: "Dados coletados prontos para exportar", icon: FileText, group: "Geral" },
+  { value: "usuarios", label: "Usuários", description: "Crie, bloqueie e gerencie permissões", icon: Users, group: "Gestão" },
+  { value: "numeros", label: "Números", description: "Números do WhatsApp conectados", icon: Phone, group: "Gestão" },
+  { value: "audio", label: "Áudio", description: "Áudios atribuídos aos operadores", icon: Mic, group: "Gestão" },
+  { value: "apis", label: "APIs", description: "Contas da Meta e API ativa", icon: Zap, group: "Sistema" },
+  { value: "saude", label: "Saúde API", description: "Taxa de falhas e qualidade das contas", icon: HeartPulse, group: "Sistema" },
+  { value: "teste-ia", label: "Teste IA", description: "Ambiente de testes do assistente", icon: BotMessageSquare, group: "Sistema" },
+];
+
 function AdminPageInner() {
   const navigate = useNavigate();
-  const { signOut } = useAuthContext();
+  const { signOut, profile } = useAuthContext();
   const isMobile = useIsMobile();
   const {
     users,
@@ -76,62 +89,29 @@ function AdminPageInner() {
   };
 
   return (
-    <div className="min-h-screen bg-background dark">
-      <AdminHeader onLogout={handleLogout} onRefresh={refreshAll} />
-
-      <main className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
-        <Tabs defaultValue="tempo-real" onValueChange={(v) => setActiveTab(v)}>
-          <TabsList className="w-full sm:w-auto flex-wrap">
-            <TabsTrigger value="tempo-real" className="gap-1.5">
-              <Eye className="h-4 w-4" /> Tempo Real
-            </TabsTrigger>
-            <TabsTrigger value="apis" className="gap-1.5">
-              <Zap className="h-4 w-4" /> APIs
-            </TabsTrigger>
-            <TabsTrigger value="saude" className="gap-1.5">
-              <HeartPulse className="h-4 w-4" /> Saúde API
-            </TabsTrigger>
-            <TabsTrigger value="usuarios" className="gap-1.5">
-              <Users className="h-4 w-4" /> Usuários
-            </TabsTrigger>
-            <TabsTrigger value="numeros" className="gap-1.5">
-              Números
-            </TabsTrigger>
-            <TabsTrigger value="contatos" className="gap-1.5">
-              Contatos
-            </TabsTrigger>
-            <TabsTrigger value="audio" className="gap-1.5">
-              <Mic className="h-4 w-4" /> Áudio
-            </TabsTrigger>
-            <TabsTrigger value="disparos" className="gap-1.5">
-              <Radio className="h-4 w-4" /> Disparos
-            </TabsTrigger>
-            <TabsTrigger value="acompanhamento" className="gap-1.5">
-              <Activity className="h-4 w-4" /> Acompanhamento
-            </TabsTrigger>
-            <TabsTrigger value="fichas" className="gap-1.5">
-              <FileText className="h-4 w-4" /> Fichas
-            </TabsTrigger>
-            <TabsTrigger value="teste-ia" className="gap-1.5">
-              <BotMessageSquare className="h-4 w-4" /> Teste IA
-            </TabsTrigger>
-          </TabsList>
-
-
-          <TabsContent value="tempo-real" className="mt-4">
+    <>
+      <AdminShell
+        items={NAV_ITEMS}
+        active={activeTab}
+        onChange={setActiveTab}
+        onLogout={handleLogout}
+        onRefresh={refreshAll}
+        userName={profile?.full_name || undefined}
+      >
+          {activeTab === "tempo-real" && (<div className="">
             <RealtimeMonitorPanel />
-          </TabsContent>
+          </div>)}
 
-          <TabsContent value="apis" className="mt-4">
+          {activeTab === "apis" && (<div className="">
             <ApiConfigsSection />
-          </TabsContent>
+          </div>)}
 
-          <TabsContent value="saude" className="mt-4 space-y-4">
+          {activeTab === "saude" && (<div className="space-y-4">
             <FailureRateCard />
             <ApiHealthMonitor />
-          </TabsContent>
+          </div>)}
 
-          <TabsContent value="usuarios" className="mt-4 space-y-4">
+          {activeTab === "usuarios" && (<div className="space-y-4">
             <StatsCards stats={stats} isLoading={isLoadingStats} />
             <Card>
               <CardHeader>
@@ -199,40 +179,38 @@ function AdminPageInner() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>)}
 
-          <TabsContent value="numeros" className="mt-4 space-y-4">
+          {activeTab === "numeros" && (<div className="space-y-4">
             <PhoneNumbersSection />
-          </TabsContent>
+          </div>)}
 
-          <TabsContent value="contatos" className="mt-4">
+          {activeTab === "contatos" && (<div className="">
             <AdminContatosPage />
-          </TabsContent>
+          </div>)}
 
-          <TabsContent value="audio" className="mt-4">
+          {activeTab === "audio" && (<div className="">
             <AdminAudioPage />
-          </TabsContent>
+          </div>)}
 
-          <TabsContent value="disparos" className="mt-4">
+          {activeTab === "disparos" && (<div className="">
             <AdminDisparosPage />
-          </TabsContent>
+          </div>)}
 
-          <TabsContent value="acompanhamento" className="mt-4">
+          {activeTab === "acompanhamento" && (<div className="">
             <DispatchMonitor />
-          </TabsContent>
+          </div>)}
 
-          <TabsContent value="fichas" className="mt-4">
+          {activeTab === "fichas" && (<div className="">
             <AdminFichasPanel />
-          </TabsContent>
+          </div>)}
 
-          <TabsContent value="teste-ia" className="mt-4">
+          {activeTab === "teste-ia" && (<div className="">
             <AITestPanel />
-          </TabsContent>
+          </div>)}
 
 
-        </Tabs>
-
-      </main>
+      </AdminShell>
 
       <CreateUserDialog
         open={showCreateDialog}
@@ -284,7 +262,7 @@ function AdminPageInner() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
 
