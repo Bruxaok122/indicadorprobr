@@ -322,14 +322,8 @@ export default function AdminDisparosPage() {
 
   useEffect(() => {
     if (!selectedTemplate) { setVariableMappings({}); return; }
-    const body = getTemplateBody(selectedTemplate);
-    const vars = extractVariables(body);
-    const defaults: Record<string, string> = {};
-    vars.forEach((v, i) => {
-      if (i === 0) defaults[String(v)] = "name";
-      else if (i === 1) defaults[String(v)] = "process_number";
-    });
-    setVariableMappings(defaults);
+    // Smart defaults: guess every variable from the template text itself
+    setVariableMappings(guessVariableMappings(getTemplateBody(selectedTemplate)));
   }, [selectedTemplate]);
 
   const approvedTemplates = allTemplates.filter((t) => t.status === "APPROVED");
