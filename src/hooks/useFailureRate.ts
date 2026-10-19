@@ -33,11 +33,21 @@ export function useFailureRate(enabled = true) {
       // Messages from last 2 hours
       const since = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
 
-      const { data: messages } = await supabase
-        .from("messages")
-        .select("status, error_code")
-        .eq("direction", "outgoing")
-        .gte("created_at", since);
+      // Escopo: somente números da API ativa (evita misturar APIs antigas)
+      const { data: api } = await supabase.from("api_configs").select("id").eq("is_active", true).maybeSingle();
+      const { data: phones } = api
+        ? await supabase.from("waba_phone_numbers").select("phone_number_id").eq("api_config_id", api.id)
+        : { data: [] as { phone_number_id: string }[] };
+      const ids = (phones || []).map((p) => p.phone_number_id);
+
+      const { data: messages } = ids.length === 0
+        ? { data: [] as { status: string | null; error_code: string | null }[] }
+        : await supabase
+            .from("messages")
+            .select("status, error_code, contacts!inner(dispatched_phone_number_id)")
+            .eq("direction", "outgoing")
+            .in("contacts.dispatched_phone_number_id", ids)
+            .gte("created_at", since);
 
       if (!messages) return;
 
