@@ -118,6 +118,7 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
   const [activeDispatches, setActiveDispatches] = useState<ActiveDispatch[]>([]);
   const [loadingFromDb, setLoadingFromDb] = useState(true);
   const dispatchControlsRef = useRef<Record<string, DispatchControls>>({});
+  const lastDbControlsRef = useRef<Record<string, DispatchControls>>({});
 
   // Load persisted dispatches from DB on mount
   useEffect(() => {
