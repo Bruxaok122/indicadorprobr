@@ -180,7 +180,7 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact, onRep
     }
     // Clique em botão do template (inclui registros antigos salvos como "[button]")
     if ((message.message_type as string) === "button" || (message.message_type as string) === "interactive" || message.content === "[button]" || message.content === "[interactive]") {
-      const label = message.content && !message.content.startsWith("[") ? message.content : "Botão do template";
+      const label = message.content && !message.content.startsWith("[") ? message.content : "Nome do botão não registrado (clique antigo)";
       return (
         <div className="flex flex-col gap-1">
           <span className="text-[9px] font-semibold uppercase tracking-wider opacity-60">👆 Clicou no botão</span>
