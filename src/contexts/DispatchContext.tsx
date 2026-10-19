@@ -199,6 +199,15 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
             // Preserve locally-controlled dispatches not yet in DB (race condition guard)
             for (const localDispatch of prev) {
               if (localControlledIds.has(localDispatch.id) && !dbIds.has(localDispatch.id)) {
+                if (lastDbControlsRef.current[localDispatch.id]) {
+                  // Was in DB before and is gone now: closed/removed elsewhere → stop and drop it.
+                  const ctrl = dispatchControlsRef.current[localDispatch.id];
+                  if (ctrl) {
+                    ctrl.isCancelled = true;
+                    ctrl.isPaused = false;
+                  }
+                  continue;
+                }
                 merged.push(localDispatch);
               }
             }
