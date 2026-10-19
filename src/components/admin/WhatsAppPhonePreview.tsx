@@ -9,6 +9,7 @@ export interface WhatsAppPhonePreviewProps {
   /** Map of variable number → display value (already resolved). */
   values: Record<string, string>;
   senderName: string;
+  photoUrl?: string;
 }
 
 interface TemplateButton { type?: string; text?: string }
@@ -24,7 +25,7 @@ function formatWa(text: string): ReactNode[] {
   });
 }
 
-export function WhatsAppPhonePreview({ template, body, values, senderName }: WhatsAppPhonePreviewProps) {
+export function WhatsAppPhonePreview({ template, body, values, senderName, photoUrl }: WhatsAppPhonePreviewProps) {
   const comps = template?.components ?? [];
   const header = comps.find((c) => c.type === "HEADER" && c.format === "TEXT")?.text;
   const footer = comps.find((c) => c.type === "FOOTER")?.text;
@@ -40,11 +41,15 @@ export function WhatsAppPhonePreview({ template, body, values, senderName }: Wha
       <div className="absolute -inset-6 rounded-[3rem] bg-primary/20 blur-3xl" aria-hidden />
       <div className="relative rounded-[2.6rem] border border-border/60 bg-gradient-to-b from-muted to-background p-2.5 shadow-2xl">
         <div className="absolute left-1/2 top-3.5 z-10 h-5 w-24 -translate-x-1/2 rounded-full bg-background" aria-hidden />
-        <div className="wa-screen relative flex h-[540px] flex-col overflow-hidden rounded-[2.1rem]">
+        <div className="wa-screen relative flex h-[min(540px,calc(100dvh-180px))] flex-col overflow-hidden rounded-[2.1rem]">
           {/* Chat header */}
           <div className="wa-header flex items-center gap-2 px-3 pb-2.5 pt-10">
             <ArrowLeft className="h-4 w-4" />
-            <div className="wa-avatar flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold">{initials}</div>
+            {photoUrl ? (
+              <img src={photoUrl} alt="Foto do perfil" referrerPolicy="no-referrer" className="h-8 w-8 rounded-full object-cover" />
+            ) : (
+              <div className="wa-avatar flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold">{initials}</div>
+            )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-semibold leading-tight">{senderName || "Seu número"}</p>
               <p className="text-[10px] opacity-75">conta comercial</p>
