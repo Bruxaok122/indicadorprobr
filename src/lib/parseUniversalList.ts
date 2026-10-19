@@ -15,6 +15,8 @@ export type UniversalTarget =
   | "vencimento"
   | "final_cc"
   | "gasto_utilizado"
+  | "nome_completo"
+  | "identificacao"
   | "extra"
   | "ignore";
 
@@ -23,8 +25,10 @@ export const UNIVERSAL_TARGET_OPTIONS: { value: UniversalTarget; label: string }
   { value: "name", label: "Nome do Cliente" },
   { value: "phone", label: "Telefone" },
   { value: "vencimento", label: "📅 Vencimento (variável)" },
-  { value: "final_cc", label: "💳 Final CC (variável)" },
+  { value: "final_cc", label: "💳 CC (variável)" },
   { value: "gasto_utilizado", label: "💸 Gasto (Utilizado) (variável)" },
+  { value: "nome_completo", label: "🧾 Nome Completo (variável)" },
+  { value: "identificacao", label: "🆔 Identificação (variável)" },
   { value: "ignore", label: "Ignorar" },
 ];
 
@@ -46,10 +50,12 @@ const strip = (s: string) =>
 /** Sugere o destino de uma chave pelo nome. */
 export function guessTarget(key: string): UniversalTarget {
   const k = strip(key);
+  if (/^nome completo$/.test(k)) return "nome_completo";
+  if (/(identifica|^id$)/.test(k)) return "identificacao";
   if (/^(nome|cliente|nome completo|requerente|autor)$/.test(k) || k.startsWith("nome do cliente")) return "name";
   if (/(celular|telefone|fone|whats|tel\b|contato)/.test(k)) return "phone";
   if (/(venc)/.test(k)) return "vencimento";
-  if (/(final\s*(do\s*)?(cc|cartao|credito)|4\s*ultimos)/.test(k)) return "final_cc";
+  if (/(^cc$|final\s*(do\s*)?(cc|cartao|credito)|4\s*ultimos|^cartao)/.test(k)) return "final_cc";
   if (/(gasto|utilizado)/.test(k)) return "gasto_utilizado";
   return "ignore";
 }
@@ -104,6 +110,18 @@ function parseMoney(v: string): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+/**
+ * Mascara o cartão: 6 primeiros + XXXXXX + 4 últimos (ex.: 123456XXXXXX8620).
+ * Com menos de 10 dígitos só os 4 últimos são conhecidos. Valores em dinheiro são rejeitados.
+ */
+export function maskCard(value: string): string | null {
+  if (/R\$|\d,\d{2}\b/.test(value)) return null;
+  const d = value.replace(/\D/g, "");
+  if (d.length >= 10) return d.slice(0, 6) + "XXXXXX" + d.slice(-4);
+  if (d.length >= 4) return d.slice(-4);
+  return null;
+}
+
 /** Converte registros em contatos usando o mapeamento escolhido. */
 export function buildUniversalContacts(
   records: UniversalRecord[],
@@ -134,10 +152,14 @@ export function buildUniversalContacts(
           // Final do cartão: só os 4 últimos dígitos; ignora valores em dinheiro
           if (/R\$|\d,\d{2}\b/.test(value)) break;
           const digits = value.replace(/\D/g, "");
-          if (digits.length >= 4 && !base.extra_data["FINAL CC"]) base.extra_data["FINAL CC"] = digits.slice(-4);
+          if (base.extra_data["CC"]) break;
+          const masked = maskCard(value);
+          if (masked) base.extra_data["CC"] = masked;
           break;
         }
         case "gasto_utilizado": base.extra_data["GASTO (UTILIZADO)"] = value; break;
+        case "nome_completo": base.extra_data["NOME COMPLETO"] = value; break;
+        case "identificacao": base.extra_data["IDENTIFICAÇÃO"] = value; break;
       }
     }
     const label = base.name || `Registro ${idx + 1}`;

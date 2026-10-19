@@ -44,8 +44,10 @@ const CONTACT_FIELD_OPTIONS = [
   { value: "cpf", label: "CPF" },
   { value: "valor_da_causa", label: "Valor da Causa" },
   { value: "vencimento", label: "Vencimento" },
-  { value: "final_cc", label: "Final CC" },
+  { value: "final_cc", label: "CC" },
   { value: "gasto_utilizado", label: "Gasto (Utilizado)" },
+  { value: "nome_completo", label: "Nome Completo" },
+  { value: "identificacao", label: "Identificação" },
 ];
 
 function extractVariablesFromText(text: string): number[] {
