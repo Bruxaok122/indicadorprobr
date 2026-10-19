@@ -44,9 +44,9 @@ interface DispatchContextType {
 const DispatchContext = createContext<DispatchContextType | null>(null);
 
 /** Persist a dispatch record to the database */
-async function upsertDispatchToDb(dispatch: ActiveDispatch) {
+async function upsertDispatchToDb(dispatch: ActiveDispatch, includeControls: boolean = true) {
   try {
-    await supabase.from("active_dispatches").upsert({
+    const row: Record<string, unknown> = {
       id: dispatch.id,
       operator_name: dispatch.operatorName,
       operator_id: dispatch.operatorId,
@@ -57,12 +57,16 @@ async function upsertDispatchToDb(dispatch: ActiveDispatch) {
       sent: dispatch.sent,
       failed: dispatch.failed,
       current: dispatch.current,
-      is_paused: dispatch.isPaused,
-      is_cancelled: dispatch.isCancelled,
       is_finished: dispatch.isFinished,
       errors: dispatch.errors as any,
       updated_at: new Date().toISOString(),
-    } as any);
+    };
+    // Progress updates must not overwrite pause/cancel set remotely (other tab/device)
+    if (includeControls) {
+      row.is_paused = dispatch.isPaused;
+      row.is_cancelled = dispatch.isCancelled;
+    }
+    await supabase.from("active_dispatches").upsert(row as any);
   } catch (e) {
     console.error("Failed to persist dispatch to DB:", e);
   }
