@@ -402,3 +402,68 @@ h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Sora', 'Manrope', system-u
   .admin-gradient [data-card] { animation: none; transition: none; }
   .admin-gradient [data-card]:hover { transform: none; }
 }
+
+/* ============ Tela de login: fundo violeta do painel + orbes animados ============ */
+.login-gradient {
+  background-color: hsl(var(--panel-to));
+  background-image:
+    radial-gradient(90% 55% at 50% -8%, hsl(var(--panel-glow) / 0.32), transparent 70%),
+    radial-gradient(55% 40% at 8% 0%, hsl(var(--panel-glow) / 0.16), transparent 65%),
+    linear-gradient(165deg, hsl(var(--panel-from)) 0%, hsl(var(--panel-to)) 100%);
+}
+
+@keyframes login-orb-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(6%, -5%, 0) scale(1.08); }
+  66% { transform: translate3d(-5%, 4%, 0) scale(0.94); }
+}
+.login-orb { animation: login-orb-drift 18s ease-in-out infinite; will-change: transform; }
+.login-orb-slow { animation-duration: 26s; animation-direction: reverse; }
+
+/* Borda luminosa girando ao redor do card */
+@keyframes login-border-spin {
+  to { transform: rotate(1turn); }
+}
+.login-border-glow::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--angle, 0deg),
+    hsl(var(--panel-glow) / 0.55),
+    transparent 28%,
+    hsl(190 90% 55% / 0.4) 46%,
+    transparent 62%,
+    hsl(var(--panel-glow) / 0.55));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: login-border-spin 8s linear infinite;
+  pointer-events: none;
+}
+@property --angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes login-border-spin { to { --angle: 360deg; } }
+
+/* Pulso suave atrás da logo */
+@keyframes login-logo-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.12); }
+}
+.login-logo-pulse { animation: login-logo-pulse 4s ease-in-out infinite; }
+
+/* Brilho que percorre o botão */
+@keyframes login-shine {
+  0% { transform: translateX(-120%) skewX(-15deg); }
+  60%, 100% { transform: translateX(240%) skewX(-15deg); }
+}
+.login-shine { animation: login-shine 3.2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .login-orb, .login-border-glow::before, .login-logo-pulse, .login-shine { animation: none; }
+}

@@ -4,9 +4,10 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Lock, Mail, Eye, EyeOff, Scale, AlertCircle } from "lucide-react";
+import { Lock, Mail, Eye, EyeOff, AlertCircle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import logoAsset from "@/assets/logo-juriszap.png.asset.json";
 
 export function LoginGlassCard() {
   const navigate = useNavigate();
@@ -46,41 +47,54 @@ export function LoginGlassCard() {
       initial={{ y: 40, opacity: 0, scale: 0.95 }}
       animate={{ y: 0, opacity: 1, scale: 1 }}
       transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-      className="relative w-full max-w-[440px] rounded-3xl p-6 sm:p-8 lg:p-10"
+      className="login-border-glow relative w-full max-w-[440px] rounded-3xl p-6 sm:p-8 lg:p-10"
       style={{
-        background: "hsla(213, 40%, 16%, 0.55)",
+        background:
+          "linear-gradient(160deg, hsl(258 28% 13% / 0.75), hsl(245 30% 6% / 0.85))",
         backdropFilter: "blur(24px) saturate(1.4)",
         WebkitBackdropFilter: "blur(24px) saturate(1.4)",
-        border: "1px solid hsla(263, 70%, 60%, 0.2)",
+        border: "1px solid hsl(263 70% 65% / 0.18)",
         boxShadow:
-          "0 32px 64px -12px hsla(213, 53%, 8%, 0.6), inset 0 1px 0 hsla(0, 0%, 100%, 0.06)",
+          "0 32px 80px -16px hsl(245 30% 3% / 0.8), 0 0 60px -20px hsl(263 70% 58% / 0.35), inset 0 1px 0 hsl(0 0% 100% / 0.07)",
       }}
     >
-      {/* Logo & branding */}
+      {/* Logo & branding — nova logo oficial */}
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.6 }}
-        className="mb-5 lg:mb-8 flex items-center gap-3"
+        className="mb-6 lg:mb-8 flex flex-col items-center text-center"
       >
-        <div
-          className="flex h-12 w-12 items-center justify-center rounded-xl"
-          style={{
-            background:
-              "linear-gradient(135deg, hsl(43 84% 45%) 0%, hsl(43 84% 60%) 100%)",
-            boxShadow: "0 6px 20px hsla(43, 84%, 38%, 0.35)",
-          }}
-        >
-          <Scale className="h-6 w-6 text-white" />
+        <div className="relative mb-4">
+          {/* Halo pulsante atrás da logo */}
+          <div
+            className="login-logo-pulse absolute inset-0 rounded-2xl"
+            style={{
+              background:
+                "radial-gradient(circle, hsl(263 70% 58% / 0.5) 0%, transparent 70%)",
+              filter: "blur(14px)",
+            }}
+          />
+          <motion.img
+            src={logoAsset.url}
+            alt="JurisZap"
+            initial={{ scale: 0.8, rotate: -6, opacity: 0 }}
+            animate={{ scale: 1, rotate: 0, opacity: 1 }}
+            transition={{ delay: 0.15, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="relative h-16 w-16 rounded-2xl"
+            style={{
+              border: "1px solid hsl(263 70% 65% / 0.35)",
+              boxShadow:
+                "0 10px 30px -8px hsl(263 70% 58% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.1)",
+            }}
+          />
         </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white">
-            JurisZap
-          </h1>
-          <p className="text-[11px] font-medium uppercase tracking-widest text-white/40">
-            Comunicação Jurídica
-          </p>
-        </div>
+        <h1 className="text-2xl font-bold tracking-tight text-white">
+          JurisZap
+        </h1>
+        <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.25em] text-white/40">
+          Comunicação Jurídica
+        </p>
       </motion.div>
 
       {/* Welcome text */}
@@ -88,10 +102,10 @@ export function LoginGlassCard() {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.6 }}
-        className="mb-5 lg:mb-8"
+        className="mb-6 lg:mb-8 text-center"
       >
-        <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-          Bem-vindo
+        <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+          Bem-vindo de volta
         </h2>
         <p className="mt-2 text-sm text-white/50">
           Insira suas credenciais para acessar o sistema
@@ -104,7 +118,7 @@ export function LoginGlassCard() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.4, duration: 0.6 }}
         onSubmit={handleSubmit}
-        className="space-y-4 lg:space-y-6"
+        className="space-y-4 lg:space-y-5"
       >
         {error && (
           <motion.div
@@ -115,9 +129,9 @@ export function LoginGlassCard() {
             <div
               className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm"
               style={{
-                background: "hsla(0, 70%, 50%, 0.12)",
-                border: "1px solid hsla(0, 70%, 50%, 0.2)",
-                color: "hsl(0, 85%, 75%)",
+                background: "hsl(0 70% 50% / 0.12)",
+                border: "1px solid hsl(0 70% 50% / 0.25)",
+                color: "hsl(0 85% 75%)",
               }}
             >
               <AlertCircle className="h-4 w-4 shrink-0" />
@@ -142,7 +156,7 @@ export function LoginGlassCard() {
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-12 rounded-xl border-white/10 bg-white/[0.06] pl-11 text-base text-white shadow-sm transition-all duration-200 placeholder:text-white/25 focus-visible:border-violet/40 focus-visible:ring-1 focus-visible:ring-violet/30"
+              className="h-12 rounded-xl border-white/10 bg-white/[0.06] pl-11 text-base text-white shadow-sm transition-all duration-300 placeholder:text-white/25 focus-visible:border-violet/50 focus-visible:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-violet/25"
               required
               disabled={isLoading}
             />
@@ -165,7 +179,7 @@ export function LoginGlassCard() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-12 rounded-xl border-white/10 bg-white/[0.06] pl-11 pr-11 text-base text-white shadow-sm transition-all duration-200 placeholder:text-white/25 focus-visible:border-violet/40 focus-visible:ring-1 focus-visible:ring-violet/30"
+              className="h-12 rounded-xl border-white/10 bg-white/[0.06] pl-11 pr-11 text-base text-white shadow-sm transition-all duration-300 placeholder:text-white/25 focus-visible:border-violet/50 focus-visible:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-violet/25"
               required
               disabled={isLoading}
             />
@@ -188,19 +202,20 @@ export function LoginGlassCard() {
         <button
           type="submit"
           disabled={isLoading}
-          className="relative h-12 w-full overflow-hidden rounded-xl text-sm font-bold uppercase tracking-wider text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
+          className="group relative h-12 w-full overflow-hidden rounded-xl text-sm font-bold uppercase tracking-wider text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
           style={{
             background:
-              "linear-gradient(135deg, hsl(263 70% 55%) 0%, hsl(263 70% 65%) 100%)",
-            boxShadow: "0 8px 32px hsla(263, 70%, 50%, 0.35)",
+              "linear-gradient(135deg, hsl(263 70% 52%) 0%, hsl(263 70% 64%) 100%)",
+            boxShadow:
+              "0 8px 32px hsl(263 70% 50% / 0.4), inset 0 1px 0 hsl(0 0% 100% / 0.2)",
           }}
         >
-          {/* Shine effect */}
+          {/* Shine sweep */}
           <div
-            className="absolute inset-0 opacity-0 transition-opacity duration-300 hover:opacity-100"
+            className="login-shine absolute inset-y-0 w-1/3 opacity-0 group-hover:opacity-100"
             style={{
               background:
-                "linear-gradient(90deg, transparent 0%, hsla(0,0%,100%,0.15) 50%, transparent 100%)",
+                "linear-gradient(90deg, transparent 0%, hsl(0 0% 100% / 0.18) 50%, transparent 100%)",
             }}
           />
           {isLoading ? (
@@ -219,10 +234,11 @@ export function LoginGlassCard() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.7, duration: 0.5 }}
-        className="mt-5 lg:mt-8 flex items-center gap-3"
+        className="mt-6 lg:mt-8 flex items-center gap-3"
       >
         <div className="h-px flex-1 bg-white/10" />
-        <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/25">
+        <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.2em] text-white/30">
+          <ShieldCheck className="h-3 w-3" />
           Acesso Seguro
         </span>
         <div className="h-px flex-1 bg-white/10" />
@@ -235,7 +251,7 @@ export function LoginGlassCard() {
         transition={{ delay: 0.9, duration: 0.5 }}
         className="mt-5 text-center text-[11px] text-white/25"
       >
-        © 2025 JurisZap
+        © 2026 JurisZap
       </motion.p>
     </motion.div>
   );

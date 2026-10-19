@@ -2,56 +2,54 @@ import { motion } from "framer-motion";
 
 export function LoginBackground() {
   return (
-    <div className="absolute inset-0 overflow-hidden">
-      {/* Deep gradient base */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(135deg, hsl(213 53% 8%) 0%, hsl(213 53% 14%) 30%, hsl(213 40% 18%) 60%, hsl(220 30% 12%) 100%)",
-        }}
-      />
-
-      {/* Ambient gold glow — top left */}
+    <div className="login-gradient absolute inset-0 overflow-hidden">
+      {/* Orbe violeta — topo esquerdo (deriva lenta) */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 2 }}
-        className="absolute -left-32 -top-32 h-[600px] w-[600px] rounded-full"
+        className="login-orb absolute -left-40 -top-40 h-[640px] w-[640px] rounded-full"
         style={{
           background:
-            "radial-gradient(circle, hsla(43, 84%, 50%, 0.12) 0%, transparent 70%)",
+            "radial-gradient(circle, hsl(263 70% 58% / 0.22) 0%, transparent 70%)",
+          filter: "blur(40px)",
         }}
       />
 
-      {/* Ambient blue glow — bottom right */}
+      {/* Orbe ciano — eco da logo, base direita (deriva reversa) */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 2, delay: 0.3 }}
-        className="absolute -bottom-40 -right-40 h-[700px] w-[700px] rounded-full"
+        className="login-orb login-orb-slow absolute -bottom-48 -right-40 h-[720px] w-[720px] rounded-full"
         style={{
           background:
-            "radial-gradient(circle, hsla(213, 53%, 30%, 0.2) 0%, transparent 70%)",
+            "radial-gradient(circle, hsl(190 90% 45% / 0.12) 0%, transparent 70%)",
+          filter: "blur(50px)",
         }}
       />
 
-      {/* Subtle center glow */}
+      {/* Orbe violeta suave — centro */}
       <div
-        className="absolute left-1/3 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        className="absolute left-1/3 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full"
         style={{
           background:
-            "radial-gradient(circle, hsla(43, 84%, 50%, 0.05) 0%, transparent 70%)",
+            "radial-gradient(circle, hsl(263 70% 60% / 0.07) 0%, transparent 70%)",
+          filter: "blur(30px)",
         }}
       />
 
       {/* Grid pattern overlay */}
       <div
-        className="absolute inset-0 opacity-[0.025]"
+        className="absolute inset-0 opacity-[0.03]"
         style={{
           backgroundImage:
             "linear-gradient(rgba(255,255,255,.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.15) 1px, transparent 1px)",
           backgroundSize: "80px 80px",
+          maskImage:
+            "radial-gradient(ellipse at center, black 30%, transparent 75%)",
+          WebkitMaskImage:
+            "radial-gradient(ellipse at center, black 30%, transparent 75%)",
         }}
       />
 
