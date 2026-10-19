@@ -11,6 +11,8 @@ interface AuthState {
   profile: Profile | null;
   role: 'admin' | 'user' | null;
   isLoading: boolean;
+  /** true depois que perfil/papel foram lidos do banco nesta sessão */
+  profileLoaded: boolean;
   isBlocked: boolean;
   isTempBanned: boolean;
   banReason: string | null;
@@ -24,6 +26,7 @@ export function useAuth() {
     profile: null,
     role: null,
     isLoading: true,
+    profileLoaded: false,
     isBlocked: false,
     isTempBanned: false,
     banReason: null,
@@ -63,12 +66,13 @@ export function useAuth() {
         banReason,
         banUntil,
         isLoading: false,
+        profileLoaded: true,
       }));
 
       return { profile, isBlocked, isTempBanned, banReason, banUntil };
     } catch (error) {
       console.error("Error fetching user data:", error);
-      setState(prev => ({ ...prev, isLoading: false }));
+      setState(prev => ({ ...prev, isLoading: false, profileLoaded: true }));
       return { profile: null, isBlocked: false, isTempBanned: false, banReason: null, banUntil: null };
     }
   }, []);
@@ -270,6 +274,7 @@ export function useAuth() {
           banReason: null,
           banUntil: null,
           isLoading: false,
+          profileLoaded: false,
         }));
       }
     });

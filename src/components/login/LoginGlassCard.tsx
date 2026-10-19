@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -25,9 +26,24 @@ export function LoginGlassCard() {
     setIsLoading(true);
 
     try {
-      await signIn(email, password);
+      // signIn devolve { user, session } (sem o embrulho "data")
+      const authData = await signIn(email, password);
       toast.success("Login realizado com sucesso!");
-      navigate("/");
+      // Administrador entra direto no /administrador; demais perfis vão para o chat.
+      // O papel é lido direto do banco: o listener de sessão ainda pode não ter
+      // carregado o perfil no instante em que o signIn resolve.
+      let target = "/";
+      const userId = authData?.user?.id;
+      if (userId) {
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userId);
+        if (roles?.some((r: { role: string }) => r.role === "admin")) {
+          target = "/administrador";
+        }
+      }
+      navigate(target, { replace: true });
     } catch (err: any) {
       console.error("Login error:", err);
       if (err.message.includes("Invalid login credentials")) {

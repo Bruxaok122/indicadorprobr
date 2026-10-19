@@ -9,6 +9,7 @@ interface AuthContextType {
   profile: Profile | null;
   role: 'admin' | 'user' | null;
   isLoading: boolean;
+  profileLoaded: boolean;
   isBlocked: boolean;
   isAdmin: boolean;
   isAuthenticated: boolean;
