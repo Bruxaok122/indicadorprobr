@@ -179,7 +179,7 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact, onRep
       );
     }
     // Clique em botão do template (inclui registros antigos salvos como "[button]")
-    if (message.message_type === "button" || message.message_type === "interactive" || message.content === "[button]" || message.content === "[interactive]") {
+    if ((message.message_type as string) === "button" || (message.message_type as string) === "interactive" || message.content === "[button]" || message.content === "[interactive]") {
       const label = message.content && !message.content.startsWith("[") ? message.content : "Botão do template";
       return (
         <div className="flex flex-col gap-1">
@@ -373,7 +373,7 @@ function QuickReactRow({ messageId, onReact }: { messageId: string; onReact: (id
 
 export function getReplyPreview(msg: Message): { label: string; icon: "text" | "image" | "audio" | "document" | "sticker" } {
   if (msg.is_deleted) return { label: "Mensagem apagada", icon: "text" };
-  switch (msg.message_type) {
+  switch (msg.message_type as string) {
     case "image":
       return { label: msg.content && msg.content !== "[Imagem recebida]" ? msg.content : "Imagem", icon: "image" };
     case "audio":
