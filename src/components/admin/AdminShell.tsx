@@ -2,10 +2,11 @@ import { ReactNode, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, LogOut, Menu, RefreshCw, Scale, LucideIcon } from "lucide-react";
+import { CalendarDays, LogOut, Menu, RefreshCw, LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import logoAsset from "@/assets/logo-juriszap.png.asset.json";
 
 export interface AdminNavItem {
   value: string;
@@ -37,9 +38,13 @@ function SidebarBody({ items, active, onSelect, onLogout, userName }: {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-3 px-5 py-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
-          <Scale className="h-5 w-5" />
-        </div>
+        <img
+          src={logoAsset.url}
+          alt="JurisZap"
+          width={40}
+          height={40}
+          className="h-10 w-10 shrink-0 rounded-xl object-cover shadow-lg shadow-black/40 ring-1 ring-white/10"
+        />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-foreground">JurisZap</p>
           <p className="truncate text-xs text-muted-foreground">Painel administrativo</p>
