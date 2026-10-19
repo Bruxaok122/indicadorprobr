@@ -35,7 +35,7 @@ const NAV_ITEMS: AdminNavItem[] = [
   { value: "tempo-real", label: "Tempo Real", description: "Acompanhe operadores e conversas ao vivo", icon: Eye, group: "Geral" },
   { value: "acompanhamento", label: "Acompanhamento", description: "Progresso dos disparos em andamento", icon: Activity, group: "Geral" },
   { value: "disparos", label: "Disparos", description: "Configure e inicie envios de templates", icon: Radio, group: "Geral" },
-  { value: "contatos", label: "Contatos", description: "Listas importadas e contatos dos clientes", icon: Contact, group: "Geral" },
+  { value: "contatos", label: "Listas", description: "Listas importadas e contatos dos clientes", icon: Contact, group: "Geral" },
   { value: "fichas", label: "Fichas", description: "Dados coletados prontos para exportar", icon: FileText, group: "Geral" },
   { value: "usuarios", label: "Usuários", description: "Crie, bloqueie e gerencie permissões", icon: Users, group: "Gestão" },
   { value: "numeros", label: "Números", description: "Números do WhatsApp conectados", icon: Phone, group: "Gestão" },
