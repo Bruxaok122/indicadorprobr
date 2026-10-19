@@ -29,17 +29,17 @@ import { ManualDispatchDialog, ManualContact } from "@/components/admin/ManualDi
 // --- Types & helpers ---
 
 const CONTACT_FIELD_OPTIONS = [
-  { value: "name", label: "Nome do Cliente", defaultHint: "" },
-  { value: "advogado", label: "Nome do Advogado (Nº Disparo)", defaultHint: "" },
-  { value: "phone", label: "Telefone", defaultHint: "" },
-  { value: "lawyer_name", label: "Parte Contrária", defaultHint: "Padrão: ********" },
-  { value: "process_number", label: "Número do Processo", defaultHint: "Padrão: 0031486-26.2025.8.26.0002" },
-  { value: "cpf", label: "CPF", defaultHint: "" },
-  { value: "valor_da_causa", label: "Valor da Causa", defaultHint: "" },
-  { value: "vencimento", label: "Vencimento", defaultHint: "Da lista universal (ex.: 04/11/2026)" },
-  { value: "final_cc", label: "Final CC", defaultHint: "Últimos dígitos do cartão" },
-  { value: "valor_fatura", label: "Valor Fatura", defaultHint: "Formatado em R$ (ex.: R$ 3.456,90)" },
-  { value: "gasto_utilizado", label: "Gasto (Utilizado)", defaultHint: "Formatado em R$ (ex.: R$ 1.234,56)" },
+  { value: "name", label: "👤 Nome do Cliente", defaultHint: "" },
+  { value: "advogado", label: "👨‍⚖️ Nome do Advogado (Nº Disparo)", defaultHint: "" },
+  { value: "phone", label: "📱 Telefone", defaultHint: "" },
+  { value: "lawyer_name", label: "⚖️ Parte Contrária", defaultHint: "Padrão: ********" },
+  { value: "process_number", label: "📄 Número do Processo", defaultHint: "Padrão: 0031486-26.2025.8.26.0002" },
+  { value: "cpf", label: "🪪 CPF", defaultHint: "" },
+  { value: "valor_da_causa", label: "💵 Valor da Causa", defaultHint: "" },
+  { value: "vencimento", label: "📅 Vencimento", defaultHint: "Da lista universal (ex.: 04/11/2026)" },
+  { value: "final_cc", label: "💳 Final CC", defaultHint: "Últimos dígitos do cartão" },
+  { value: "valor_fatura", label: "💰 Valor Fatura", defaultHint: "Formatado em R$ (ex.: R$ 3.456,90)" },
+  { value: "gasto_utilizado", label: "💸 Gasto (Utilizado)", defaultHint: "Formatado em R$ (ex.: R$ 1.234,56)" },
 ];
 
 function extractVariables(text: string): number[] {
@@ -1308,7 +1308,7 @@ export default function AdminDisparosPage() {
                                 <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Campo..." /></SelectTrigger>
                                 <SelectContent>
                                   {CONTACT_FIELD_OPTIONS.map((opt) => (<SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>))}
-                                  {extraFieldKeys.map((k) => (<SelectItem key={`extra:${k}`} value={`extra:${k}`} className="text-xs">📋 {k} (lista universal)</SelectItem>))}
+                                  {extraFieldKeys.filter((k) => !/^(final\s*cc|vencimento|gasto|valor\s*fatura)/i.test(k.trim())).map((k) => (<SelectItem key={`extra:${k}`} value={`extra:${k}`} className="text-xs">📋 {k} (lista universal)</SelectItem>))}
                                 </SelectContent>
                               </Select>
                             </div>
