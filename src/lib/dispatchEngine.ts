@@ -216,6 +216,8 @@ export function runDispatch(opts: RunDispatchOptions): void {
     variableMappings,
     phoneVerifiedName,
     dispatchMode: sharedDispatch ? "shared" : "private",
+    // O servidor só envia se este cartão de disparo existir e estiver ativo
+    dispatchId,
   });
 
   (async () => {

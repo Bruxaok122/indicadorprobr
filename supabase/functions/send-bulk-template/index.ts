@@ -106,8 +106,41 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { contactIds, templateName, templateLanguage, userId, assignedUserId, selectedPhoneNumberId, variableMappings, phoneVerifiedName, dispatchMode } = await req.json();
+    const { contactIds, templateName, templateLanguage, userId, assignedUserId, selectedPhoneNumberId, variableMappings, phoneVerifiedName, dispatchMode, dispatchId } = await req.json();
     const isSharedDispatch = dispatchMode === "shared";
+
+    const stoppedResponse = (reason: string) => new Response(
+      JSON.stringify({
+        success: true,
+        stopped: true,
+        results: { total: Array.isArray(contactIds) ? contactIds.length : 0, sent: 0, failed: 0, skipped: Array.isArray(contactIds) ? contactIds.length : 0, errors: [reason] },
+        message: reason,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+    // Disparos-fantasma: telas antigas ainda abertas usando o mapeamento removido "valor_fatura".
+    // Essa variável não existe mais no sistema, então qualquer chamada com ela é de um disparo antigo e é recusada.
+    if (variableMappings && typeof variableMappings === "object" &&
+        Object.values(variableMappings).some((v) => v === "valor_fatura")) {
+      console.warn("Rejected legacy dispatch using removed 'valor_fatura' mapping");
+      return stoppedResponse("🛑 Disparo antigo encerrado pelo servidor.");
+    }
+
+    // Disparo identificado: só envia se o cartão existir e estiver ativo (não pausado/cancelado/finalizado)
+    if (dispatchId && typeof dispatchId === "string") {
+      const { data: row } = await supabase
+        .from("active_dispatches")
+        .select("is_paused, is_cancelled, is_finished")
+        .eq("id", dispatchId)
+        .maybeSingle();
+      if (!row || row.is_cancelled || row.is_finished) {
+        return stoppedResponse("🛑 Disparo encerrado.");
+      }
+      if (row.is_paused) {
+        return stoppedResponse("⏸️ Disparo pausado.");
+      }
+    }
 
     if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
       return new Response(
