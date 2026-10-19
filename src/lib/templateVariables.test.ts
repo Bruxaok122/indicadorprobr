@@ -18,7 +18,7 @@ describe("guessVariableMappings", () => {
     const mapping = guessVariableMappings(body);
     const vars = extractTemplateVariables(body);
     for (const v of vars) {
-      expect(mapping[String(v]), `variable ${v} must be pre-selected`).toBeTruthy();
+      expect(mapping[String(v)], "variable " + v + " must be pre-selected").toBeTruthy();
     }
   });
 
