@@ -32,6 +32,7 @@ import { FailureRateCard } from "@/components/admin/FailureRateCard";
 import { RealtimeMonitorPanel } from "@/components/admin/RealtimeMonitorPanel";
 
 const NAV_ITEMS: AdminNavItem[] = [
+  { value: "saude", label: "Saúde API", description: "Taxa de falhas e qualidade das contas", icon: HeartPulse, group: "Geral" },
   { value: "tempo-real", label: "Tempo Real", description: "Acompanhe operadores e conversas ao vivo", icon: Eye, group: "Geral" },
   { value: "acompanhamento", label: "Acompanhamento", description: "Progresso dos disparos em andamento", icon: Activity, group: "Geral" },
   { value: "disparos", label: "Disparos", description: "Configure e inicie envios de templates", icon: Radio, group: "Geral" },
@@ -41,7 +42,6 @@ const NAV_ITEMS: AdminNavItem[] = [
   { value: "numeros", label: "Números", description: "Números do WhatsApp conectados", icon: Phone, group: "Gestão" },
   { value: "audio", label: "Áudio", description: "Áudios atribuídos aos operadores", icon: Mic, group: "Gestão" },
   { value: "apis", label: "APIs", description: "Contas da Meta e API ativa", icon: Zap, group: "Sistema" },
-  { value: "saude", label: "Saúde API", description: "Taxa de falhas e qualidade das contas", icon: HeartPulse, group: "Sistema" },
   { value: "teste-ia", label: "Teste IA", description: "Ambiente de testes do assistente", icon: BotMessageSquare, group: "Sistema" },
 ];
 
@@ -81,7 +81,7 @@ function AdminPageInner() {
   const [phonePermUser, setPhonePermUser] = useState<Profile | null>(null);
   const [monitorUser, setMonitorUser] = useState<Profile | null>(null);
   const [userToDeleteMobile, setUserToDeleteMobile] = useState<Profile | null>(null);
-  const [activeTab, setActiveTab] = useState("tempo-real");
+  const [activeTab, setActiveTab] = useState("saude");
 
   const handleLogout = async () => {
     await signOut();
