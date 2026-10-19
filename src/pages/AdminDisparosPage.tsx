@@ -321,9 +321,8 @@ export default function AdminDisparosPage() {
   }, [selectedList, availableLists]);
 
   useEffect(() => {
-    if (!selectedTemplate) { setVariableMappings({}); return; }
-    // Smart defaults: guess every variable from the template text itself
-    setVariableMappings(guessVariableMappings(getTemplateBody(selectedTemplate)));
+    // No pre-selection: every variable starts empty
+    setVariableMappings({});
   }, [selectedTemplate]);
 
   const approvedTemplates = allTemplates.filter((t) => t.status === "APPROVED");
