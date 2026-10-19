@@ -542,6 +542,16 @@ serve(async (req) => {
                   content = emoji || "";
                   // Stash for insert below
                   (messageInsertExtra as any).reacts_to_message_id = reactsToId;
+                } else if (message.type === "button") {
+                  // Clique em botão de resposta rápida de template
+                  messageType = "button_reply";
+                  content = message.button?.text || message.button?.payload || "Botão";
+                } else if (message.type === "interactive") {
+                  messageType = "button_reply";
+                  content =
+                    message.interactive?.button_reply?.title ||
+                    message.interactive?.list_reply?.title ||
+                    "Botão";
                 } else if (message.type === "video") {
                   content = "[Vídeo recebido]";
                 } else if (message.type === "contacts") {
