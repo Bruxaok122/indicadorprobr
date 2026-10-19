@@ -236,10 +236,16 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
 
   const addDispatch = useCallback((dispatch: ActiveDispatch) => {
     setActiveDispatches((prev) => [dispatch, ...prev]);
-    upsertDispatchToDb(dispatch);
+    upsertDispatchToDb(dispatch, true, true);
   }, []);
 
   const dismissDispatch = useCallback((dispatchId: string) => {
+    // Closing a card also stops any loop still holding it in this tab.
+    const ctrl = dispatchControlsRef.current[dispatchId];
+    if (ctrl) {
+      ctrl.isCancelled = true;
+      ctrl.isPaused = false;
+    }
     setActiveDispatches((prev) => prev.filter((d) => d.id !== dispatchId));
     deleteDispatchFromDb(dispatchId);
   }, []);
