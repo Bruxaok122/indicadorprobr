@@ -35,7 +35,7 @@ function SidebarBody({ items, active, onSelect, onLogout, userName }: {
 }) {
   const groups = Array.from(new Set(items.map((i) => i.group)));
   return (
-    <div className="flex h-full flex-col bg-card/60 backdrop-blur-xl">
+    <div className="flex h-full flex-col">
       <div className="flex items-center gap-3 px-5 py-6">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
           <Scale className="h-5 w-5" />
@@ -87,7 +87,7 @@ function SidebarBody({ items, active, onSelect, onLogout, userName }: {
       </nav>
 
       <div className="p-3">
-        <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/40 p-3">
+        <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/40 p-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-bold text-primary-foreground">
             {initials(userName)}
           </div>
@@ -120,19 +120,19 @@ export function AdminShell({ items, active, onChange, onLogout, onRefresh, userN
   const select = (v: string) => { onChange(v); setMobileOpen(false); };
 
   return (
-    <div className="dark flex h-[100dvh] w-full overflow-hidden bg-background text-foreground">
-      <aside className="hidden w-64 shrink-0 border-r border-border/60 lg:block">
+    <div className="dark admin-gradient flex h-[100dvh] w-full overflow-hidden text-foreground">
+      <aside className="hidden w-64 shrink-0 border-r border-border/40 lg:block">
         <SidebarBody items={items} active={active} onSelect={select} onLogout={onLogout} userName={userName} />
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="dark w-72 border-border/60 bg-background p-0">
+        <SheetContent side="left" className="dark admin-gradient w-72 border-border/40 p-0">
           <SidebarBody items={items} active={active} onSelect={select} onLogout={onLogout} userName={userName} />
         </SheetContent>
       </Sheet>
 
       <div className="relative flex min-w-0 flex-1 flex-col overflow-y-auto">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-primary/15 via-primary/5 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-violet/12 via-violet/4 to-transparent" />
         <header className="relative flex flex-col gap-4 px-4 pt-6 pb-4 md:flex-row md:items-end md:justify-between md:px-8 md:pt-8">
           <div className="flex items-start gap-3">
             <Button variant="ghost" size="icon" className="lg:hidden -ml-2" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">
