@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -138,7 +139,7 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Manrope', system-ui, -apple-system, sans-serif;
   }
 }
 
@@ -367,4 +368,37 @@ div[style*="Edit with Lovable"],
     radial-gradient(90% 55% at 50% -8%, hsl(var(--panel-glow) / 0.3), transparent 70%),
     radial-gradient(55% 40% at 10% 0%, hsl(var(--panel-glow) / 0.14), transparent 65%),
     linear-gradient(165deg, hsl(var(--panel-from)) 0%, hsl(var(--panel-to)) 100%);
+}
+
+/* Títulos com Sora */
+h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Sora', 'Manrope', system-ui, sans-serif; letter-spacing: -0.02em; }
+
+/* Cards do painel admin: vidro, borda luminosa, entrada e hover animados */
+@keyframes admin-card-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.admin-gradient [data-card] {
+  position: relative;
+  border-radius: 1rem;
+  background: linear-gradient(160deg, hsl(var(--card) / 0.72), hsl(var(--card) / 0.38));
+  backdrop-filter: blur(14px);
+  border-color: hsl(var(--panel-glow) / 0.18);
+  box-shadow: 0 1px 0 hsl(0 0% 100% / 0.05) inset, 0 10px 30px -18px hsl(var(--panel-glow) / 0.45);
+  animation: admin-card-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s, border-color 0.3s;
+}
+.admin-gradient [data-card]:nth-child(2) { animation-delay: 0.06s; }
+.admin-gradient [data-card]:nth-child(3) { animation-delay: 0.12s; }
+.admin-gradient [data-card]:nth-child(4) { animation-delay: 0.18s; }
+.admin-gradient [data-card]:nth-child(n+5) { animation-delay: 0.24s; }
+.admin-gradient [data-card]:hover {
+  transform: translateY(-3px);
+  border-color: hsl(var(--panel-glow) / 0.45);
+  box-shadow: 0 1px 0 hsl(0 0% 100% / 0.08) inset, 0 18px 40px -16px hsl(var(--panel-glow) / 0.6);
+}
+.admin-gradient [data-card] [data-card]:hover { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .admin-gradient [data-card] { animation: none; transition: none; }
+  .admin-gradient [data-card]:hover { transform: none; }
 }
