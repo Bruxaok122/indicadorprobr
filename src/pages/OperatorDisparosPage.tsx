@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { guessVariableMappings } from "@/lib/templateVariables";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

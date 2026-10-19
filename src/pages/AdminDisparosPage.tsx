@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { resilientDelay } from "@/lib/resilientDelay";
-import { guessVariableMappings } from "@/lib/templateVariables";
 import { useAdmin } from "@/hooks/useAdmin";
 import { useMetaTemplates, MetaTemplate } from "@/hooks/useMetaTemplates";
 import { useWabaPhones } from "@/hooks/useWabaPhones";
