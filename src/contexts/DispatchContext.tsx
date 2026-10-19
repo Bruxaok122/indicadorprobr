@@ -74,7 +74,7 @@ async function upsertDispatchToDb(dispatch: ActiveDispatch, includeControls: boo
 
 async function writeControlsToDb(
   dispatchId: string,
-  controls: { is_paused?: boolean; is_cancelled?: boolean },
+  controls: { is_paused?: boolean; is_cancelled?: boolean; is_finished?: boolean },
 ) {
   try {
     const { error } = await supabase
@@ -246,9 +246,13 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
   const handleCancel = useCallback((dispatchId: string) => {
     const ctrl = dispatchControlsRef.current[dispatchId];
     if (!ctrl) {
-      writeControlsToDb(dispatchId, { is_cancelled: true, is_paused: false });
+      // No local loop: mark as finished too, so an orphaned dispatch actually ends.
+      // If a loop is alive elsewhere, it sees is_cancelled on its next poll and stops.
+      writeControlsToDb(dispatchId, { is_cancelled: true, is_paused: false, is_finished: true });
       setActiveDispatches((prev) =>
-        prev.map((d) => (d.id === dispatchId ? { ...d, isCancelled: true, isPaused: false } : d)),
+        prev.map((d) =>
+          d.id === dispatchId ? { ...d, isCancelled: true, isPaused: false, isFinished: true } : d,
+        ),
       );
       return;
     }
