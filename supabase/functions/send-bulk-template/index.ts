@@ -315,6 +315,29 @@ serve(async (req) => {
 
     for (const contact of eligibleContacts) {
       try {
+        // Interrupção imediata: se o disparo deste solicitante foi pausado/cancelado, para o lote no servidor
+        if (requesterUserId && contacts.length > 1) {
+          const { data: stopRow } = await supabase
+            .from("active_dispatches")
+            .select("id")
+            .eq("operator_id", requesterUserId)
+            .or("is_cancelled.eq.true,is_paused.eq.true")
+            .limit(1)
+            .maybeSingle();
+          if (stopRow) {
+            results.errors.push("⏸️ Disparo interrompido pelo usuário.");
+            break;
+          }
+        }
+
+        // Relê o status atual (o contato pode ter saído da fila desde o início do lote)
+        const { data: freshContact } = await supabase
+          .from("contacts")
+          .select("status")
+          .eq("id", contact.id)
+          .maybeSingle();
+        if (freshContact) contact.status = freshContact.status;
+
         if (contact.status !== "novo") {
           results.skipped++;
           results.errors.push(`${contact.name}: já removido da lista de disparo`);
