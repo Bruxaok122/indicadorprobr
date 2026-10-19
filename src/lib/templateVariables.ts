@@ -30,7 +30,6 @@ const KEYWORD_RULES: Array<[RegExp, string]> = [
   [/venc/, "vencimento"],
   [/final (do )?(cart|cc|card)|final cc/, "final_cc"],
   [/gasto|utilizad/, "gasto_utilizado"],
-  [/valor da fatura|valor fatura|\bfatura\b/, "valor_fatura"],
   [/processo|process\b/, "process_number"],
   [/\bcpf\b|\bc\.p\.f\b|documento|\bdoc\b/, "cpf"],
   [/causa/, "valor_da_causa"],
@@ -38,11 +37,11 @@ const KEYWORD_RULES: Array<[RegExp, string]> = [
   [/advogad/, "advogado"],
   [/telefone|celular|whats/, "phone"],
   [/nome/, "name"],
-  [/valor/, "valor_fatura"],
 ];
 
+
 /** Deterministic fallback for variables no keyword could match. */
-const FALLBACK_ORDER = ["name", "process_number", "cpf", "phone", "vencimento", "final_cc", "valor_fatura", "gasto_utilizado", "valor_da_causa", "lawyer_name"];
+const FALLBACK_ORDER = ["name", "process_number", "cpf", "phone", "vencimento", "final_cc", "gasto_utilizado", "valor_da_causa", "lawyer_name"];
 
 const CONTEXT_WINDOW = 80;
 

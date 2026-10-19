@@ -14,7 +14,6 @@ export type UniversalTarget =
   | "valor_da_causa"
   | "vencimento"
   | "final_cc"
-  | "valor_fatura"
   | "gasto_utilizado"
   | "extra"
   | "ignore";
@@ -138,7 +137,6 @@ export function buildUniversalContacts(
           if (digits.length >= 4 && !base.extra_data["FINAL CC"]) base.extra_data["FINAL CC"] = digits.slice(-4);
           break;
         }
-        case "valor_fatura": base.extra_data["VALOR FATURA"] = value; break;
         case "gasto_utilizado": base.extra_data["GASTO (UTILIZADO)"] = value; break;
       }
     }
