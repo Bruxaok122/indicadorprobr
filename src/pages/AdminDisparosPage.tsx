@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { WhatsAppPhonePreview } from "@/components/admin/WhatsAppPhonePreview";
 import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock, Zap, Hand } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -318,6 +319,27 @@ export default function AdminDisparosPage() {
   const approvedTemplates = allTemplates.filter((t) => t.status === "APPROVED");
   const templateBody = selectedTemplate ? getTemplateBody(selectedTemplate) : "";
   const templateVars = extractVariables(templateBody);
+  // Sample values for the live phone preview (derived, no effect)
+  const previewSamples: Record<string, string> = {
+    name: "Maria Silva",
+    advogado: customAdvogadoName || defaultPhoneName || "Dr. Advogado",
+    phone: "(11) 98765-4321",
+    lawyer_name: "********",
+    process_number: "0031486-26.2025.8.26.0002",
+    cpf: "123.456.789-00",
+    valor_da_causa: "R$ 15.000,00",
+    vencimento: "04/11/2026",
+    final_cc: "8620",
+    valor_fatura: "R$ 3.456,90",
+    gasto_utilizado: "R$ 1.234,56",
+  };
+  const previewValues: Record<string, string> = Object.fromEntries(
+    templateVars.map((v) => {
+      const m = variableMappings[String(v)] || "";
+      const val = m.startsWith("extra:") ? `‹${m.slice(6)}›` : previewSamples[m] || "";
+      return [String(v), val];
+    }),
+  );
   const effectiveCount = dispatchMode === "turbo" ? turboLimit : dispatchMode === "scheduled" || dispatchMode === "manual" ? listContactCount : batchMode ? Math.min(batchSize, listContactCount) : listContactCount;
 
   const isStep1Valid = phones.length === 0 || !!selectedPhoneNumberId;
@@ -1189,7 +1211,7 @@ export default function AdminDisparosPage() {
       </div>
 
       {/* Step content */}
-      <div className="relative overflow-hidden min-h-[340px] max-w-xl mx-auto">
+      <div className={`relative overflow-hidden min-h-[340px] mx-auto ${currentStep === 2 ? "max-w-5xl" : "max-w-xl"}`}>
         <AnimatePresence initial={false} custom={direction} mode="wait">
           <motion.div
             key={currentStep}
@@ -1240,6 +1262,7 @@ export default function AdminDisparosPage() {
             )}
 
             {currentStep === 2 && (
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -1255,12 +1278,6 @@ export default function AdminDisparosPage() {
                       {approvedTemplates.map((t) => (<SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>))}
                     </SelectContent>
                   </Select>
-
-                  {selectedTemplate && templateBody && (
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-                      {templateBody}
-                    </motion.div>
-                  )}
 
                   {templateVars.length > 0 && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
@@ -1289,6 +1306,15 @@ export default function AdminDisparosPage() {
                   )}
                 </CardContent>
               </Card>
+              <div className="lg:sticky lg:top-4">
+                <WhatsAppPhonePreview
+                  template={selectedTemplate}
+                  body={templateBody}
+                  values={previewValues}
+                  senderName={customAdvogadoName || defaultPhoneName || phoneVerifiedName || ""}
+                />
+              </div>
+              </div>
             )}
 
             {currentStep === 3 && (

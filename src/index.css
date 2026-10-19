@@ -467,3 +467,19 @@ h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Sora', 'Manrope', system-u
 @media (prefers-reduced-motion: reduce) {
   .login-orb, .login-border-glow::before, .login-logo-pulse, .login-shine { animation: none; }
 }
+
+/* WhatsApp phone preview (simulates WhatsApp dark theme) */
+@layer components {
+  .wa-screen { --wa-bg: 200 25% 7%; --wa-head: 202 22% 13%; --wa-bubble: 200 18% 16%; --wa-fg: 200 10% 92%; --wa-green: 162 70% 42%; background: hsl(var(--wa-bg)); color: hsl(var(--wa-fg)); }
+  .wa-header { background: hsl(var(--wa-head)); }
+  .wa-avatar { background: hsl(var(--wa-green) / 0.25); color: hsl(var(--wa-green)); }
+  .wa-wallpaper { background-color: hsl(var(--wa-bg)); background-image: radial-gradient(hsl(var(--wa-fg) / 0.04) 1px, transparent 1px); background-size: 14px 14px; }
+  .wa-bubble { background: hsl(var(--wa-bubble)); }
+  .wa-btn { color: hsl(199 85% 62%); }
+  .wa-chip { background: hsl(var(--wa-head)); color: hsl(var(--wa-fg) / 0.7); }
+  .wa-ticks { color: hsl(199 85% 62%); }
+  .wa-var-filled { background: hsl(var(--wa-green) / 0.18); color: hsl(var(--wa-green)); }
+  .wa-var-empty { background: hsl(40 90% 55% / 0.15); color: hsl(40 90% 65%); }
+  .wa-input { background: hsl(var(--wa-head)); }
+  .wa-send { background: hsl(var(--wa-green)); }
+}
