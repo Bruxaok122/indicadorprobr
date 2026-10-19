@@ -74,7 +74,7 @@ async function upsertDispatchToDb(dispatch: ActiveDispatch, includeControls: boo
 
 async function writeControlsToDb(
   dispatchId: string,
-  controls: { is_paused?: boolean; is_cancelled?: boolean },
+  controls: { is_paused?: boolean; is_cancelled?: boolean; is_finished?: boolean },
 ) {
   try {
     const { error } = await supabase
