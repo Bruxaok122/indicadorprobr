@@ -642,7 +642,7 @@ export default function AdminContatosPage() {
       <div>
         <h2 className="text-xl font-bold flex items-center gap-2">
           <ContactRound className="h-5 w-5 text-primary" />
-          Contatos
+          Listas
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
           Gerencie os contatos por lista para uso nos disparos.
