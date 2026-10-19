@@ -19,6 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import { WhatsAppPhonePreview } from "@/components/admin/WhatsAppPhonePreview";
 import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock, Zap, Hand } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -276,6 +277,20 @@ export default function AdminDisparosPage() {
 
   // Phone data for advogado variable (editable override)
   const selectedPhoneData = phones.find(p => p.phone_number_id === selectedPhoneNumberId);
+  // Profile photo of the sending number, for the WhatsApp preview (read-only)
+  const { data: senderPhotoUrl } = useQuery({
+    queryKey: ["waba-profile-photo", selectedPhoneNumberId],
+    enabled: !!selectedPhoneNumberId,
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+    queryFn: async (): Promise<string> => {
+      const { data, error } = await supabase.functions.invoke("manage-waba-profile", {
+        body: { action: "get_profile", phone_number_id: selectedPhoneNumberId },
+      });
+      if (error || data?.error) return "";
+      return (data?.data?.profile_picture_url as string | undefined) || "";
+    },
+  });
   const defaultPhoneName = selectedPhoneData?.verified_name || selectedPhoneData?.lawyer_name || "";
   const [customAdvogadoName, setCustomAdvogadoName] = useState<string>("");
   const phoneVerifiedName = customAdvogadoName || defaultPhoneName;
@@ -1211,7 +1226,7 @@ export default function AdminDisparosPage() {
       </div>
 
       {/* Step content */}
-      <div className={`relative overflow-hidden min-h-[340px] mx-auto ${currentStep === 2 ? "max-w-5xl" : "max-w-xl"}`}>
+      <div className={`relative min-h-[340px] mx-auto ${currentStep === 2 ? "max-w-5xl overflow-x-clip overflow-y-visible" : "max-w-xl overflow-hidden"}`}>
         <AnimatePresence initial={false} custom={direction} mode="wait">
           <motion.div
             key={currentStep}
@@ -1306,11 +1321,12 @@ export default function AdminDisparosPage() {
                   )}
                 </CardContent>
               </Card>
-              <div className="lg:sticky lg:top-4">
+              <div className="lg:sticky lg:top-2">
                 <WhatsAppPhonePreview
                   template={selectedTemplate}
                   body={templateBody}
                   values={previewValues}
+                  photoUrl={senderPhotoUrl || ""}
                   senderName={customAdvogadoName || defaultPhoneName || phoneVerifiedName || ""}
                 />
               </div>
