@@ -41,7 +41,7 @@ export function WhatsAppPhonePreview({ template, body, values, senderName, photo
       <div className="absolute -inset-6 rounded-[3rem] bg-primary/20 blur-3xl" aria-hidden />
       <div className="relative rounded-[2.6rem] border border-border/60 bg-gradient-to-b from-muted to-background p-2.5 shadow-2xl">
         <div className="absolute left-1/2 top-3.5 z-10 h-5 w-24 -translate-x-1/2 rounded-full bg-background" aria-hidden />
-        <div className="wa-screen relative flex h-[640px] flex-col overflow-hidden rounded-[2.1rem]">
+        <div className="wa-screen relative flex h-[clamp(460px,calc(100dvh-215px),640px)] flex-col overflow-hidden rounded-[2.1rem]">
           {/* Chat header */}
           <div className="wa-header flex items-center gap-2 px-3 pb-2.5 pt-10">
             <ArrowLeft className="h-4 w-4" />
