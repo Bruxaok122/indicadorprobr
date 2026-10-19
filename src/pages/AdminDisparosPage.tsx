@@ -1189,7 +1189,7 @@ export default function AdminDisparosPage() {
       </div>
 
       {/* Step content */}
-      <div className="relative overflow-hidden min-h-[340px] max-w-xl mx-auto">
+      <div className={`relative overflow-hidden min-h-[340px] mx-auto ${currentStep === 2 ? "max-w-5xl" : "max-w-xl"}`}>
         <AnimatePresence initial={false} custom={direction} mode="wait">
           <motion.div
             key={currentStep}
@@ -1240,6 +1240,7 @@ export default function AdminDisparosPage() {
             )}
 
             {currentStep === 2 && (
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -1255,12 +1256,6 @@ export default function AdminDisparosPage() {
                       {approvedTemplates.map((t) => (<SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>))}
                     </SelectContent>
                   </Select>
-
-                  {selectedTemplate && templateBody && (
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-                      {templateBody}
-                    </motion.div>
-                  )}
 
                   {templateVars.length > 0 && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
