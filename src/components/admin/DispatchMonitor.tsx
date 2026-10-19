@@ -326,7 +326,7 @@ export function DispatchMonitor() {
                   <DispatchCard
                     key={dispatch.id}
                     dispatch={dispatch}
-                    isOrphaned={!isLocallyControlled}
+                    isOrphaned={false}
                     onPause={() => handlePause(dispatch.id)}
                     onCancel={() => handleCancel(dispatch.id)}
                     onDismiss={() => dismissDispatch(dispatch.id)}

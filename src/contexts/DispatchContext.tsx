@@ -229,12 +229,14 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
         const target = prev.find((d) => d.id === dispatchId);
         if (!target) return prev;
         const next = !target.isPaused;
+        lastDbControlsRef.current[dispatchId] = { isPaused: next, isCancelled: target.isCancelled };
         writeControlsToDb(dispatchId, { is_paused: next });
         return prev.map((d) => (d.id === dispatchId ? { ...d, isPaused: next } : d));
       });
       return;
     }
     ctrl.isPaused = !ctrl.isPaused;
+    lastDbControlsRef.current[dispatchId] = { isPaused: ctrl.isPaused, isCancelled: ctrl.isCancelled };
     setActiveDispatches((prev) => {
       const updated = prev.map((d) => (d.id === dispatchId ? { ...d, isPaused: ctrl.isPaused } : d));
       const dispatch = updated.find((d) => d.id === dispatchId);
@@ -244,26 +246,51 @@ export function DispatchProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleCancel = useCallback((dispatchId: string) => {
+    // Cancel is immediate and final everywhere: local loop (if any) stops before the
+    // next send, loops in other tabs/devices stop within ~1s, and the card closes now.
     const ctrl = dispatchControlsRef.current[dispatchId];
-    if (!ctrl) {
-      // No local loop: mark as finished too, so an orphaned dispatch actually ends.
-      // If a loop is alive elsewhere, it sees is_cancelled on its next poll and stops.
-      writeControlsToDb(dispatchId, { is_cancelled: true, is_paused: false, is_finished: true });
-      setActiveDispatches((prev) =>
-        prev.map((d) =>
-          d.id === dispatchId ? { ...d, isCancelled: true, isPaused: false, isFinished: true } : d,
-        ),
-      );
-      return;
+    if (ctrl) {
+      ctrl.isCancelled = true;
+      ctrl.isPaused = false;
     }
-    ctrl.isCancelled = true;
-    ctrl.isPaused = false;
-    setActiveDispatches((prev) => {
-      const updated = prev.map((d) => (d.id === dispatchId ? { ...d, isCancelled: true, isPaused: false } : d));
-      const dispatch = updated.find((d) => d.id === dispatchId);
-      if (dispatch) upsertDispatchToDb(dispatch);
-      return updated;
-    });
+    lastDbControlsRef.current[dispatchId] = { isPaused: false, isCancelled: true };
+    writeControlsToDb(dispatchId, { is_cancelled: true, is_paused: false, is_finished: true });
+    setActiveDispatches((prev) =>
+      prev.map((d) =>
+        d.id === dispatchId ? { ...d, isCancelled: true, isPaused: false, isFinished: true } : d,
+      ),
+    );
+  }, []);
+
+  // Fast control sync (1s): apply pause/cancel issued from any tab/device to the loop running here.
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const ids = Object.keys(dispatchControlsRef.current);
+      if (ids.length === 0) return;
+      try {
+        const { data } = await supabase
+          .from("active_dispatches")
+          .select("id, is_paused, is_cancelled")
+          .in("id", ids);
+        for (const row of (data ?? []) as Array<{ id: string; is_paused: boolean; is_cancelled: boolean }>) {
+          const ctrl = dispatchControlsRef.current[row.id];
+          if (!ctrl) continue;
+          const lastSeen = lastDbControlsRef.current[row.id];
+          if (lastSeen) {
+            if (row.is_cancelled && !lastSeen.isCancelled) {
+              ctrl.isCancelled = true;
+              ctrl.isPaused = false;
+            } else if (row.is_paused !== lastSeen.isPaused) {
+              ctrl.isPaused = row.is_paused;
+            }
+          }
+          lastDbControlsRef.current[row.id] = { isPaused: row.is_paused, isCancelled: row.is_cancelled };
+        }
+      } catch {
+        // ignore transient polling errors
+      }
+    }, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const hasActiveDispatch = activeDispatches.some((d) => !d.isFinished);
