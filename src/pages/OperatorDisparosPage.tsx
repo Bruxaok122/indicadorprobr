@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { guessVariableMappings } from "@/lib/templateVariables";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -143,18 +144,10 @@ export default function OperatorDisparosPage() {
     }
   }, [phones, selectedPhoneNumberId]);
 
-  // Auto-set variable mappings when template changes (only if mappings empty)
+  // Auto-set variable mappings when template changes (smart defaults from template text)
   useEffect(() => {
     if (!selectedTemplate) return;
-    if (Object.keys(variableMappings).length > 0) return;
-    const body = getTemplateBody(selectedTemplate);
-    const vars = extractVariables(body);
-    const defaults: Record<string, string> = {};
-    vars.forEach((v, i) => {
-      if (i === 0) defaults[String(v)] = "name";
-      else if (i === 1) defaults[String(v)] = "process_number";
-    });
-    if (Object.keys(defaults).length > 0) setVariableMappings(defaults);
+    setVariableMappings(guessVariableMappings(getTemplateBody(selectedTemplate)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTemplate]);
 
