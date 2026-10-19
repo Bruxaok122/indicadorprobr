@@ -178,6 +178,18 @@ export function ChatBubble({ message, reactions, onDeleteMessage, onReact, onRep
         </>
       );
     }
+    // Clique em botão do template (inclui registros antigos salvos como "[button]")
+    if ((message.message_type as string) === "button" || (message.message_type as string) === "interactive" || message.content === "[button]" || message.content === "[interactive]") {
+      const label = message.content && !message.content.startsWith("[") ? message.content : "Botão do template";
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="text-[9px] font-semibold uppercase tracking-wider opacity-60">👆 Clicou no botão</span>
+          <span className="inline-flex items-center justify-center rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary">
+            {label}
+          </span>
+        </div>
+      );
+    }
     if (message.message_type === "template") {
       return (
         <div>
@@ -361,7 +373,7 @@ function QuickReactRow({ messageId, onReact }: { messageId: string; onReact: (id
 
 export function getReplyPreview(msg: Message): { label: string; icon: "text" | "image" | "audio" | "document" | "sticker" } {
   if (msg.is_deleted) return { label: "Mensagem apagada", icon: "text" };
-  switch (msg.message_type) {
+  switch (msg.message_type as string) {
     case "image":
       return { label: msg.content && msg.content !== "[Imagem recebida]" ? msg.content : "Imagem", icon: "image" };
     case "audio":
@@ -370,6 +382,9 @@ export function getReplyPreview(msg: Message): { label: string; icon: "text" | "
       return { label: msg.document_name || "Documento", icon: "document" };
     case "sticker":
       return { label: "Figurinha", icon: "sticker" };
+    case "button":
+    case "interactive":
+      return { label: `👆 ${msg.content || "Botão"}`, icon: "text" };
     case "template":
       return { label: msg.content || msg.template_name || "Template", icon: "text" };
     default: {
