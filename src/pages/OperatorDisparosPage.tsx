@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { guessVariableMappings } from "@/lib/templateVariables";
+import { useState, useEffect, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -144,11 +143,12 @@ export default function OperatorDisparosPage() {
     }
   }, [phones, selectedPhoneNumberId]);
 
-  // Auto-set variable mappings when template changes (smart defaults from template text)
+  // Variables start empty on template change (no pre-selection); keep persisted ones on first mount
+  const firstTemplateRun = useRef(true);
   useEffect(() => {
+    if (firstTemplateRun.current) { firstTemplateRun.current = false; return; }
     if (!selectedTemplate) return;
-    setVariableMappings(guessVariableMappings(getTemplateBody(selectedTemplate)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setVariableMappings({});
   }, [selectedTemplate]);
 
   const avulsoPhoneDigits = avulsoPhone.replace(/\D/g, "");
