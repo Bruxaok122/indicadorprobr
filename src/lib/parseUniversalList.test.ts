@@ -17,3 +17,13 @@ describe("guessTarget", () => {
     expect(guessTarget("CC")).toBe("final_cc");
   });
 });
+
+import { parseUniversalRecords } from "./parseUniversalList";
+describe("parseUniversalRecords", () => {
+  it("splits fields separated by >>", () => {
+    const [r] = parseUniversalRecords("NOME: ANA | Nascimento: 1987-05-13 >> CPF: 00560972202 >> Mãe: MARIA");
+    expect(r["NASCIMENTO"]).toBe("1987-05-13");
+    expect(r["CPF"]).toBe("00560972202");
+    expect(r["MÃE"]).toBe("MARIA");
+  });
+});

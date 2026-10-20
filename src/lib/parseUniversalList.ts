@@ -60,7 +60,7 @@ export function guessTarget(key: string): UniversalTarget {
   return "ignore";
 }
 
-const KEY_RE = /(?:^|\||\n|\s{2,})\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9 ._\/()º°-]{0,40}?)\s*:(?!\/\/)/g;
+const KEY_RE = /(?:^|\||\n|\s{2,}|>{1,3}|»|•|;)\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9 ._\/()º°-]{0,40}?)\s*:(?!\/\/)/g;
 const SEPARATOR_RE = /^\s*[-=_*]{5,}\s*$/gm;
 
 /** Extrai registros brutos (chave → valor). */
@@ -81,7 +81,7 @@ export function parseUniversalRecords(raw: string): UniversalRecord[] {
     let current: UniversalRecord = {};
     hits.forEach((h, i) => {
       const end = i + 1 < hits.length ? hits[i + 1].start : chunk.length;
-      const value = chunk.slice(h.valueStart, end).replace(/^[\s|]+|[\s|]+$/g, "").trim();
+      const value = chunk.slice(h.valueStart, end).replace(/^[\s|>»•;]+|[\s|>»•;]+$/g, "").trim();
       const normKey = h.key.toUpperCase();
       if (normKey in current) {
         records.push(current);
