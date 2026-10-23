@@ -65,7 +65,8 @@ const SEPARATOR_RE = /^\s*[-=_*]{5,}\s*$/gm;
 
 /** Extrai registros brutos (chave → valor). */
 export function parseUniversalRecords(raw: string): UniversalRecord[] {
-  const text = raw.replace(/\r/g, "").replace(SEPARATOR_RE, "\n\u0000\n").replace(/\n\s*\n\s*\n/g, "\n\u0000\n");
+  // "FATURA ATUAL R$ 1.063,28" vem sem ":" — vira campo próprio
+  const text = raw.replace(/\r/g, "").replace(/\bFATURA\s+ATUAL\s*:?\s*(?=R\$|\d)/gi, " | FATURA ATUAL: ").replace(SEPARATOR_RE, "\n\u0000\n").replace(/\n\s*\n\s*\n/g, "\n\u0000\n");
   const records: UniversalRecord[] = [];
 
   const countKeys = (s: string) => {
