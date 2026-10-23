@@ -27,3 +27,14 @@ describe("parseUniversalRecords", () => {
     expect(r["MÃE"]).toBe("MARIA");
   });
 });
+
+describe("one record per line", () => {
+  it("does not leak a field from the next line when a record lacks it", () => {
+    const recs = parseUniversalRecords(
+      "Nome: ANA | Celular: 92991111111\nNome: MARIA | Celular: 92992222222 | Gasto (Utilizado): R$1.297,69"
+    );
+    expect(recs).toHaveLength(2);
+    expect(recs[0]["GASTO (UTILIZADO)"]).toBeUndefined();
+    expect(recs[1]["GASTO (UTILIZADO)"]).toBe("R$1.297,69");
+  });
+});
