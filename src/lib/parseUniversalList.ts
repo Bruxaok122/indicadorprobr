@@ -183,7 +183,13 @@ export function buildUniversalContacts(
         }
         case "gasto_utilizado": base.extra_data["FATURA ATUAL"] = value; break;
         case "nome_completo": base.extra_data["NOME COMPLETO"] = value; break;
-        case "identificacao": base.extra_data["IDENTIFICAÇÃO"] = value; break;
+        case "identificacao": {
+          base.extra_data["IDENTIFICAÇÃO"] = value;
+          // Identificação com 11 dígitos é CPF: preenche o campo CPF quando vazio
+          const d = value.replace(/\D/g, "");
+          if (!base.cpf && d.length === 11) base.cpf = d;
+          break;
+        }
       }
     }
     const label = base.name || `Registro ${idx + 1}`;
