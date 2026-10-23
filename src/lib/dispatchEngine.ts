@@ -433,6 +433,7 @@ export function runDispatch(opts: RunDispatchOptions): void {
           if (!sendError && result?.results) {
             results.sent += result.results.sent || 0;
             results.failed += result.results.failed || 0;
+            results.skipped += result.results.skipped || 0;
             if (result.results.errors) results.errors.push(...result.results.errors);
             if (result.results.errors?.some((e: string) => e.includes("Conta Business bloqueada"))) {
               toast.error("🛑 Conta Business bloqueada! Parando disparo imediatamente.", { duration: 30000 });
@@ -481,14 +482,25 @@ export function runDispatch(opts: RunDispatchOptions): void {
         let batchBlockSize = getJitteredBlockSize();
         let i = 0;
         let chunkIndex = 0;
-        while (i < remainingIds.length) {
+        // Quantidade escolhida: conta só os enviados (pulados não contam)
+        const sendCap = batchMode ? Math.max(1, batchSize) : Number.POSITIVE_INFINITY;
+        const attemptedIds = new Set<string>();
+        while (results.sent < sendCap) {
+          if (i >= remainingIds.length) {
+            if (!Number.isFinite(sendCap)) break;
+            const moreIds = (await fetchRemaining(listName, sendCap - results.sent, minIncome)).filter((id) => !attemptedIds.has(id));
+            if (moreIds.length === 0) break;
+            remainingIds = moreIds;
+            i = 0;
+            updateDispatch(dispatchId, { total: results.sent + results.failed + results.skipped + remainingIds.length });
+          }
           const ctrl = controlsRef.current[dispatchId];
           if (ctrl?.isCancelled) break;
 
           if (ctrl?.isPaused) {
             while (ctrl?.isPaused && !ctrl?.isCancelled) await new Promise((r) => setTimeout(r, 500));
             if (ctrl?.isCancelled) break;
-            const freshIds = await fetchRemaining(listName, undefined, minIncome);
+            const freshIds = await fetchRemaining(listName, Number.isFinite(sendCap) ? Math.max(sendCap - results.sent, 1) : undefined, minIncome);
             remainingIds = freshIds;
             i = 0;
             updateDispatch(dispatchId, { total: results.sent + results.failed + results.skipped + remainingIds.length });
@@ -509,7 +521,9 @@ export function runDispatch(opts: RunDispatchOptions): void {
             batchBlockSize = getJitteredBlockSize();
           }
 
-          const chunk = remainingIds.slice(i, i + batchBlockSize);
+          const take = Number.isFinite(sendCap) ? Math.min(batchBlockSize, sendCap - results.sent) : batchBlockSize;
+          const chunk = remainingIds.slice(i, i + take);
+          chunk.forEach((id) => attemptedIds.add(id));
 
           const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
             body: invokeBody(chunk),
@@ -542,7 +556,7 @@ export function runDispatch(opts: RunDispatchOptions): void {
             blocksSent: chunkIndex + 1,
           });
 
-          i += batchBlockSize;
+          i += chunk.length;
           chunkIndex++;
         }
       }
