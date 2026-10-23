@@ -963,7 +963,20 @@ export default function AdminDisparosPage() {
           let i = 0;
           let chunkIndex = 0;
           let batchConsecutiveErrors = 0;
-          while (i < remainingIds.length) {
+          // Quantidade escolhida: conta só os enviados com sucesso (pulados não contam)
+          const sendCap = capturedBatchMode ? Math.max(1, capturedBatchSize) : Number.POSITIVE_INFINITY;
+          const attemptedIds = new Set<string>();
+          while (results.sent < sendCap) {
+            if (i >= remainingIds.length) {
+              // Fila acabou antes da quantidade (ex.: contatos pulados) — busca mais da lista
+              if (!Number.isFinite(sendCap)) break;
+              const moreIds = await fetchRemainingContactIds(capturedListName, sendCap - results.sent, capturedMinIncome);
+              const fresh = moreIds.filter((id) => !attemptedIds.has(id));
+              if (fresh.length === 0) break;
+              remainingIds = fresh;
+              i = 0;
+              updateDispatch(dispatchId, { total: results.sent + results.failed + results.skipped + remainingIds.length });
+            }
             const ctrl = dispatchControlsRef.current[dispatchId];
             if (ctrl?.isCancelled) break;
 
@@ -973,7 +986,11 @@ export default function AdminDisparosPage() {
               }
               if (ctrl?.isCancelled) break;
 
-              const freshIds = await fetchRemainingContactIds(capturedListName, undefined, capturedMinIncome);
+              const freshIds = await fetchRemainingContactIds(
+                capturedListName,
+                Number.isFinite(sendCap) ? Math.max(sendCap - results.sent, 1) : undefined,
+                capturedMinIncome,
+              );
               remainingIds = freshIds;
               i = 0;
               updateDispatch(dispatchId, { total: results.sent + results.failed + results.skipped + remainingIds.length });
@@ -989,24 +1006,16 @@ export default function AdminDisparosPage() {
               toast.success("✅ Janela de disparo aberta! Retomando...", { id: `dispatch-window-${dispatchId}`, duration: 5000 });
             }
 
-            // 🛡️ Anti-ban: Breathing with progressive timing between chunks (skip first)
+            // Lote: sem pausas de respiro — segue direto até a quantidade escolhida
             if (chunkIndex > 0) {
               updateDispatch(dispatchId, { blocksSent: chunkIndex });
-              const breathingMs = ANTI_BAN_BREATHING_MS + randomBetween(0, 2 * 60 * 1000);
-              toast.info(`☕ Bloco ${chunkIndex} de ${batchBlockSize} enviado. Respirando...`, { id: `dispatch-breathing-${dispatchId}`, duration: 10000 });
-              await breathingWait(dispatchId, breathingMs, updateDispatch, dispatchControlsRef);
-              const ctrl2 = dispatchControlsRef.current[dispatchId];
-              if (ctrl2?.isCancelled) break;
               batchBlockSize = getJitteredBlockSize();
               batchConsecutiveErrors = 0;
-
-              if (!isWithinDispatchHours()) {
-                const canContinue = await waitForDispatchWindow(dispatchId, updateDispatch, dispatchControlsRef);
-                if (!canContinue) break;
-              }
             }
 
-            const chunk = remainingIds.slice(i, i + batchBlockSize);
+            const take = Number.isFinite(sendCap) ? Math.min(batchBlockSize, sendCap - results.sent) : batchBlockSize;
+            const chunk = remainingIds.slice(i, i + take);
+            chunk.forEach((id) => attemptedIds.add(id));
 
             const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
               body: {
@@ -1026,6 +1035,7 @@ export default function AdminDisparosPage() {
             if (!sendError && result?.results) {
               results.sent += result.results.sent || 0;
               results.failed += result.results.failed || 0;
+              results.skipped += result.results.skipped || 0;
               if (result.results.errors) results.errors.push(...result.results.errors);
 
               // 🛡️ Anti-ban: Circuit breaker
@@ -1057,7 +1067,7 @@ export default function AdminDisparosPage() {
               blocksSent: chunkIndex + 1,
             });
 
-            i += batchBlockSize;
+            i += chunk.length;
             chunkIndex++;
           }
         }
