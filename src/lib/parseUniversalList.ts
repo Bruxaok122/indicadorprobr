@@ -26,7 +26,7 @@ export const UNIVERSAL_TARGET_OPTIONS: { value: UniversalTarget; label: string }
   { value: "phone", label: "Telefone" },
   { value: "vencimento", label: "📅 Vencimento (variável)" },
   { value: "final_cc", label: "💳 CC (variável)" },
-  { value: "gasto_utilizado", label: "💸 Gasto (Utilizado) (variável)" },
+  { value: "gasto_utilizado", label: "🧾 Fatura Atual (variável)" },
   { value: "nome_completo", label: "🧾 Nome Completo (variável)" },
   { value: "identificacao", label: "🆔 Identificação (variável)" },
   { value: "ignore", label: "Ignorar" },
@@ -56,7 +56,7 @@ export function guessTarget(key: string): UniversalTarget {
   if (/(celular|telefone|fone|whats|tel\b|contato)/.test(k)) return "phone";
   if (/(venc)/.test(k)) return "vencimento";
   if (/(^cc$|final\s*(do\s*)?(cc|cartao|credito)|4\s*ultimos|^cartao)/.test(k)) return "final_cc";
-  if (/(gasto|utilizado)/.test(k)) return "gasto_utilizado";
+  if (/fatura\s*atual/.test(k)) return "gasto_utilizado";
   return "ignore";
 }
 
@@ -180,7 +180,7 @@ export function buildUniversalContacts(
           if (masked) base.extra_data["CC"] = masked;
           break;
         }
-        case "gasto_utilizado": base.extra_data["GASTO (UTILIZADO)"] = value; break;
+        case "gasto_utilizado": base.extra_data["FATURA ATUAL"] = value; break;
         case "nome_completo": base.extra_data["NOME COMPLETO"] = value; break;
         case "identificacao": base.extra_data["IDENTIFICAÇÃO"] = value; break;
       }

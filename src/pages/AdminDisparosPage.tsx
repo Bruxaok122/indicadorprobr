@@ -38,7 +38,7 @@ const CONTACT_FIELD_OPTIONS = [
   { value: "valor_da_causa", label: "💵 Valor da Causa", defaultHint: "" },
   { value: "vencimento", label: "📅 Vencimento", defaultHint: "Da lista universal (ex.: 04/11/2026)" },
   { value: "final_cc", label: "💳 CC", defaultHint: "6 primeiros + XXXXXX + 4 últimos" },
-  { value: "gasto_utilizado", label: "💸 Gasto (Utilizado)", defaultHint: "Formatado em R$ (ex.: R$ 1.234,56)" },
+  { value: "gasto_utilizado", label: "🧾 Fatura Atual", defaultHint: "Formatado em R$ (ex.: R$ 1.234,56)" },
   { value: "nome_completo", label: "🧾 Nome Completo", defaultHint: "Da lista universal" },
   { value: "identificacao", label: "🆔 Identificação", defaultHint: "Da lista universal" },
 ];
@@ -1307,7 +1307,7 @@ export default function AdminDisparosPage() {
                                 <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Campo..." /></SelectTrigger>
                                 <SelectContent>
                                   {CONTACT_FIELD_OPTIONS.map((opt) => (<SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>))}
-                                  {extraFieldKeys.filter((k) => !/^(final\s*cc|vencimento|gasto|valor\s*fatura)/i.test(k.trim())).map((k) => (<SelectItem key={`extra:${k}`} value={`extra:${k}`} className="text-xs">📋 {k} (lista universal)</SelectItem>))}
+                                  {extraFieldKeys.filter((k) => !/^(final\s*cc|vencimento|gasto|fatura|valor\s*fatura)/i.test(k.trim())).map((k) => (<SelectItem key={`extra:${k}`} value={`extra:${k}`} className="text-xs">📋 {k} (lista universal)</SelectItem>))}
                                 </SelectContent>
                               </Select>
                             </div>
