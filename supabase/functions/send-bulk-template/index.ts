@@ -385,6 +385,33 @@ serve(async (req) => {
           continue;
         }
 
+        // Pula telefones que já receberam mensagem (ex.: mesma pessoa de uma lista reimportada)
+        {
+          const { data: samePhone } = await supabase
+            .from("contacts")
+            .select("id")
+            .eq("phone", contact.phone)
+            .neq("id", contact.id);
+          const otherIds = (samePhone || []).map((r: any) => r.id);
+          if (otherIds.length > 0) {
+            const { data: prevMsg } = await supabase
+              .from("messages")
+              .select("id")
+              .in("contact_id", otherIds.slice(0, 100))
+              .eq("direction", "outgoing")
+              .limit(1);
+            if (prevMsg && prevMsg.length > 0) {
+              await supabase
+                .from("contacts")
+                .update({ status: "encerrado", contact_list: null })
+                .eq("id", contact.id);
+              results.skipped++;
+              results.errors.push(`${contact.name}: já recebeu antes — pulado`);
+              continue;
+            }
+          }
+        }
+
         if (contact.status === "encerrado") {
           results.failed++;
           results.errors.push(`${contact.name}: Cliente bloqueado`);
