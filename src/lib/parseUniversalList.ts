@@ -26,7 +26,7 @@ export const UNIVERSAL_TARGET_OPTIONS: { value: UniversalTarget; label: string }
   { value: "phone", label: "Telefone" },
   { value: "vencimento", label: "📅 Vencimento (variável)" },
   { value: "final_cc", label: "💳 CC (variável)" },
-  { value: "gasto_utilizado", label: "🧾 Fatura Atual (variável)" },
+  { value: "gasto_utilizado", label: "💸 Fatura Atual (variável)" },
   { value: "nome_completo", label: "🧾 Nome Completo (variável)" },
   { value: "identificacao", label: "🆔 Identificação (variável)" },
   { value: "ignore", label: "Ignorar" },
