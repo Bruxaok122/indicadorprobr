@@ -965,13 +965,15 @@ export default function AdminDisparosPage() {
           let batchConsecutiveErrors = 0;
           // Quantidade escolhida: conta só os enviados com sucesso (pulados não contam)
           const sendCap = capturedBatchMode ? Math.max(1, capturedBatchSize) : Number.POSITIVE_INFINITY;
+          const attemptedIds = new Set<string>();
           while (results.sent < sendCap) {
             if (i >= remainingIds.length) {
               // Fila acabou antes da quantidade (ex.: contatos pulados) — busca mais da lista
               if (!Number.isFinite(sendCap)) break;
               const moreIds = await fetchRemainingContactIds(capturedListName, sendCap - results.sent, capturedMinIncome);
-              if (moreIds.length === 0) break;
-              remainingIds = moreIds;
+              const fresh = moreIds.filter((id) => !attemptedIds.has(id));
+              if (fresh.length === 0) break;
+              remainingIds = fresh;
               i = 0;
               updateDispatch(dispatchId, { total: results.sent + results.failed + results.skipped + remainingIds.length });
             }
@@ -1013,6 +1015,7 @@ export default function AdminDisparosPage() {
 
             const take = Number.isFinite(sendCap) ? Math.min(batchBlockSize, sendCap - results.sent) : batchBlockSize;
             const chunk = remainingIds.slice(i, i + take);
+            chunk.forEach((id) => attemptedIds.add(id));
 
             const { data: result, error: sendError } = await supabase.functions.invoke("send-bulk-template", {
               body: {
@@ -1032,6 +1035,7 @@ export default function AdminDisparosPage() {
             if (!sendError && result?.results) {
               results.sent += result.results.sent || 0;
               results.failed += result.results.failed || 0;
+              results.skipped += result.results.skipped || 0;
               if (result.results.errors) results.errors.push(...result.results.errors);
 
               // 🛡️ Anti-ban: Circuit breaker
