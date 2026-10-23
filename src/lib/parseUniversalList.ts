@@ -68,7 +68,30 @@ export function parseUniversalRecords(raw: string): UniversalRecord[] {
   const text = raw.replace(/\r/g, "").replace(SEPARATOR_RE, "\n\u0000\n").replace(/\n\s*\n\s*\n/g, "\n\u0000\n");
   const records: UniversalRecord[] = [];
 
-  for (const chunk of text.split("\u0000")) {
+  const countKeys = (s: string) => {
+    KEY_RE.lastIndex = 0;
+    let n = 0;
+    let mm: RegExpExecArray | null;
+    while ((mm = KEY_RE.exec(s))) if (!/^\d/.test(mm[1].trim())) n++;
+    return n;
+  };
+  // Formato "um registro por linha": cada linha com 2+ campos é um registro próprio.
+  // Evita que um campo faltando num registro puxe o valor do registro seguinte.
+  const chunks: string[] = [];
+  for (const block of text.split("\u0000")) {
+    const lines = block.split("\n");
+    const multi = lines.filter((l) => countKeys(l) >= 2).length;
+    if (multi >= 2) {
+      let cur = "";
+      for (const l of lines) {
+        if (countKeys(l) >= 2) { if (cur.trim()) chunks.push(cur); cur = l; }
+        else cur += "\n" + l;
+      }
+      if (cur.trim()) chunks.push(cur);
+    } else chunks.push(block);
+  }
+
+  for (const chunk of chunks) {
     const hits: { key: string; start: number; valueStart: number }[] = [];
     KEY_RE.lastIndex = 0;
     let m: RegExpExecArray | null;
