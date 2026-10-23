@@ -29,7 +29,7 @@ function normalize(text: string): string {
 const KEYWORD_RULES: Array<[RegExp, string]> = [
   [/venc/, "vencimento"],
   [/final (do )?(cart|cc|card)|final cc/, "final_cc"],
-  [/gasto|utilizad/, "gasto_utilizado"],
+  [/fatura atual|gasto|utilizad/, "gasto_utilizado"],
   [/processo|process\b/, "process_number"],
   [/\bcpf\b|\bc\.p\.f\b|documento|\bdoc\b/, "cpf"],
   [/causa/, "valor_da_causa"],

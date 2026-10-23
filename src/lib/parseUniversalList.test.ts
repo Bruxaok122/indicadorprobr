@@ -38,3 +38,10 @@ describe("one record per line", () => {
     expect(recs[1]["GASTO (UTILIZADO)"]).toBe("R$1.297,69");
   });
 });
+
+describe("fatura atual", () => {
+  it("maps FATURA ATUAL to the fatura variable and ignores Gasto (Utilizado)", () => {
+    expect(guessTarget("FATURA ATUAL")).toBe("gasto_utilizado");
+    expect(guessTarget("Gasto (Utilizado)")).toBe("ignore");
+  });
+});
