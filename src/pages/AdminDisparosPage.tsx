@@ -1063,7 +1063,7 @@ export default function AdminDisparosPage() {
               blocksSent: chunkIndex + 1,
             });
 
-            i += batchBlockSize;
+            i += chunk.length;
             chunkIndex++;
           }
         }
