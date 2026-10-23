@@ -503,18 +503,10 @@ export function runDispatch(opts: RunDispatchOptions): void {
             toast.success("✅ Janela de disparo aberta! Retomando...", { id: `dispatch-window-${dispatchId}`, duration: 5000 });
           }
 
+          // Lote: sem pausas de respiro entre blocos — segue no mesmo ritmo até o total.
           if (chunkIndex > 0) {
             updateDispatch(dispatchId, { blocksSent: chunkIndex });
-            const breathingMs = ANTI_BAN_BREATHING_MS + randomBetween(0, 2 * 60 * 1000);
-            toast.info(`☕ Bloco ${chunkIndex} de ${batchBlockSize} enviado. Respirando...`, { id: `dispatch-breathing-${dispatchId}`, duration: 10000 });
-            await breathingWait(dispatchId, breathingMs, updateDispatch, controlsRef);
-            const ctrl2 = controlsRef.current[dispatchId];
-            if (ctrl2?.isCancelled) break;
             batchBlockSize = getJitteredBlockSize();
-            if (!isWithinDispatchHours()) {
-              const canContinue = await waitForDispatchWindow(dispatchId, updateDispatch, controlsRef);
-              if (!canContinue) break;
-            }
           }
 
           const chunk = remainingIds.slice(i, i + batchBlockSize);
