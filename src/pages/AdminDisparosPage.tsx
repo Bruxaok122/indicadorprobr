@@ -17,6 +17,7 @@ import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { WhatsAppPhonePreview } from "@/components/admin/WhatsAppPhonePreview";
+import { isExtraFieldVisible } from "@/lib/parseUniversalList";
 import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock, Zap, Hand } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";

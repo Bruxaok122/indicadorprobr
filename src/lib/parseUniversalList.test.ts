@@ -18,7 +18,18 @@ describe("guessTarget", () => {
   });
 });
 
-import { parseUniversalRecords } from "./parseUniversalList";
+import { parseUniversalRecords, isExtraFieldVisible } from "./parseUniversalList";
+describe("isExtraFieldVisible", () => {
+  it("hides CC and Identificação (already dedicated options)", () => {
+    expect(isExtraFieldVisible("CC")).toBe(false);
+    expect(isExtraFieldVisible("IDENTIFICAÇÃO")).toBe(false);
+    expect(isExtraFieldVisible("FATURA ATUAL")).toBe(false);
+  });
+  it("keeps other universal fields selectable", () => {
+    expect(isExtraFieldVisible("MÃE")).toBe(true);
+    expect(isExtraFieldVisible("LIMITE")).toBe(true);
+  });
+});
 describe("parseUniversalRecords", () => {
   it("splits fields separated by >>", () => {
     const [r] = parseUniversalRecords("NOME: ANA | Nascimento: 1987-05-13 >> CPF: 00560972202 >> Mãe: MARIA");
