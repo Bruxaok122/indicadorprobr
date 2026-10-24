@@ -32,6 +32,18 @@ export const UNIVERSAL_TARGET_OPTIONS: { value: UniversalTarget; label: string }
   { value: "ignore", label: "Ignorar" },
 ];
 
+/**
+ * Chaves de extra_data que NÃO viram opção de variável "(lista universal)" na tela
+ * de disparos: cada uma já tem uma opção própria (💳 CC, 📅 Vencimento, 💸 Fatura
+ * Atual, 🧾 Nome Completo, 🆔 Identificação), então repeti-las só duplica a lista.
+ */
+const HIDDEN_EXTRA_KEYS =
+  /^(final\s*cc|vencimento|gasto|fatura|valor\s*fatura|cc\b|identifica)/i;
+
+export function isExtraFieldVisible(key: string): boolean {
+  return !HIDDEN_EXTRA_KEYS.test(key.trim());
+}
+
 export type UniversalRecord = Record<string, string>;
 
 export interface UniversalContact {

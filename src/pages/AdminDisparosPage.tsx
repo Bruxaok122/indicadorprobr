@@ -17,6 +17,7 @@ import { PhoneNumberSelector } from "@/components/chat/PhoneNumberSelector";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { WhatsAppPhonePreview } from "@/components/admin/WhatsAppPhonePreview";
+import { isExtraFieldVisible } from "@/lib/parseUniversalList";
 import { Radio, Send, List, Layers, Pause, Play, XCircle, Timer, User, ChevronLeft, ChevronRight, Check, Phone, FileText, CalendarClock, Zap, Hand } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
@@ -1317,7 +1318,7 @@ export default function AdminDisparosPage() {
                                 <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Campo..." /></SelectTrigger>
                                 <SelectContent>
                                   {CONTACT_FIELD_OPTIONS.map((opt) => (<SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>))}
-                                  {extraFieldKeys.filter((k) => !/^(final\s*cc|vencimento|gasto|fatura|valor\s*fatura)/i.test(k.trim())).map((k) => (<SelectItem key={`extra:${k}`} value={`extra:${k}`} className="text-xs">📋 {k} (lista universal)</SelectItem>))}
+                                  {extraFieldKeys.filter(isExtraFieldVisible).map((k) => (<SelectItem key={`extra:${k}`} value={`extra:${k}`} className="text-xs">📋 {k} (lista universal)</SelectItem>))}
                                 </SelectContent>
                               </Select>
                             </div>
