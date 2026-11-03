@@ -491,6 +491,13 @@ serve(async (req) => {
             case 131047:
               friendlyMsg = "⏳ Mensagem não enviada - mais de 24h sem interação";
               break;
+            case 130429:
+            case 80007:
+            case 131048:
+              // Limite de velocidade da Meta: espera antes de seguir para não agravar
+              friendlyMsg = "🐢 Limite de velocidade da Meta atingido — reduzindo ritmo";
+              await delay(15000);
+              break;
             case 131056:
               friendlyMsg = "🚫 Número de destino faz parte de uma conta business";
               break;
@@ -636,7 +643,8 @@ serve(async (req) => {
         results.sent++;
         // Only add delay when processing multiple contacts in a single call
         if (contacts.length > 1) {
-          const humanDelay = Math.floor(Math.random() * 3000) + 2000;
+          // Ritmo rápido e seguro: 1.0–2.0s com variação (antes 2–5s)
+          const humanDelay = Math.floor(Math.random() * 1000) + 1000;
           await delay(humanDelay);
         }
       } catch (err) {
