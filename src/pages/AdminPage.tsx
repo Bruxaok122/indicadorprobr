@@ -39,7 +39,6 @@ const NAV_ITEMS: AdminNavItem[] = [
   { value: "contatos", label: "Listas", description: "Listas importadas e contatos dos clientes", icon: Contact, group: "Geral" },
   { value: "fichas", label: "Fichas", description: "Dados coletados prontos para exportar", icon: FileText, group: "Geral" },
   { value: "usuarios", label: "Usuários", description: "Crie, bloqueie e gerencie permissões", icon: Users, group: "Gestão" },
-  { value: "gestao", label: "Gestão de acessos", description: "Computadores administrativos", icon: Users, group: "Gestão" },
   { value: "numeros", label: "Números", description: "Números do WhatsApp conectados", icon: Phone, group: "Gestão" },
   { value: "audio", label: "Áudio", description: "Áudios atribuídos aos operadores", icon: Mic, group: "Gestão" },
   { value: "apis", label: "APIs", description: "Contas da Meta e API ativa", icon: Zap, group: "Sistema" },
@@ -94,7 +93,7 @@ function AdminPageInner() {
       <AdminShell
         items={NAV_ITEMS}
         active={activeTab}
-        onChange={value => value === "gestao" ? navigate("/Gestão") : setActiveTab(value)}
+        onChange={setActiveTab}
         onLogout={handleLogout}
         onRefresh={refreshAll}
         userName={profile?.full_name || undefined}

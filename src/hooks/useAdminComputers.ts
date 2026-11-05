@@ -1,24 +1,26 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { z } from "zod";
+import { checkAdminComputer } from "@/lib/adminComputerAccess";
+
+const deviceSchema = z.object({
+  id: z.string(), registered: z.boolean(), is_blocked: z.boolean(),
+  device_info: z.record(z.unknown()),
+  profile: z.object({ full_name: z.string().nullable(), email: z.string().nullable() }),
+  sessions: z.array(z.object({ id: z.string(), last_seen_at: z.string() })),
+});
 
 export function useAdminComputers() {
   const client = useQueryClient();
   const query = useQuery({
-    queryKey: ["admin-computers"], staleTime: 2000, refetchInterval: 5000,
+    queryKey: ["admin-computers"], staleTime: 1000, refetchInterval: 3000, refetchIntervalInBackground: true,
     queryFn: async () => {
-      const [computers, sessions, profiles] = await Promise.all([
-        supabase.from("admin_computers").select("*").order("updated_at", { ascending: false }),
-        supabase.from("admin_login_sessions").select("*").eq("is_active", true),
-        supabase.from("profiles").select("user_id, full_name, email"),
-      ]);
-      if (computers.error) throw computers.error;
-      if (sessions.error) throw sessions.error;
-      if (profiles.error) throw profiles.error;
-      return computers.data.map(computer => ({ ...computer,
-        profile: profiles.data.find(p => p.user_id === computer.user_id),
-        sessions: sessions.data.filter(s => s.computer_id === computer.id),
-      }));
+      const access = await checkAdminComputer();
+      if (!access.allowed) throw new Error("Acesso encerrado");
+      const { data, error } = await supabase.rpc("list_admin_devices");
+      if (error) throw error;
+      return z.array(deviceSchema).parse(data);
     },
   });
   const action = useMutation({
