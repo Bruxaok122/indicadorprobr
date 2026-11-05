@@ -8,9 +8,8 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { useAdminComputers } from "@/hooks/useAdminComputers";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import type { Json } from "@/integrations/supabase/types";
 
-function deviceLabel(info: Json): string {
+function deviceLabel(info: Record<string, unknown>): string {
   if (!info || typeof info !== "object" || Array.isArray(info)) return "Computador";
   return [info.browser, info.os].filter(v => typeof v === "string").join(" · ") || "Computador";
 }
