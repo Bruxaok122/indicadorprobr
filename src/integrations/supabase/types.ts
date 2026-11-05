@@ -1026,6 +1026,7 @@ export type Database = {
       is_subscription_expired: { Args: { _user_id: string }; Returns: boolean }
       is_temp_banned: { Args: { _user_id: string }; Returns: boolean }
       is_user_blocked: { Args: { _user_id: string }; Returns: boolean }
+      list_admin_devices: { Args: never; Returns: Json }
       manage_admin_computer: {
         Args: { p_action: string; p_computer_id: string }
         Returns: undefined
