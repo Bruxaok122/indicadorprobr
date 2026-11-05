@@ -22,6 +22,13 @@
       "when": 1793845975087,
       "tag": "0002_list_current_admin_devices",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793847594969,
+      "tag": "0003_admin_device_history_details",
+      "breakpoints": true
     }
   ]
 }
