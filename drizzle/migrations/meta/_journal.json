@@ -15,6 +15,13 @@
       "when": 1793845526229,
       "tag": "0001_support_verified_admin_preview_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793845975087,
+      "tag": "0002_list_current_admin_devices",
+      "breakpoints": true
     }
   ]
 }
