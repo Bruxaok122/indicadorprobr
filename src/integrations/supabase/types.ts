@@ -98,6 +98,71 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_computers: {
+        Row: {
+          created_at: string
+          device_info: Json
+          fingerprint: string
+          id: string
+          is_blocked: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_info?: Json
+          fingerprint: string
+          id?: string
+          is_blocked?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_info?: Json
+          fingerprint?: string
+          id?: string
+          is_blocked?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      admin_login_sessions: {
+        Row: {
+          computer_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_seen_at: string
+          user_id: string
+        }
+        Insert: {
+          computer_id: string
+          created_at?: string
+          id: string
+          is_active?: boolean
+          last_seen_at?: string
+          user_id: string
+        }
+        Update: {
+          computer_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_login_sessions_computer_id_fkey"
+            columns: ["computer_id"]
+            isOneToOne: false
+            referencedRelation: "admin_computers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_conversion_logs: {
         Row: {
           contact_id: string
@@ -936,6 +1001,10 @@ export type Database = {
         Args: { _contact_id: string; _user_id: string }
         Returns: boolean
       }
+      check_admin_computer: {
+        Args: { p_device_info?: Json; p_fingerprint: string }
+        Returns: Json
+      }
       clear_failed_attempts: { Args: { _user_id: string }; Returns: undefined }
       has_role: {
         Args: {
@@ -956,6 +1025,10 @@ export type Database = {
       is_subscription_expired: { Args: { _user_id: string }; Returns: boolean }
       is_temp_banned: { Args: { _user_id: string }; Returns: boolean }
       is_user_blocked: { Args: { _user_id: string }; Returns: boolean }
+      manage_admin_computer: {
+        Args: { p_action: string; p_computer_id: string }
+        Returns: undefined
+      }
       record_failed_device_attempt: {
         Args: { _user_id: string }
         Returns: Json
