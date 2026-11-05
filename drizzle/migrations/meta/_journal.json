@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1793845325962,
+      "tag": "0000_admin_computer_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793845526229,
+      "tag": "0001_support_verified_admin_preview_sessions",
+      "breakpoints": true
+    }
+  ]
+}

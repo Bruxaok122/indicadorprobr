@@ -4,6 +4,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { Profile, UserRole } from "@/types/juriszap";
 import { generateDeviceFingerprint, getDeviceInfo } from "@/lib/deviceFingerprint";
 import { toast } from "sonner";
+import { checkAdminComputer, adminAccessDenied, ADMIN_BLOCK_MESSAGE } from "@/lib/adminComputerAccess";
 
 interface AuthState {
   user: User | null;
@@ -127,7 +128,12 @@ export function useAuth() {
 
       const isAdmin = roles?.some((r: any) => r.role === "admin");
       if (isAdmin) {
-        // Admins always allowed - register device session
+        const access = await checkAdminComputer();
+        if (adminAccessDenied(access)) {
+          toast.error(access.reason === "blocked" ? ADMIN_BLOCK_MESSAGE : "Acesso encerrado pelo administrador");
+          await supabase.auth.signOut({ scope: "local" });
+          return false;
+        }
         await registerDeviceSession(userId, fingerprint, deviceInfo);
         return true;
       }
@@ -355,6 +361,15 @@ export function useAuth() {
 
           const isAdmin = roles?.some((r: any) => r.role === "admin");
 
+          if (isAdmin) {
+            const access = await checkAdminComputer();
+            if (adminAccessDenied(access)) {
+              toast.error(access.reason === "blocked" ? ADMIN_BLOCK_MESSAGE : "Acesso encerrado pelo administrador", { duration: 10000 });
+              await supabase.auth.signOut({ scope: "local" });
+            }
+            return;
+          }
+
           // If not admin and authorized fingerprint changed (admin reset or changed), force logout
           if (!isAdmin && profile?.authorized_fingerprint && profile.authorized_fingerprint !== fingerprint) {
             toast.error("Dispositivo desautorizado", {
@@ -379,9 +394,6 @@ export function useAuth() {
               .from("device_sessions")
               .update({ last_seen_at: new Date().toISOString() })
               .eq("id", current.id);
-          } else if (isAdmin) {
-            // Re-register for admins
-            await registerDeviceSession(userId, fingerprint, deviceInfo);
           }
         } catch (err) {
           console.error("Device session guard error:", err);
@@ -408,6 +420,17 @@ export function useAuth() {
 
     // After successful auth, check temp ban status
     if (data.user) {
+      const { data: roles, error: roleError } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
+      if (roleError) { await supabase.auth.signOut({ scope: "local" }); throw roleError; }
+      if (roles?.some(r => r.role === "admin")) {
+        try {
+          const access = await checkAdminComputer();
+          if (adminAccessDenied(access)) throw new Error(access.reason === "blocked" ? ADMIN_BLOCK_MESSAGE : "Acesso encerrado pelo administrador");
+        } catch (error) {
+          await supabase.auth.signOut({ scope: "local" });
+          throw error;
+        }
+      }
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("temp_banned_until, ban_reason")
@@ -438,6 +461,12 @@ export function useAuth() {
 
   const signOut = async () => {
     try {
+      if (state.role === "admin") {
+        const access = await checkAdminComputer();
+        if (access.allowed && access.computer_id) {
+          await supabase.rpc("manage_admin_computer", { p_computer_id: access.computer_id, p_action: "logout" });
+        }
+      }
       // Deactivate device session
       if (state.user) {
         const fingerprint = await generateDeviceFingerprint();

@@ -18,6 +18,7 @@ import WhatsAppApiPage from "./pages/WhatsAppApiPage";
 import OperatorDisparosPage from "./pages/OperatorDisparosPage";
 import LoginPage from "./pages/LoginPage";
 import AdminPage from "./pages/AdminPage";
+import GestaoPage from "./pages/GestaoPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,8 @@ const App = () => (
           <ScrollToTop />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/Gestão" element={<ProtectedRoute requireAdmin><GestaoPage /></ProtectedRoute>} />
+            <Route path="/gestao" element={<ProtectedRoute requireAdmin><GestaoPage /></ProtectedRoute>} />
             <Route
               path="/administrador"
               element={
