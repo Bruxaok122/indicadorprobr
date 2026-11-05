@@ -993,6 +993,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_current_session_id: { Args: never; Returns: string }
       can_view_contact: {
         Args: { _contact_id: string; _user_id: string }
         Returns: boolean
