@@ -7,9 +7,12 @@ import { checkAdminComputer } from "@/lib/adminComputerAccess";
 const deviceSchema = z.object({
   id: z.string(), registered: z.boolean(), is_blocked: z.boolean(),
   device_info: z.record(z.unknown()),
+  last_seen_at: z.string().nullable().optional(),
   profile: z.object({ full_name: z.string().nullable(), email: z.string().nullable() }),
   sessions: z.array(z.object({ id: z.string(), last_seen_at: z.string() })),
 });
+
+export type AdminComputer = z.infer<typeof deviceSchema>;
 
 export function useAdminComputers() {
   const client = useQueryClient();
