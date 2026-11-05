@@ -1,4 +1,5 @@
 # Gestão de acessos administrativos
+- [x] Incluir histórico de dispositivos administrativos, navegador, modelo disponível e localização aproximada (ausências sinalizadas; coleta de localização nos novos acessos).
 - [x] Separar Gestão do menu e da estrutura do painel administrativo.
 - [x] Mostrar sessões reais existentes, inclusive dispositivos ainda não identificados, e atualizar continuamente.
 - [x] Registrar sessões administrativas separadamente por computador.
